@@ -1,13 +1,32 @@
 # Games
 
-A browser game in a **single self-contained HTML file** — no build step, no dependencies,
+Browser games, each one a **single self-contained HTML file** — no build step, no dependencies,
 no bundler. Open the file in a browser and it runs.
 
-**▶ Play it: <https://ardy828.github.io/games/>**
+**▶ Play them: <https://ardy828.github.io/games/>**
 
 | Game | Type | Play | Folder |
 |---|---|---|---|
+| **Block Blast** | 8×8 block puzzle | [Play](https://ardy828.github.io/games/blockblast/) | [`blockblast/`](blockblast/) |
 | **Scrapline** | Top-down arena shooter | [Play](https://ardy828.github.io/games/scrapline/) | [`scrapline/`](scrapline/) |
+
+## Block Blast
+
+Drag pieces from the tray onto an 8×8 grid. Fill a whole row or column and it blasts away.
+The game ends when none of the three pieces in the tray fit anywhere.
+
+- **Controls** — drag a piece onto the grid with the mouse or a finger; it snaps to the grid
+  while it is over a legal spot. On touch the piece rides a cell above your thumb so you can
+  see where it lands. `M` mutes, `R` starts a new game; both also have buttons.
+- 42 block shapes: bars up to five long, squares, corners, S/Z, T, J/L, a plus and diagonals.
+  Each piece is dealt in one of eight colours.
+- **The lines you are about to clear light up in the colour of the piece you are holding**, and
+  the clear itself sweeps down that row or column in the same colour before the cubes burst apart.
+- Clearing several lines in one drop scores more, and clearing on consecutive drops builds a combo
+  multiplier. A drop that clears nothing resets the combo.
+- A fresh hand is checked against the board, so you are not dealt three pieces that cannot be played.
+- All audio is synthesised at runtime with the Web Audio API — no audio files. The high score is
+  kept in `localStorage`.
 
 ## Scrapline
 
@@ -31,11 +50,10 @@ Hold a scrapyard against malfunctioning salvage drones converging from every bea
 ## Running locally
 
 ```bash
-cd scrapline
-python3 -m http.server 8000
+python3 -m http.server 8000     # from the repo root, for the landing page
 ```
 
-Then open <http://localhost:8000>. Opening the file directly over `file://` mostly works, but
+Then open <http://localhost:8000>. Opening a file directly over `file://` mostly works, but
 `localStorage` behaves inconsistently there, so the high scores are more reliable over `http://`.
 
 ## Hosting
@@ -44,4 +62,4 @@ Live on GitHub Pages at <https://ardy828.github.io/games/>, served from the root
 pushing to `main` deploys.
 
 Plain static HTML — any static host will serve it unchanged. Drop the folder on Cloudflare
-Pages or Netlify, or upload `index.html` to the web root of any shared host.
+Pages or Netlify, or upload the files to the web root of any shared host.

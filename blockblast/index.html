@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Block Blast</title>
+<meta name="description" content="An 8x8 block-dropping puzzle. Drag pieces onto the grid, fill rows and columns to blast them away.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#141a4a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap">
+<style>
+  :root{
+    --sky1:#2b3aa0;
+    --sky2:#151c56;
+    --sky3:#0b0f34;
+    --ink:#ffffff;
+    --font:"Fredoka","Trebuchet MS",ui-rounded,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden}
+  body{
+    background:var(--sky3);color:var(--ink);font-family:var(--font);
+    -webkit-font-smoothing:antialiased;
+    -webkit-user-select:none;user-select:none;
+  }
+  #stage{position:fixed;inset:0;overflow:hidden}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  .btn{
+    position:absolute;display:flex;align-items:center;justify-content:center;
+    border:none;cursor:pointer;color:#fff;
+    background:rgba(255,255,255,.13);
+    border-radius:30%;
+    box-shadow:0 3px 0 rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.22);
+    transition:background 120ms, transform 90ms;
+    padding:0;
+  }
+  .btn:hover{background:rgba(255,255,255,.22)}
+  .btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.22)}
+  .btn svg{width:56%;height:56%;fill:none;stroke:#fff;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+  .btn svg .mute{display:none}
+  .btn.off svg .on{display:none}
+  .btn.off svg .mute{display:inline}
+
+  #over{
+    position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(6,9,32,.72);backdrop-filter:blur(3px);padding:20px;
+  }
+  #over.show{display:flex;animation:fade .28s ease both}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .panel{
+    width:min(340px,88vw);text-align:center;padding:30px 26px 26px;
+    background:linear-gradient(#3a4bbd,#26308c);
+    border:3px solid rgba(255,255,255,.28);border-radius:26px;
+    box-shadow:0 16px 0 rgba(0,0,0,.30), 0 30px 60px rgba(0,0,0,.5);
+    animation:pop .34s cubic-bezier(.2,1.5,.4,1) both;
+  }
+  @keyframes pop{from{transform:scale(.72) translateY(18px);opacity:0}to{transform:none;opacity:1}}
+  .panel h2{font-size:1.6rem;font-weight:700;letter-spacing:.03em;text-shadow:0 3px 0 rgba(0,0,0,.3)}
+  .panel .lbl{margin-top:18px;font-size:.72rem;font-weight:600;letter-spacing:.22em;opacity:.7}
+  .panel .big{font-size:3rem;font-weight:700;line-height:1.05;text-shadow:0 4px 0 rgba(0,0,0,.3)}
+  .panel .rec{margin-top:6px;font-size:.85rem;font-weight:600;opacity:.85}
+  .panel .rec b{color:#ffd76b}
+  .panel button{
+    margin-top:22px;width:100%;padding:14px 0;font-family:var(--font);
+    font-size:1.05rem;font-weight:700;letter-spacing:.08em;color:#22350c;cursor:pointer;
+    background:linear-gradient(#a9ea63,#68c22c);border:none;border-radius:16px;
+    box-shadow:0 5px 0 #3f8514, inset 0 1px 0 rgba(255,255,255,.5);
+    transition:transform 90ms, box-shadow 90ms;
+  }
+  .panel button:active{transform:translateY(4px);box-shadow:0 1px 0 #3f8514, inset 0 1px 0 rgba(255,255,255,.5)}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+
+  <button id="bSound" class="btn" title="Sound (M)" aria-label="Toggle sound">
+    <svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z"/><g class="on"><path d="M15.6 9.2a4 4 0 0 1 0 5.6"/><path d="M18.2 6.6a7.6 7.6 0 0 1 0 10.8"/></g><g class="mute"><path d="M16 9.6l5 4.8M21 9.6l-5 4.8"/></g></svg>
+  </button>
+  <button id="bNew" class="btn" title="New game (R)" aria-label="New game">
+    <svg viewBox="0 0 24 24"><path d="M20 5.5v5h-5"/><path d="M19.6 10.4A8 8 0 1 0 20 14.6"/></svg>
+  </button>
+
+  <div id="over">
+    <div class="panel">
+      <h2 id="oTitle">NO MOVES LEFT</h2>
+      <p class="lbl">SCORE</p>
+      <p class="big" id="oScore">0</p>
+      <p class="rec" id="oBest">BEST <b>0</b></p>
+      <button id="bAgain">PLAY AGAIN</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+"use strict";
+
+/* ---------------------------------------------------------------- config */
+
+var GRID = 8;                       /* 8x8 board, same as the original */
+var BEST_KEY = "blockblast.best";
+
+/* Block palette. Each entry is one candy-coloured cube: a dark outline,
+   a vertical gradient for the face, and a light for the top bevel. */
+var COLORS = [
+  { lo:"#1b5fb0", md:"#2f8ce8", hi:"#7ac6ff", gl:"#8fd2ff" },  /* blue   */
+  { lo:"#2f7c1a", md:"#4cb52c", hi:"#96e874", gl:"#a9f088" },  /* green  */
+  { lo:"#a82418", md:"#e8402f", hi:"#ff8a7d", gl:"#ff9c8f" },  /* red    */
+  { lo:"#b56f0c", md:"#f5a623", hi:"#ffd97b", gl:"#ffe08f" },  /* yellow */
+  { lo:"#5c22a3", md:"#8a3fe0", hi:"#cd9bff", gl:"#d7abff" },  /* purple */
+  { lo:"#0f8489", md:"#22bfc0", hi:"#7cebe6", gl:"#8ff3ee" },  /* cyan   */
+  { lo:"#b04a08", md:"#f2711c", hi:"#ffb277", gl:"#ffc08c" },  /* orange */
+  { lo:"#a81f6c", md:"#ea3fa0", hi:"#ff9ad8", gl:"#ffaae0" }   /* pink   */
+];
+
+/* Shape table. Cells are [x,y] offsets from the piece's top-left corner;
+   w/h are filled in by norm(). Weight biases how often a shape is drawn. */
+function box(w,h){ var c=[],x,y; for(y=0;y<h;y++) for(x=0;x<w;x++) c.push([x,y]); return c; }
+
+var SHAPES = [];
+function add(cells, weight){
+  var w=0,h=0,i;
+  for(i=0;i<cells.length;i++){
+    if(cells[i][0]+1>w) w=cells[i][0]+1;
+    if(cells[i][1]+1>h) h=cells[i][1]+1;
+  }
+  SHAPES.push({ c:cells, w:w, h:h, n:cells.length, wt:weight });
+}
+
+add(box(1,1), 5);
+add(box(2,1), 7);  add(box(1,2), 7);
+add(box(3,1), 7);  add(box(1,3), 7);
+add(box(4,1), 5);  add(box(1,4), 5);
+add(box(5,1), 3);  add(box(1,5), 3);
+add(box(2,2), 8);
+add(box(3,2), 3);  add(box(2,3), 3);
+add(box(3,3), 2);
+/* small corner, 3 cells, four rotations */
+add([[0,0],[0,1],[1,1]], 6);
+add([[0,0],[1,0],[0,1]], 6);
+add([[0,0],[1,0],[1,1]], 6);
+add([[1,0],[0,1],[1,1]], 6);
+/* big corner, 5 cells in a 3x3 box, four rotations */
+add([[0,0],[0,1],[0,2],[1,2],[2,2]], 4);
+add([[0,0],[1,0],[2,0],[0,1],[0,2]], 4);
+add([[0,0],[1,0],[2,0],[2,1],[2,2]], 4);
+add([[2,0],[2,1],[0,2],[1,2],[2,2]], 4);
+/* S / Z */
+add([[1,0],[2,0],[0,1],[1,1]], 3);
+add([[0,0],[1,0],[1,1],[2,1]], 3);
+add([[0,0],[0,1],[1,1],[1,2]], 3);
+add([[1,0],[0,1],[1,1],[0,2]], 3);
+/* T */
+add([[0,0],[1,0],[2,0],[1,1]], 3);
+add([[1,0],[0,1],[1,1],[1,2]], 3);
+add([[1,0],[0,1],[1,1],[2,1]], 3);
+add([[0,0],[0,1],[1,1],[0,2]], 3);
+/* J / L, 4 cells */
+add([[0,0],[0,1],[0,2],[1,2]], 2);
+add([[0,0],[1,0],[2,0],[0,1]], 2);
+add([[0,0],[1,0],[1,1],[1,2]], 2);
+add([[2,0],[0,1],[1,1],[2,1]], 2);
+add([[1,0],[1,1],[0,2],[1,2]], 2);
+add([[0,0],[0,1],[1,1],[2,1]], 2);
+add([[0,0],[1,0],[0,1],[0,2]], 2);
+add([[0,0],[1,0],[2,0],[2,1]], 2);
+/* plus */
+add([[1,0],[0,1],[1,1],[2,1],[1,2]], 2);
+/* diagonals */
+add([[0,0],[1,1]], 2);
+add([[1,0],[0,1]], 2);
+add([[0,0],[1,1],[2,2]], 1);
+add([[2,0],[1,1],[0,2]], 1);
+
+var WT_TOTAL = 0, si;
+for(si=0; si<SHAPES.length; si++) WT_TOTAL += SHAPES[si].wt;
+
+/* ---------------------------------------------------------------- state */
+
+var stage = document.getElementById("stage");
+var cv    = document.getElementById("c");
+var g     = cv.getContext("2d");
+var elOver = document.getElementById("over");
+var elOScore = document.getElementById("oScore");
+var elOBest = document.getElementById("oBest");
+var elOTitle = document.getElementById("oTitle");
+var bSound = document.getElementById("bSound");
+var bNew = document.getElementById("bNew");
+var bAgain = document.getElementById("bAgain");
+
+var grid = new Int8Array(GRID*GRID);   /* -1 empty, else colour index */
+var popT = new Float32Array(GRID*GRID);/* per-cell settle animation */
+var tray = [null,null,null];
+var score = 0, best = 0, shown = 0, combo = 0;
+var over = false, newBest = false;
+var drag = null, ret = null;
+var clears = [], bursts = [], sweeps = [], floats = [];
+var shake = 0, shakeT = 0;
+var touchMode = false;
+
+/* layout, recomputed on resize */
+var W=0, H=0, u=0, boardX=0, boardY=0, boardW=0, trayY=0, trayH=0, headY=0;
+
+/* ---------------------------------------------------------------- audio */
+
+var ac = null, master = null, noiseBuf = null, muted = false;
+
+try { muted = localStorage.getItem("blockblast.muted") === "1"; } catch(e){}
+
+function audioInit(){
+  if(ac) return;
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return;
+  ac = new AC();
+  master = ac.createGain();
+  master.gain.value = 0.85;
+  var comp = ac.createDynamicsCompressor();
+  comp.threshold.value = -14;
+  comp.knee.value = 22;
+  comp.ratio.value = 6;
+  comp.attack.value = 0.003;
+  comp.release.value = 0.16;
+  master.connect(comp);
+  comp.connect(ac.destination);
+
+  var n = Math.floor(ac.sampleRate * 0.5), d, i;
+  noiseBuf = ac.createBuffer(1, n, ac.sampleRate);
+  d = noiseBuf.getChannelData(0);
+  for(i=0;i<n;i++) d[i] = Math.random()*2 - 1;
+}
+
+function ready(){
+  if(!ac) return false;
+  if(ac.state === "suspended") ac.resume();
+  return !muted;
+}
+
+/* One oscillator voice with an exponential envelope. */
+function tone(o){
+  if(!ready()) return;
+  var t0 = ac.currentTime + (o.delay || 0);
+  var dur = o.dur || 0.2;
+  var v = o.v || 0.2;
+  var osc = ac.createOscillator();
+  var gn = ac.createGain();
+  osc.type = o.type || "sine";
+  osc.frequency.setValueAtTime(o.f, t0);
+  if(o.f2) osc.frequency.exponentialRampToValueAtTime(o.f2, t0 + (o.slide || dur));
+  var atk = o.a == null ? 0.008 : o.a;
+  gn.gain.setValueAtTime(0.0001, t0);
+  gn.gain.exponentialRampToValueAtTime(v, t0 + atk);
+  gn.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(gn);
+  gn.connect(master);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.03);
+}
+
+/* Filtered noise burst — the body of every impact sound. */
+function hiss(o){
+  if(!ready() || !noiseBuf) return;
+  var t0 = ac.currentTime + (o.delay || 0);
+  var dur = o.dur || 0.08;
+  var src = ac.createBufferSource();
+  src.buffer = noiseBuf;
+  var flt = ac.createBiquadFilter();
+  flt.type = o.type || "lowpass";
+  flt.frequency.setValueAtTime(o.f, t0);
+  if(o.f2) flt.frequency.exponentialRampToValueAtTime(o.f2, t0 + dur);
+  flt.Q.value = o.q == null ? 0.8 : o.q;
+  var gn = ac.createGain();
+  gn.gain.setValueAtTime(0.0001, t0);
+  gn.gain.exponentialRampToValueAtTime(o.v || 0.1, t0 + 0.006);
+  gn.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.connect(flt); flt.connect(gn); gn.connect(master);
+  src.start(t0);
+  src.stop(t0 + dur + 0.03);
+}
+
+var SCALE = [523.25,587.33,659.25,783.99,880.00,1046.50,1174.66,1318.51,1567.98,1760.00];
+
+function sndPick(){
+  tone({ type:"triangle", f:480, f2:720, dur:0.075, v:0.10, slide:0.05 });
+}
+function sndDrop(){
+  tone({ type:"sine",     f:250, f2:104, dur:0.11, v:0.30, slide:0.07 });
+  tone({ type:"triangle", f:640, f2:470, dur:0.05, v:0.07 });
+  hiss({ f:2600, f2:700,  dur:0.05, v:0.09 });
+}
+function sndDeny(){
+  tone({ type:"sine", f:150, f2:96, dur:0.15, v:0.16, slide:0.12 });
+  hiss({ f:420, dur:0.07, v:0.05 });
+}
+function sndClear(lines, cmb){
+  var base = Math.min(cmb - 1, 4);
+  var i, f;
+  hiss({ f:900, f2:7000, dur:0.26, v:0.07, type:"bandpass", q:1.2 });
+  tone({ type:"sine", f:150, f2:70, dur:0.20, v:0.22, slide:0.14 });
+  for(i=0;i<lines;i++){
+    f = SCALE[Math.min(base + i, SCALE.length-1)];
+    tone({ type:"triangle", f:f,   dur:0.36, v:0.17, delay:i*0.058, a:0.012 });
+    tone({ type:"sine",     f:f*2, dur:0.30, v:0.055, delay:i*0.058 + 0.012 });
+  }
+  if(cmb > 1) tone({ type:"sine", f:SCALE[Math.min(base+lines, SCALE.length-1)]*2, dur:0.45, v:0.09, delay:lines*0.058 + 0.04 });
+}
+function sndOver(){
+  var n = [523.25, 466.16, 392.00, 311.13], i;
+  for(i=0;i<n.length;i++){
+    tone({ type:"triangle", f:n[i], dur:0.5, v:0.16, delay:i*0.13, a:0.02 });
+    tone({ type:"sine", f:n[i]/2, dur:0.55, v:0.10, delay:i*0.13 });
+  }
+}
+function sndBest(){
+  var n = [659.25, 783.99, 1046.5, 1318.5], i;
+  for(i=0;i<n.length;i++) tone({ type:"triangle", f:n[i], dur:0.4, v:0.15, delay:0.55 + i*0.08 });
+}
+
+function setMuted(m){
+  muted = m;
+  bSound.className = muted ? "btn off" : "btn";
+  try { localStorage.setItem("blockblast.muted", muted ? "1" : "0"); } catch(e){}
+}
+
+/* ---------------------------------------------------------------- rules */
+
+function idx(x,y){ return y*GRID + x; }
+
+/* Can this shape sit with its top-left corner at gx,gy? */
+function fits(sh, gx, gy){
+  if(gx < 0 || gy < 0 || gx + sh.w > GRID || gy + sh.h > GRID) return false;
+  for(var i=0;i<sh.c.length;i++){
+    if(grid[idx(gx + sh.c[i][0], gy + sh.c[i][1])] >= 0) return false;
+  }
+  return true;
+}
+
+/* Does this shape fit anywhere at all? */
+function fitsAnywhere(sh){
+  for(var y=0; y<=GRID-sh.h; y++)
+    for(var x=0; x<=GRID-sh.w; x++)
+      if(fits(sh,x,y)) return true;
+  return false;
+}
+
+function anyMoves(){
+  for(var i=0;i<3;i++) if(tray[i] && fitsAnywhere(tray[i].sh)) return true;
+  return false;
+}
+
+function randShape(){
+  var r = Math.random() * WT_TOTAL, i;
+  for(i=0;i<SHAPES.length;i++){
+    r -= SHAPES[i].wt;
+    if(r <= 0) return SHAPES[i];
+  }
+  return SHAPES[0];
+}
+
+/* Deal three pieces. Retry a few times so a fresh hand is normally playable;
+   if the board is very tight, force one piece that provably fits. */
+function refill(){
+  var t, i, k, ok = false;
+  for(k=0; k<40 && !ok; k++){
+    t = [];
+    for(i=0;i<3;i++) t.push({ sh:randShape(), col:(Math.random()*COLORS.length)|0 });
+    for(i=0;i<3;i++) if(fitsAnywhere(t[i].sh)) ok = true;
+  }
+  if(!ok){
+    var pool = [], j;
+    for(j=0;j<SHAPES.length;j++) if(fitsAnywhere(SHAPES[j])) pool.push(SHAPES[j]);
+    if(pool.length) t[(Math.random()*3)|0].sh = pool[(Math.random()*pool.length)|0];
+  }
+  tray = t;
+}
+
+/* Rows and columns that would be complete if sh were dropped at gx,gy. */
+function linesAfter(sh, gx, gy){
+  var mark = {}, i, x, y, rows = [], cols = [], full;
+  for(i=0;i<sh.c.length;i++) mark[idx(gx+sh.c[i][0], gy+sh.c[i][1])] = 1;
+  for(y=0;y<GRID;y++){
+    full = true;
+    for(x=0;x<GRID;x++) if(grid[idx(x,y)] < 0 && !mark[idx(x,y)]) { full = false; break; }
+    if(full) rows.push(y);
+  }
+  for(x=0;x<GRID;x++){
+    full = true;
+    for(y=0;y<GRID;y++) if(grid[idx(x,y)] < 0 && !mark[idx(x,y)]) { full = false; break; }
+    if(full) cols.push(x);
+  }
+  return { rows:rows, cols:cols };
+}
+
+function place(slot, gx, gy){
+  var p = tray[slot], sh = p.sh, i, x, y, k;
+
+  for(i=0;i<sh.c.length;i++){
+    x = gx + sh.c[i][0];
+    y = gy + sh.c[i][1];
+    grid[idx(x,y)] = p.col;
+    popT[idx(x,y)] = 1;
+  }
+  score += sh.n;
+  tray[slot] = null;
+
+  var ln = linesAfter(sh, gx, gy);   /* grid already written, so this reads it back */
+  var total = ln.rows.length + ln.cols.length;
+
+  if(total > 0){
+    combo++;
+    var cells = {}, list = [];
+    for(k=0;k<ln.rows.length;k++) for(x=0;x<GRID;x++) cells[idx(x,ln.rows[k])] = 1;
+    for(k=0;k<ln.cols.length;k++) for(y=0;y<GRID;y++) cells[idx(ln.cols[k],y)] = 1;
+    for(k in cells){ if(cells.hasOwnProperty(k)) list.push(k|0); }
+
+    /* the rows and columns flash in the colour of the block that cleared them */
+    for(k=0;k<ln.rows.length;k++) sweeps.push({ row:true,  i:ln.rows[k], col:p.col, t:0 });
+    for(k=0;k<ln.cols.length;k++) sweeps.push({ row:false, i:ln.cols[k], col:p.col, t:0 });
+
+    var cx = 0, cy = 0;
+    for(k=0;k<list.length;k++){
+      x = list[k] % GRID;
+      y = (list[k] / GRID) | 0;
+      cx += x; cy += y;
+      clears.push({ x:x, y:y, col:grid[list[k]], flash:p.col, t:0,
+                    d: 0.055 * (Math.abs(x - gx - sh.w/2) + Math.abs(y - gy - sh.h/2)) * 0.5 });
+      burst(x, y, grid[list[k]], p.col);
+      grid[list[k]] = -1;
+      popT[list[k]] = 0;
+    }
+    cx = cx / list.length; cy = cy / list.length;
+
+    var gain = 0;
+    for(k=1;k<=total;k++) gain += 100 * k;
+    var mult = 1 + (combo - 1) * 0.5;
+    gain = Math.round(gain * mult / 10) * 10;
+    score += gain;
+
+    floats.push({ x:cx, y:cy, txt:"+" + gain, t:0, big:true, col:p.col });
+    if(combo > 1) floats.push({ x:cx, y:cy - 0.85, txt:"COMBO x" + combo, t:-0.09, big:false, col:p.col });
+    if(total > 1) floats.push({ x:cx, y:cy + 0.85, txt:total + " LINES!", t:-0.05, big:false, col:p.col });
+
+    shake = Math.min(0.22 + total*0.10, 0.6) * u * 0.16;
+    shakeT = 0.3;
+    sndClear(total, combo);
+  } else {
+    combo = 0;
+    sndDrop();
+  }
+
+  if(!tray[0] && !tray[1] && !tray[2]) refill();
+
+  if(score > best){
+    if(!newBest && best > 0) newBest = true;
+    best = score;
+    try { localStorage.setItem(BEST_KEY, String(best)); } catch(e){}
+  }
+
+  if(!anyMoves()) endGame();
+}
+
+function endGame(){
+  over = true;
+  elOScore.textContent = String(score);
+  elOBest.innerHTML = newBest ? "NEW BEST <b>" + best + "</b>" : "BEST <b>" + best + "</b>";
+  elOTitle.textContent = newBest ? "NEW HIGH SCORE" : "NO MOVES LEFT";
+  sndOver();
+  if(newBest) sndBest();
+  setTimeout(function(){ elOver.className = "show"; }, 520);
+}
+
+function reset(){
+  var i;
+  for(i=0;i<grid.length;i++){ grid[i] = -1; popT[i] = 0; }
+  score = 0; shown = 0; combo = 0; over = false; newBest = false;
+  drag = null; ret = null;
+  clears.length = 0; bursts.length = 0; sweeps.length = 0; floats.length = 0;
+  shake = 0; shakeT = 0;
+  refill();
+  elOver.className = "";
+}
+
+/* ---------------------------------------------------------------- effects */
+
+function burst(x, y, col, flash){
+  var n = 5, i, a, sp;
+  for(i=0;i<n;i++){
+    a = Math.random() * Math.PI * 2;
+    sp = (0.7 + Math.random()*1.9) * u;
+    bursts.push({
+      x:(x + 0.5) * u, y:(y + 0.5) * u,
+      vx:Math.cos(a) * sp, vy:Math.sin(a) * sp - u*1.1,
+      s:u * (0.12 + Math.random()*0.18),
+      col: Math.random() < 0.35 ? flash : col,
+      r:Math.random()*Math.PI, vr:(Math.random()-0.5)*9,
+      t:0, life:0.5 + Math.random()*0.35
+    });
+  }
+}
+
+/* ---------------------------------------------------------------- layout */
+
+function layout(){
+  var dpr = Math.min(window.devicePixelRatio || 1, 3);
+  W = stage.clientWidth;
+  H = stage.clientHeight;
+  cv.width  = Math.round(W * dpr);
+  cv.height = Math.round(H * dpr);
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  var pad = 14;
+  var UNITS = 3.0 + GRID + 0.55 + 2.75;          /* header + board + gap + tray */
+  u = Math.min((W - pad*2) / GRID, (H - pad*2) / UNITS, 76);
+
+  boardW = u * GRID;
+  boardX = (W - boardW) / 2;
+  var top = (H - u*UNITS) / 2;
+  if(top < pad*0.4) top = pad*0.4;
+  headY  = top;
+  boardY = top + u*3.0;
+  trayY  = boardY + boardW + u*0.55;
+  trayH  = u*2.75;
+
+  var bs = Math.max(34, Math.min(u*0.72, 50));
+  bSound.style.width = bNew.style.width = bs + "px";
+  bSound.style.height = bNew.style.height = bs + "px";
+  bSound.style.left = boardX + "px";
+  bNew.style.left = (boardX + boardW - bs) + "px";
+  bSound.style.top = bNew.style.top = (headY + u*0.1) + "px";
+}
+
+/* ---------------------------------------------------------------- drawing */
+
+function rrect(x,y,w,h,r){
+  if(r > w/2) r = w/2;
+  if(r > h/2) r = h/2;
+  g.beginPath();
+  g.moveTo(x+r, y);
+  g.lineTo(x+w-r, y);   g.quadraticCurveTo(x+w, y, x+w, y+r);
+  g.lineTo(x+w, y+h-r); g.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  g.lineTo(x+r, y+h);   g.quadraticCurveTo(x, y+h, x, y+h-r);
+  g.lineTo(x, y+r);     g.quadraticCurveTo(x, y, x+r, y);
+  g.closePath();
+}
+
+/* One candy cube filling the cell box at x,y of side `cell`. */
+function cube(x, y, cell, ci, alpha, sc, white){
+  var c = COLORS[ci], pad = cell*0.05, s = cell - pad*2, gr, fi;
+  x += pad; y += pad;
+  if(sc && sc !== 1){
+    x -= s*(sc-1)/2; y -= s*(sc-1)/2; s *= sc;
+  }
+  g.globalAlpha = alpha == null ? 1 : alpha;
+  var r = s*0.24;
+
+  g.fillStyle = c.lo;
+  rrect(x, y, s, s, r); g.fill();
+
+  fi = s*0.085;
+  gr = g.createLinearGradient(0, y+fi, 0, y+s-fi);
+  gr.addColorStop(0, c.hi);
+  gr.addColorStop(1, c.md);
+  g.fillStyle = gr;
+  rrect(x+fi, y+fi, s-fi*2, s-fi*2, r*0.78); g.fill();
+
+  g.fillStyle = "rgba(255,255,255,.30)";
+  rrect(x+fi*1.9, y+fi*1.5, s-fi*3.8, s*0.22, r*0.5); g.fill();
+
+  g.fillStyle = "rgba(0,0,0,.14)";
+  rrect(x+fi*1.6, y+s-fi*1.4-s*0.16, s-fi*3.2, s*0.16, r*0.5); g.fill();
+
+  if(white){
+    g.fillStyle = "rgba(255,255,255," + white + ")";
+    rrect(x, y, s, s, r); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+
+function piece(sh, ci, x, y, cell, alpha, sc){
+  for(var i=0;i<sh.c.length;i++){
+    cube(x + sh.c[i][0]*cell, y + sh.c[i][1]*cell, cell, ci, alpha, sc, 0);
+  }
+}
+
+function star(cx, cy, r){
+  var i, a, rr;
+  g.beginPath();
+  for(i=0;i<10;i++){
+    a = -Math.PI/2 + i*Math.PI/5;
+    rr = i % 2 ? r*0.46 : r;
+    if(i) g.lineTo(cx + Math.cos(a)*rr, cy + Math.sin(a)*rr);
+    else  g.moveTo(cx + Math.cos(a)*rr, cy + Math.sin(a)*rr);
+  }
+  g.closePath();
+  g.fill();
+}
+
+function text(str, x, y, size, weight, fill, align, shadow){
+  g.font = (weight||600) + " " + size + 'px "Fredoka","Trebuchet MS",sans-serif';
+  g.textAlign = align || "center";
+  g.textBaseline = "middle";
+  if(shadow){
+    g.fillStyle = "rgba(0,0,0,.34)";
+    g.fillText(str, x, y + size*0.075);
+  }
+  g.fillStyle = fill;
+  g.fillText(str, x, y);
+}
+
+function bg(){
+  var gr = g.createLinearGradient(0, 0, 0, H);
+  gr.addColorStop(0, "#2b3aa0");
+  gr.addColorStop(0.55, "#151c56");
+  gr.addColorStop(1, "#0b0f34");
+  g.fillStyle = gr;
+  g.fillRect(0, 0, W, H);
+
+  var rg = g.createRadialGradient(W/2, boardY + boardW*0.45, u*0.5, W/2, boardY + boardW*0.45, boardW*0.95);
+  rg.addColorStop(0, "rgba(120,160,255,.16)");
+  rg.addColorStop(1, "rgba(120,160,255,0)");
+  g.fillStyle = rg;
+  g.fillRect(0, 0, W, H);
+}
+
+/* ---------------------------------------------------------------- frame */
+
+var last = 0;
+
+function frame(now){
+  requestAnimationFrame(frame);
+  var dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
+  last = now;
+  step(dt);
+  draw(dt);
+}
+
+function step(dt){
+  var i;
+
+  shown += (score - shown) * Math.min(1, dt*9);
+  if(Math.abs(score - shown) < 0.6) shown = score;
+
+  for(i=0;i<grid.length;i++) if(popT[i] > 0) popT[i] = Math.max(0, popT[i] - dt*5.5);
+
+  if(shakeT > 0){ shakeT -= dt; if(shakeT <= 0) shake = 0; }
+
+  for(i=clears.length-1;i>=0;i--){
+    clears[i].t += dt;
+    if(clears[i].t - clears[i].d > 0.42) clears.splice(i,1);
+  }
+  for(i=sweeps.length-1;i>=0;i--){
+    sweeps[i].t += dt;
+    if(sweeps[i].t > 0.48) sweeps.splice(i,1);
+  }
+  for(i=bursts.length-1;i>=0;i--){
+    var b = bursts[i];
+    b.t += dt;
+    b.vy += u*7.5*dt;
+    b.x += b.vx*dt; b.y += b.vy*dt;
+    b.r += b.vr*dt;
+    if(b.t > b.life) bursts.splice(i,1);
+  }
+  for(i=floats.length-1;i>=0;i--){
+    floats[i].t += dt;
+    if(floats[i].t > 1.05) floats.splice(i,1);
+  }
+  if(ret){
+    ret.t += dt / 0.16;
+    if(ret.t >= 1) ret = null;
+  }
+}
+
+function draw(){
+  var i, x, y, c, sh, slotW, cs, px, py, k, a;
+  var T = performance.now() / 1000;
+
+  bg();
+
+  /* ---- header */
+  var bx = W/2, bt = "BEST  " + best, br = u*0.21, bgap = u*0.2;
+  g.font = '600 ' + (u*0.4) + 'px "Fredoka","Trebuchet MS",sans-serif';
+  var bw2 = g.measureText(bt).width;
+  var bl = bx - (br*2 + bgap + bw2)/2;
+  g.fillStyle = "#ffd23f";
+  star(bl + br, headY + u*0.62, br);
+  text(bt, bl + br*2 + bgap, headY + u*0.62, u*0.4, 600, "rgba(255,255,255,.82)", "left", 0);
+  text(String(Math.round(shown)), bx, headY + u*1.85, u*1.3, 700, "#ffffff", "center", 1);
+
+  if(combo > 1){
+    var cw = u*3.0, ch = u*0.62, cyp = headY + u*2.62;
+    var pulse = 1 + Math.sin(T*9) * 0.03;
+    g.save();
+    g.translate(bx, cyp); g.scale(pulse, pulse); g.translate(-bx, -cyp);
+    var cg = g.createLinearGradient(bx-cw/2, 0, bx+cw/2, 0);
+    cg.addColorStop(0, COLORS[sweeps.length ? sweeps[0].col : 3].md);
+    cg.addColorStop(1, COLORS[sweeps.length ? sweeps[0].col : 3].hi);
+    g.fillStyle = cg;
+    rrect(bx-cw/2, cyp-ch/2, cw, ch, ch/2); g.fill();
+    text("COMBO  x" + combo, bx, cyp + u*0.01, u*0.38, 700, "#fff", "center", 1);
+    g.restore();
+  }
+
+  /* ---- board (everything below shakes together) */
+  g.save();
+  if(shake > 0) g.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake);
+  g.translate(boardX, boardY);
+
+  var bp = u*0.16;
+  g.fillStyle = "rgba(10,14,52,.55)";
+  rrect(-bp, -bp, boardW+bp*2, boardW+bp*2, u*0.34); g.fill();
+  g.strokeStyle = "rgba(255,255,255,.10)";
+  g.lineWidth = Math.max(1, u*0.035);
+  rrect(-bp, -bp, boardW+bp*2, boardW+bp*2, u*0.34); g.stroke();
+
+  for(y=0;y<GRID;y++) for(x=0;x<GRID;x++){
+    g.fillStyle = "rgba(255,255,255,.075)";
+    rrect(x*u + u*0.05, y*u + u*0.05, u*0.9, u*0.9, u*0.2); g.fill();
+  }
+
+  /* line preview: the rows and columns this drop would clear, tinted with
+     the colour of the block being held */
+  var prev = null;
+  if(drag && drag.valid){
+    prev = linesAfter(drag.sh, drag.gx, drag.gy);
+    if(prev.rows.length + prev.cols.length > 0){
+      c = COLORS[drag.col];
+      a = 0.22 + Math.sin(T*8)*0.07;
+      for(k=0;k<prev.rows.length;k++) glowLine(0, prev.rows[k]*u, boardW, u, c, a);
+      for(k=0;k<prev.cols.length;k++) glowLine(prev.cols[k]*u, 0, u, boardW, c, a);
+    }
+  }
+
+  for(y=0;y<GRID;y++) for(x=0;x<GRID;x++){
+    c = grid[idx(x,y)];
+    if(c >= 0) cube(x*u, y*u, u, c, 1, 1 + popT[idx(x,y)]*0.16, 0);
+  }
+
+  /* the cells the held piece is about to land on */
+  if(drag && drag.valid){
+    sh = drag.sh;
+    g.strokeStyle = "rgba(255,255,255,.30)";
+    g.lineWidth = Math.max(1, u*0.03);
+    for(i=0;i<sh.c.length;i++){
+      x = (drag.gx + sh.c[i][0]) * u;
+      y = (drag.gy + sh.c[i][1]) * u;
+      cube(x, y, u, drag.col, 0.22, 0.94, 0);
+      rrect(x + u*0.05, y + u*0.05, u*0.9, u*0.9, u*0.2); g.stroke();
+    }
+  }
+
+  /* second pass over the same rows and columns, this time on top of the
+     blocks, so the whole line lights up in the held block's colour */
+  if(prev && prev.rows.length + prev.cols.length > 0){
+    c = COLORS[drag.col];
+    a = 0.30 + Math.sin(T*8)*0.09;
+    g.globalCompositeOperation = "lighter";
+    g.globalAlpha = a;
+    g.fillStyle = c.md;
+    for(k=0;k<prev.rows.length;k++){ rrect(u*0.04, prev.rows[k]*u + u*0.04, boardW - u*0.08, u*0.92, u*0.22); g.fill(); }
+    for(k=0;k<prev.cols.length;k++){ rrect(prev.cols[k]*u + u*0.04, u*0.04, u*0.92, boardW - u*0.08, u*0.22); g.fill(); }
+    g.globalCompositeOperation = "source-over";
+    g.globalAlpha = Math.min(1, a*2.4);
+    g.strokeStyle = c.gl;
+    g.lineWidth = Math.max(1.4, u*0.055);
+    for(k=0;k<prev.rows.length;k++){ rrect(u*0.04, prev.rows[k]*u + u*0.04, boardW - u*0.08, u*0.92, u*0.22); g.stroke(); }
+    for(k=0;k<prev.cols.length;k++){ rrect(prev.cols[k]*u + u*0.04, u*0.04, u*0.92, boardW - u*0.08, u*0.22); g.stroke(); }
+    g.globalAlpha = 1;
+  }
+
+  /* the clear sweep itself, in the colour of the block that triggered it */
+  for(k=0;k<sweeps.length;k++){
+    var s = sweeps[k], p = s.t / 0.48;
+    c = COLORS[s.col];
+    a = (1 - p) * 0.85;
+    if(s.row) glowLine(0, s.i*u, boardW, u, c, a * 0.55);
+    else      glowLine(s.i*u, 0, u, boardW, c, a * 0.55);
+    /* a bright core racing along the line */
+    var len = boardW * 0.34, at = (boardW + len) * Math.min(1, p*1.5) - len;
+    g.globalAlpha = a;
+    var lg;
+    if(s.row){
+      lg = g.createLinearGradient(at, 0, at+len, 0);
+      lg.addColorStop(0, "rgba(255,255,255,0)");
+      lg.addColorStop(0.5, c.gl);
+      lg.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = lg;
+      rrect(Math.max(0,at), s.i*u + u*0.06, Math.min(len, boardW-Math.max(0,at)), u*0.88, u*0.2); g.fill();
+    } else {
+      lg = g.createLinearGradient(0, at, 0, at+len);
+      lg.addColorStop(0, "rgba(255,255,255,0)");
+      lg.addColorStop(0.5, c.gl);
+      lg.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = lg;
+      rrect(s.i*u + u*0.06, Math.max(0,at), u*0.88, Math.min(len, boardW-Math.max(0,at)), u*0.2); g.fill();
+    }
+    g.globalAlpha = 1;
+  }
+
+  /* cubes flying apart */
+  for(k=0;k<clears.length;k++){
+    var cl = clears[k], t = cl.t - cl.d;
+    if(t < 0) { cube(cl.x*u, cl.y*u, u, cl.col, 1, 1, 0); continue; }
+    var q = Math.min(1, t/0.42);
+    cube(cl.x*u, cl.y*u, u, cl.col, 1-q, 1 + q*0.55, Math.max(0, 0.85 - q*2.2));
+  }
+
+  for(k=0;k<bursts.length;k++){
+    var b2 = bursts[k], bq = 1 - b2.t/b2.life;
+    g.save();
+    g.globalAlpha = Math.max(0, bq);
+    g.translate(b2.x, b2.y);
+    g.rotate(b2.r);
+    g.fillStyle = COLORS[b2.col].md;
+    rrect(-b2.s/2, -b2.s/2, b2.s, b2.s, b2.s*0.28); g.fill();
+    g.restore();
+  }
+  g.globalAlpha = 1;
+
+  for(k=0;k<floats.length;k++){
+    var f = floats[k];
+    if(f.t < 0) continue;
+    var fq = f.t / 1.05;
+    g.globalAlpha = fq < 0.12 ? fq/0.12 : Math.max(0, 1 - (fq-0.12)/0.88);
+    var fs = (f.big ? u*0.78 : u*0.48) * (1 + Math.min(0.35, fq*1.6) * (f.big ? 0.28 : 0.2));
+    text(f.txt, (f.x+0.5)*u, (f.y+0.5)*u - fq*u*1.7, fs, 700,
+         f.big ? "#ffffff" : COLORS[f.col].gl, "center", 1);
+    g.globalAlpha = 1;
+  }
+
+  g.restore();
+
+  /* ---- tray */
+  slotW = boardW/3;
+  for(i=0;i<3;i++){
+    if(!tray[i] || (drag && drag.slot === i)) continue;
+    sh = tray[i].sh;
+    cs = Math.min(u*0.58, (slotW - u*0.3)/sh.w, (trayH - u*0.3)/sh.h);
+    px = boardX + slotW*i + (slotW - sh.w*cs)/2;
+    py = trayY + (trayH - sh.h*cs)/2;
+    var dead = !fitsAnywhere(sh);
+    if(ret && ret.slot === i){
+      var rt = ret.t, ez = 1 - Math.pow(1-rt, 3);
+      var rx = ret.x + (px - ret.x)*ez, ry = ret.y + (py - ret.y)*ez;
+      var rc = ret.cs + (cs - ret.cs)*ez;
+      piece(sh, tray[i].col, rx, ry, rc, 1, 1);
+    } else {
+      piece(sh, tray[i].col, px, py, cs, dead ? 0.42 : 1, 1);
+    }
+  }
+
+  /* ---- the piece in hand */
+  if(drag){
+    sh = drag.sh;
+    var gs = drag.g0 + (1 - drag.g0) * Math.min(1, (performance.now() - drag.t0)/90);
+    var cw2 = u*gs;
+    if(drag.valid){
+      px = boardX + drag.gx*u;
+      py = boardY + drag.gy*u;
+      cw2 = u;
+    } else {
+      px = drag.px - sh.w*cw2/2;
+      py = drag.py - sh.h*cw2/2 - drag.lift;
+    }
+    drag.rx += (px - drag.rx) * 0.5;
+    drag.ry += (py - drag.ry) * 0.5;
+    drag.rc += (cw2 - drag.rc) * 0.5;
+    px = drag.rx; py = drag.ry; cw2 = drag.rc;
+    g.save();
+    g.shadowColor = "rgba(0,0,0,.45)";
+    g.shadowBlur = u*0.5;
+    g.shadowOffsetY = u*0.22;
+    piece(sh, drag.col, px, py, cw2, 1, 1);
+    g.restore();
+  }
+}
+
+function glowLine(x, y, w, h, c, a){
+  g.globalAlpha = a;
+  g.fillStyle = c.md;
+  rrect(x + u*0.04, y + u*0.04, w - u*0.08, h - u*0.08, u*0.22); g.fill();
+  g.globalAlpha = a*0.9;
+  g.strokeStyle = c.gl;
+  g.lineWidth = Math.max(1.2, u*0.05);
+  rrect(x + u*0.04, y + u*0.04, w - u*0.08, h - u*0.08, u*0.22); g.stroke();
+  g.globalAlpha = 1;
+}
+
+/* ---------------------------------------------------------------- input */
+
+function pos(e){
+  var r = cv.getBoundingClientRect();
+  return { x:e.clientX - r.left, y:e.clientY - r.top };
+}
+
+function trayCell(sh){
+  var slotW = boardW/3;
+  return Math.min(u*0.58, (slotW - u*0.3)/sh.w, (trayH - u*0.3)/sh.h);
+}
+
+function slotAt(p){
+  var slotW = boardW/3, i;
+  if(p.y < trayY - u*0.3 || p.y > trayY + trayH + u*0.3) return -1;
+  i = Math.floor((p.x - boardX) / slotW);
+  return (i < 0 || i > 2) ? -1 : i;
+}
+
+function updateDrag(){
+  var pw = drag.sh.w * u, ph = drag.sh.h * u;
+  drag.gx = Math.round((drag.px - pw/2 - boardX) / u);
+  drag.gy = Math.round((drag.py - ph/2 - drag.lift - boardY) / u);
+  drag.valid = fits(drag.sh, drag.gx, drag.gy);
+}
+
+function onDown(e){
+  audioInit();
+  if(over || drag) return;
+  var p = pos(e), i = slotAt(p);
+  if(i < 0 || !tray[i]) return;
+  touchMode = (e.pointerType === "touch");
+  var sh = tray[i].sh, cs = trayCell(sh);
+  drag = {
+    slot:i, sh:sh, col:tray[i].col, pid:e.pointerId,
+    px:p.x, py:p.y,
+    lift: touchMode ? u*1.05 : 0,
+    g0: cs/u, t0: performance.now(),
+    rx: p.x - sh.w*cs/2, ry: p.y - sh.h*cs/2, rc: cs,
+    gx:0, gy:0, valid:false
+  };
+  ret = null;
+  updateDrag();
+  if(cv.setPointerCapture) { try { cv.setPointerCapture(e.pointerId); } catch(err){} }
+  sndPick();
+  e.preventDefault();
+}
+
+function onMove(e){
+  if(!drag || e.pointerId !== drag.pid) return;
+  var p = pos(e);
+  drag.px = p.x; drag.py = p.y;
+  updateDrag();
+  e.preventDefault();
+}
+
+function onUp(e){
+  if(!drag || e.pointerId !== drag.pid) return;
+  var d = drag;
+  drag = null;
+  if(d.valid){
+    place(d.slot, d.gx, d.gy);
+  } else {
+    ret = { slot: d.slot, t: 0, cs: d.rc, x: d.rx, y: d.ry };
+    if(d.py - d.lift < trayY) sndDeny();
+  }
+  e.preventDefault();
+}
+
+cv.addEventListener("pointerdown", onDown, { passive:false });
+cv.addEventListener("pointermove", onMove, { passive:false });
+cv.addEventListener("pointerup", onUp, { passive:false });
+cv.addEventListener("pointercancel", onUp, { passive:false });
+cv.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+window.addEventListener("pointerup", onUp, { passive:false });
+window.addEventListener("blur", function(){ if(drag){ ret = { slot:drag.slot, t:0, cs:drag.rc, x:drag.rx, y:drag.ry }; drag = null; } });
+
+window.addEventListener("keydown", function(e){
+  if(e.key === "m" || e.key === "M"){ audioInit(); setMuted(!muted); }
+  if(e.key === "r" || e.key === "R"){ audioInit(); reset(); }
+});
+
+bSound.addEventListener("click", function(){ audioInit(); setMuted(!muted); });
+bNew.addEventListener("click", function(){ audioInit(); reset(); });
+bAgain.addEventListener("click", function(){ audioInit(); reset(); });
+
+window.addEventListener("resize", layout);
+if(window.visualViewport) window.visualViewport.addEventListener("resize", layout);
+window.addEventListener("orientationchange", function(){ setTimeout(layout, 120); });
+
+/* ---------------------------------------------------------------- boot */
+
+try {
+  var b = parseInt(localStorage.getItem(BEST_KEY), 10);
+  if(b === b && b > 0) best = b;
+} catch(e){}
+
+setMuted(muted);
+layout();
+reset();
+
+if(document.fonts && document.fonts.load){
+  document.fonts.load('700 40px "Fredoka"').then(function(){}, function(){});
+}
+
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
