@@ -159,6 +159,87 @@
   .stats span{color:#8a7e70;letter-spacing:.1em;font-family:var(--pixel);font-size:.9em}
   .stats b{font-weight:700;font-variant-numeric:tabular-nums;color:var(--bone)}
 
+  /* ---------------- touch controls ---------------- */
+  body{-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+  body.touch{-webkit-user-select:none;user-select:none}
+  body.touch #game{touch-action:none}
+  body.touch .dashrow{display:none}
+  body.touch .hud-r{right:5.2em}
+  body.touch #keys-kb{display:none}
+  #keys-touch{display:none}
+  body.touch #keys-touch{display:flex}
+  @media (orientation:portrait){
+    body.touch #stage{align-items:start;padding-top:env(safe-area-inset-top)}
+  }
+
+  #pad{
+    position:fixed;inset:0;pointer-events:none;display:none;z-index:5;
+    font-family:var(--pixel);font-size:var(--pui,15px);
+  }
+  body.touch #pad.on{display:block}
+
+  .zone{
+    position:absolute;bottom:env(safe-area-inset-bottom);height:52%;width:46%;
+    pointer-events:auto;touch-action:none;
+  }
+  .zone.l{left:env(safe-area-inset-left)}
+  .zone.r{right:env(safe-area-inset-right)}
+  .base{
+    position:absolute;width:7.6em;height:7.6em;margin:-3.8em 0 0 -3.8em;border-radius:50%;
+    border:2px solid var(--edge);background:rgba(25,21,18,.45);
+    opacity:.6;transition:opacity 140ms,background 140ms;
+  }
+  .knob{
+    position:absolute;left:50%;top:50%;width:3.2em;height:3.2em;margin:-1.6em 0 0 -1.6em;
+    border-radius:50%;border:2px solid var(--bone);background:rgba(232,223,200,.2);
+    transition:background 140ms;
+  }
+  .base .cap{            /* sits above the ring so the knob never covers it */
+    position:absolute;left:0;right:0;top:-1.9em;text-align:center;
+    font-size:.6em;letter-spacing:.16em;color:#7b7064;transition:opacity 140ms;
+  }
+  .zone.on .base{opacity:1;background:rgba(25,21,18,.72);transition:opacity 140ms,background 140ms}
+  .zone.on .cap{opacity:0}
+  .zone.on .knob{background:rgba(232,223,200,.34)}
+  .zone.r .knob{border-color:var(--amber);background:rgba(240,168,48,.18)}
+  .zone.r.on .knob{background:rgba(240,168,48,.36)}
+
+  #dashbtn{
+    position:absolute;pointer-events:auto;touch-action:none;
+    right:calc(env(safe-area-inset-right) + 8.3em);
+    bottom:calc(env(safe-area-inset-bottom) + 7.9em);
+    width:4.6em;height:4.6em;border-radius:50%;
+    border:2px solid var(--edge);background:rgba(25,21,18,.6);
+    display:grid;place-items:center;overflow:hidden;
+  }
+  #dashbtn .fill{
+    position:absolute;inset:0;background:var(--amber);opacity:.16;
+    transform-origin:50% 100%;transform:scaleY(0);
+  }
+  #dashbtn .txt{
+    position:relative;font-size:.62em;letter-spacing:.12em;color:#7b7064;transition:color 120ms;
+  }
+  #dashbtn.rdy{border-color:var(--amber);background:rgba(240,168,48,.16)}
+  #dashbtn.rdy .fill{opacity:0}
+  #dashbtn.rdy .txt{color:var(--amber)}
+  #dashbtn.hit{transform:scale(.9)}
+
+  #pausebtn{
+    position:absolute;pointer-events:auto;touch-action:manipulation;
+    top:calc(env(safe-area-inset-top) + .7em);right:calc(env(safe-area-inset-right) + .7em);
+    width:2.4em;height:2.4em;border:2px solid var(--edge);background:rgba(25,21,18,.6);
+    display:grid;place-items:center;gap:0;
+  }
+  #pausebtn::before,#pausebtn::after{
+    content:"";width:.24em;height:1em;background:var(--bone);opacity:.75;
+    grid-area:1/1;
+  }
+  #pausebtn::before{transform:translateX(-.3em)}
+  #pausebtn::after{transform:translateX(.3em)}
+
+  #b-mute2{display:none}
+  body.touch #b-mute2{display:inline-block}
+
   @media (max-width:560px){
     .cards{gap:.5em}
     .card{width:9em;min-height:9.5em;padding:.7em .55em}
@@ -195,13 +276,18 @@
       <h1 class="title">SCRAPLINE</h1>
       <p class="lede">The yard&rsquo;s drones went bad three shifts ago. They come in from every bearing, they do not stop, and there is no extraction. Hold the line as long as you can.</p>
       <div class="row"><button id="b-play">PLAY</button><button class="ghost" id="b-mute">SOUND: ON</button></div>
-      <div class="keys">
+      <div class="keys" id="keys-kb">
         <div><b>WASD</b>move</div>
         <div><b>MOUSE</b>aim</div>
         <div><b>CLICK</b>fire</div>
         <div><b>SPACE</b>dash</div>
         <div><b>ESC</b>pause</div>
         <div><b>M</b>mute</div>
+      </div>
+      <div class="keys" id="keys-touch">
+        <div><b>LEFT STICK</b>move</div>
+        <div><b>RIGHT STICK</b>aim &amp; fire</div>
+        <div><b>DASH</b>burst</div>
       </div>
       <div class="best" id="menubest">NO RUNS LOGGED</div>
     </div>
@@ -236,10 +322,17 @@
           <div class="stats2" id="p-stats"></div>
         </div>
       </div>
-      <div class="row"><button id="b-resume">RESUME</button><button class="ghost" id="b-quit">ABANDON RUN</button></div>
+      <div class="row"><button id="b-resume">RESUME</button><button class="ghost" id="b-mute2">SOUND: ON</button><button class="ghost" id="b-quit">ABANDON RUN</button></div>
     </div>
 
   </div>
+</div>
+
+<div id="pad">
+  <div class="zone l" id="zl"><div class="base" id="bl"><span class="cap">MOVE</span><i class="knob"></i></div></div>
+  <div class="zone r" id="zr"><div class="base" id="br"><span class="cap">FIRE</span><i class="knob"></i></div></div>
+  <div id="dashbtn"><span class="fill" id="dashfill"></span><span class="txt">DASH</span></div>
+  <div id="pausebtn"></div>
 </div>
 
 <script>
@@ -567,6 +660,10 @@ function resize(){
   cv.style.width = cssW + "px"; cv.style.height = cssH + "px";
   frame.style.width = cssW + "px"; frame.style.height = cssH + "px";
   frame.style.setProperty("--ui", Math.max(11, Math.round(cssW / 40)) + "px");
+  if (pad){
+    pad.style.setProperty("--pui", Math.max(12, Math.min(24, Math.round(Math.min(vw, vh) / 26))) + "px");
+    layoutPad();
+  }
   ctx.imageSmoothingEnabled = false;
 }
 window.addEventListener("resize", resize);
@@ -581,7 +678,7 @@ function toLogical(e){
 window.addEventListener("mousemove", toLogical);
 cv.addEventListener("mousedown", function(e){ if (e.button === 0){ toLogical(e); mouse.down = true; } });
 window.addEventListener("mouseup", function(e){ if (e.button === 0) mouse.down = false; });
-window.addEventListener("blur", function(){ mouse.down = false; keys = {}; });
+window.addEventListener("blur", function(){ mouse.down = false; keys = {}; releaseTouch(); });
 cv.addEventListener("contextmenu", function(e){ e.preventDefault(); });
 window.addEventListener("keydown", function(e){
   keys[e.key.toLowerCase()] = true;
@@ -591,6 +688,125 @@ window.addEventListener("keydown", function(e){
   if (state === "upgrade" && "123".indexOf(e.key) > -1) chooseUpgrade(+e.key - 1);
 });
 window.addEventListener("keyup", function(e){ keys[e.key.toLowerCase()] = false; });
+
+/* ---------------- touch controls ----------------
+   Two floating sticks: left drives movement (analogue), right aims and fires
+   while deflected. The dash button sits up-and-inboard of the fire stick, one
+   base-radius clear of it so a resting thumb cannot trip it.
+   Each stick owns the pointer that grabbed it, so both track independently. */
+var TOUCH = false, dashHeld = false;
+var pad = document.getElementById("pad");
+var dashBtn = document.getElementById("dashbtn");
+var dashFill = document.getElementById("dashfill");
+
+function mkStick(zoneId, baseId, left){
+  var st = {
+    zone: document.getElementById(zoneId),
+    base: document.getElementById(baseId),
+    knob: null, left: left, id: -1, rad: 40,
+    hx: 0, hy: 0, cx: 0, cy: 0,
+    x: 0, y: 0, mag: 0, ang: -Math.PI / 2
+  };
+  st.knob = st.base.getElementsByClassName("knob")[0];
+  st.zone.addEventListener("pointerdown", function(e){ stickDown(st, e); });
+  st.zone.addEventListener("pointermove", function(e){ stickMove(st, e); });
+  st.zone.addEventListener("pointerup", function(e){ stickUp(st, e); });
+  st.zone.addEventListener("pointercancel", function(e){ stickUp(st, e); });
+  return st;
+}
+var stickL = mkStick("zl", "bl", true);
+var stickR = mkStick("zr", "br", false);
+var STICKS = [stickL, stickR];
+
+function restStick(st){
+  st.base.style.left = st.hx + "px";
+  st.base.style.top = st.hy + "px";
+  st.knob.style.transform = "";
+  st.zone.classList.remove("on");
+  st.x = 0; st.y = 0; st.mag = 0;
+}
+function layoutPad(){
+  for (var i = 0; i < STICKS.length; i++){
+    var st = STICKS[i];
+    var zr = st.zone.getBoundingClientRect();
+    if (!zr.width || !zr.height) continue;      /* pad hidden — lay out when shown */
+    st.rad = (st.base.offsetWidth || 76) / 2;
+    var gap = st.rad * 0.45;
+    st.hx = st.left ? st.rad + gap : zr.width - st.rad - gap;
+    st.hy = zr.height - st.rad - gap;
+    if (st.id < 0) restStick(st);
+  }
+}
+function stickDown(st, e){
+  if (st.id >= 0) return;
+  st.id = e.pointerId;
+  try { st.zone.setPointerCapture(e.pointerId); } catch (err) {}
+  st.zone.classList.add("on");
+  var zr = st.zone.getBoundingClientRect();
+  /* origin is the exact touch point, never clamped — clamping it would offset the
+     finger from the centre and register a deflection the player did not make */
+  st.cx = e.clientX - zr.left;
+  st.cy = e.clientY - zr.top;
+  st.base.style.left = st.cx + "px";
+  st.base.style.top = st.cy + "px";
+  stickMove(st, e);
+}
+function stickMove(st, e){
+  if (e.pointerId !== st.id) return;
+  var zr = st.zone.getBoundingClientRect();
+  var dx = (e.clientX - zr.left) - st.cx, dy = (e.clientY - zr.top) - st.cy;
+  var d = Math.hypot(dx, dy), maxr = st.rad * 0.78, dead = st.rad * 0.17;
+  var kx = dx, ky = dy;
+  if (d > maxr){ kx = dx / d * maxr; ky = dy / d * maxr; }
+  st.knob.style.transform = "translate(" + kx.toFixed(1) + "px," + ky.toFixed(1) + "px)";
+  if (d <= dead){ st.x = 0; st.y = 0; st.mag = 0; return; }
+  st.ang = Math.atan2(dy, dx);                  /* kept after release, so aim holds */
+  st.mag = Math.min(1, (d - dead) / (maxr - dead) * 1.12);
+  st.x = Math.cos(st.ang) * st.mag;
+  st.y = Math.sin(st.ang) * st.mag;
+}
+function stickUp(st, e){
+  if (e.pointerId !== st.id) return;
+  st.id = -1;
+  try { st.zone.releasePointerCapture(e.pointerId); } catch (err) {}
+  restStick(st);
+}
+function releaseTouch(){
+  dashHeld = false;
+  dashBtn.classList.remove("hit");
+  for (var i = 0; i < STICKS.length; i++){ STICKS[i].id = -1; restStick(STICKS[i]); }
+}
+
+dashBtn.addEventListener("pointerdown", function(e){
+  e.preventDefault();
+  dashHeld = true;
+  dashBtn.classList.add("hit");
+  try { dashBtn.setPointerCapture(e.pointerId); } catch (err) {}
+});
+function dashRelease(){ dashHeld = false; dashBtn.classList.remove("hit"); }
+dashBtn.addEventListener("pointerup", dashRelease);
+dashBtn.addEventListener("pointercancel", dashRelease);
+document.getElementById("pausebtn").addEventListener("pointerdown", function(e){
+  e.preventDefault(); togglePause();
+});
+
+function syncPad(which){
+  var on = TOUCH && which === null;
+  pad.classList.toggle("on", on);
+  if (on) layoutPad(); else releaseTouch();
+}
+function enableTouch(){
+  if (TOUCH) return;
+  TOUCH = true;
+  document.body.classList.add("touch");
+  mouse.down = false;
+  resize();
+  syncPad(state === "play" ? null : state);
+}
+window.addEventListener("touchstart", enableTouch, true);
+document.addEventListener("visibilitychange", function(){
+  if (document.hidden && state === "play") togglePause();
+});
 
 /* ---------------- enemy roster ---------------- */
 var TYPES = {
@@ -777,7 +993,7 @@ function newRun(){
   for (var i = 0; i < UPGRADES.length; i++) lvl[UPGRADES[i].id] = 0;
   recalc();
   player = { x:W/2, y:H/2, ang:0, hp:S.maxhp, cool:0, recoil:0, iframe:0,
-             dashT:0, dashCd:0, step:0, adrnT:0, kx:0, ky:0, saves:0, hitSet:[], hbT:0 };
+             dashT:0, dashCd:0, ddx:0, ddy:0, step:0, adrnT:0, kx:0, ky:0, saves:0, hitSet:[], hbT:0 };
   enemies = []; bullets = []; ebullets = []; parts = []; casings = [];
   pickups = []; floats = []; teles = []; decals = [];
   drones = []; rings = []; arcs = []; mortars = [];
@@ -1051,14 +1267,20 @@ function updPlayer(dt){
   var ay = ((keys.s || keys.arrowdown) ? 1 : 0) - ((keys.w || keys.arrowup) ? 1 : 0);
   var len = Math.hypot(ax, ay);
   if (len > 0){ ax /= len; ay /= len; }
+  if (TOUCH && stickL.mag > 0){ ax = stickL.x; ay = stickL.y; len = stickL.mag; }
 
   player.dashCd -= dt; player.dashT -= dt;
-  if (keys[" "] && player.dashCd <= 0 && (ax || ay)){
+  /* on touch a dash with no move input goes where you are aiming */
+  var ddx = ax, ddy = ay;
+  if (TOUCH && !ddx && !ddy){ ddx = Math.cos(player.ang); ddy = Math.sin(player.ang); }
+  if ((keys[" "] || dashHeld) && player.dashCd <= 0 && (ddx || ddy)){
     player.dashT = 0.16; player.dashCd = S.dashcd;
+    player.ddx = ddx; player.ddy = ddy;
     player.hitSet.length = 0;
     burst(player.x, player.y, 7, "#e8dfc8", 40);
     SFX.dash();
   }
+  if (TOUCH && player.dashT > 0 && !ax && !ay){ ax = player.ddx; ay = player.ddy; len = 1; }
   var spd = S.speed * (player.dashT > 0 ? 3.2 : 1);
   player.x += ax * spd * dt + player.kx * dt;
   player.y += ay * spd * dt + player.ky * dt;
@@ -1068,7 +1290,7 @@ function updPlayer(dt){
   if (player.dashT > 0 && rnd() < 0.6) burst(player.x, player.y, 1, "#b3a68d", 12);
   if (len > 0) player.step += dt * 7;
 
-  player.ang = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+  player.ang = TOUCH ? stickR.ang : Math.atan2(mouse.y - player.y, mouse.x - player.x);
   player.recoil = Math.max(0, player.recoil - dt * 22);
   player.iframe -= dt;
   player.adrnT -= dt;
@@ -1099,7 +1321,7 @@ function updPlayer(dt){
 
   var rate = S.rate * (player.adrnT > 0 ? 1 + 0.30 * lvl.adrn : 1);
   player.cool -= dt;
-  if (mouse.down && player.cool <= 0){ fire(); player.cool = 1 / rate; }
+  if ((TOUCH ? stickR.mag > 0 : mouse.down) && player.cool <= 0){ fire(); player.cool = 1 / rate; }
 }
 
 function updEnemies(dt){
@@ -1657,9 +1879,10 @@ var el = {};
 function show(which){
   for (var k in SCREENS) document.getElementById(SCREENS[k]).classList.toggle("on", k === which);
   el.hud.classList.toggle("on", which === null || which === "paused" || which === "upgrade");
+  syncPad(which);
 }
 
-var lastHp = -1, lastWave = -1, lastKills = -1, lastDash = -1;
+var lastHp = -1, lastWave = -1, lastKills = -1, lastDash = -1, lastDashF = -1;
 function syncHud(){
   var hp = Math.max(0, Math.round(player.hp));
   if (hp !== lastHp){
@@ -1678,6 +1901,14 @@ function syncHud(){
     var kids = el.dashpips.children;
     for (var i = 0; i < kids.length; i++) kids[i].className = i < pips ? "rdy" : "";
     el.dlabel.classList.toggle("rdy", pips >= 4);
+  }
+  if (TOUCH){
+    var df = player.dashCd <= 0 ? 1 : Math.max(0, (S.dashcd - player.dashCd) / S.dashcd);
+    if (Math.abs(df - lastDashF) > 0.02 || (df >= 1) !== (lastDashF >= 1)){
+      lastDashF = df;
+      dashFill.style.transform = "scaleY(" + df.toFixed(2) + ")";
+      dashBtn.classList.toggle("rdy", df >= 1);
+    }
   }
 }
 
@@ -1729,6 +1960,7 @@ function paintPause(){
 function paintMute(){
   var t = muted ? "OFF" : "ON";
   var b = document.getElementById("b-mute"); if (b) b.textContent = "SOUND: " + t;
+  var b2 = document.getElementById("b-mute2"); if (b2) b2.textContent = "SOUND: " + t;
   var h = document.getElementById("hsnd"); if (h) h.textContent = t;
 }
 
@@ -1750,7 +1982,7 @@ function openUpgrades(){
               '<span class="nm">' + u.nm + '</span>' +
               '<span class="ds">' + u.ds + '</span>' +
               '<span class="pips">' + pips + '</span>' +
-              '<span class="key">PRESS ' + (j + 1) + '</span>' +
+              '<span class="key">' + (TOUCH ? "TAP" : "PRESS " + (j + 1)) + '</span>' +
             '</button>';
   }
   el["up-cards"].innerHTML = html;
@@ -1834,7 +2066,7 @@ function gameOver(){
 }
 
 function togglePause(){
-  if (state === "play"){ state = "paused"; mouse.down = false; paintPause(); show("paused"); }
+  if (state === "play"){ state = "paused"; mouse.down = false; releaseTouch(); paintPause(); show("paused"); }
   else if (state === "paused"){ state = "play"; show(null); }
 }
 function toMenu(){
@@ -1847,6 +2079,7 @@ function toMenu(){
 document.getElementById("b-play").addEventListener("click", function(){ audioInit(); SFX.click(); startRun(null); });
 document.getElementById("b-again").addEventListener("click", function(){ audioInit(); SFX.click(); startRun(null); });
 document.getElementById("b-mute").addEventListener("click", function(){ audioInit(); setMuted(!muted); SFX.click(); });
+document.getElementById("b-mute2").addEventListener("click", function(){ audioInit(); setMuted(!muted); SFX.click(); });
 window.addEventListener("pointerdown", function(){ audioInit(); }, true);
 document.getElementById("b-menu").addEventListener("click", toMenu);
 document.getElementById("b-resume").addEventListener("click", togglePause);
@@ -1893,6 +2126,7 @@ function snap(){
 function start(data){
   buildSprites();
   buildFloor();
+  if (window.matchMedia && window.matchMedia("(hover:none) and (pointer:coarse)").matches) enableTouch();
   resize();
   loadBest();
   audioLoad();

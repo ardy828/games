@@ -4,10 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Two browser games, each a **single self-contained HTML file** — no build step, no dependencies, no
-bundler, no package.json. `scrapline/index.html` (~1900 lines) and `challenger-deep/index.html`
-(~650 lines) each hold their own markup, CSS and JS. The repo root `index.html` is a landing page
-indexing both; `README.md` documents controls.
+One browser game, a **single self-contained HTML file** — no build step, no dependencies, no
+bundler, no package.json. `scrapline/index.html` (~2150 lines) holds its own markup, CSS and JS.
+The repo root `index.html` is a landing page linking to it; `README.md` documents controls.
 
 Nothing is compiled or transpiled. Editing a file *is* deploying it.
 
@@ -17,10 +16,10 @@ There is no test suite, linter, or build. **This machine has no JS runtime** —
 bun — so `node --check` is unavailable and the only real verification is loading the page in a browser.
 
 ```bash
-# run a game locally (localStorage misbehaves over file://, so use http://)
+# run the game locally (localStorage misbehaves over file://, so use http://)
 cd scrapline && python3 -m http.server 8000     # then open localhost:8000
 
-# run from the repo root to get the landing page and click through to either game
+# run from the repo root to get the landing page and click through to the game
 python3 -m http.server 8000
 
 # deploy: main is the GitHub Pages branch, served from /
@@ -29,17 +28,17 @@ git add -A && git commit -m "..." && git push   # live at ardy828.github.io/game
 
 Before handing over an edit you cannot load in a browser, at minimum verify statically: bracket
 balance with strings/comments stripped, that every `getElementById` id exists in the markup, and that
-every called identifier is defined. A silent typo in one of these files breaks the entire game, since
-it is one script block.
+every called identifier is defined. A silent typo breaks the entire game, since it is one script
+block.
 
 ## Publishing to Claude Artifacts
 
-The local files are the **source of truth**. The Artifact copies are derived: strip the
+The local file is the **source of truth**. The Artifact copy is derived: strip the
 `<!doctype>/<html>/<head>/<body>` wrapper (the artifact runtime supplies its own, and rejects the
 tags), keeping everything from `<title>` through `</script>`. Never hand-edit a published copy —
 regenerate it from the local file, or the two silently diverge.
 
-Both games guard their `window.claude.hot` calls, so they run identically as a plain static page.
+The game guards its `window.claude.hot` calls, so it runs identically as a plain static page.
 
 ## Scrapline architecture
 
@@ -103,6 +102,31 @@ which `resize()` sizes to match the canvas rect; `--ui` scales all overlay type 
 `show(name)` toggles screens, where `null` means "playing". Adding a screen means adding to `SCREENS`
 and the `el` id list.
 
+### Touch controls
+
+`TOUCH` is the single switch. It flips on at boot for `(hover:none) and (pointer:coarse)`, or on the
+first `touchstart` anywhere, and everything else keys off it:
+
+- `#pad` is a viewport-sized fixed overlay **outside `#stage`**, not inside `#frame`. That is deliberate:
+  `#frame` is only as big as the canvas, so sticks parented to it would sit on the arena. From the
+  viewport, the same CSS puts them in the side letterbox in landscape and in the dead space below the
+  arena in portrait (where `#stage` switches to `align-items:start`).
+- Both sticks **float** — `stickDown()` moves the base to wherever the thumb landed. `layoutPad()` caches
+  each stick's home centre and radius from its zone rect, so it must run whenever the pad becomes visible
+  (`syncPad()`) or the viewport changes (`resize()`); a hidden pad measures zero and is skipped.
+- Each stick owns one `pointerId` and takes a pointer capture, so the two track independently and a drag
+  that leaves the zone keeps working.
+- `stickR.ang` is deliberately **not** reset on release, so the player keeps facing where you last aimed.
+  `stickR.mag > 0` is the fire trigger — aim and fire are the same gesture.
+- Touch reads into `updPlayer()` at exactly three points: movement (`stickL` overrides WASD), aim, and
+  fire. Every desktop path is left byte-for-byte intact behind `TOUCH ?` guards.
+- Dash with no move input is the one behaviour that genuinely differs: on touch it dashes along
+  `player.ang` and stores that heading in `player.ddx/ddy` for the whole 0.16s, because there is no
+  "hold a direction key while tapping" on a thumbstick.
+
+Anything that strands a held control must call `releaseTouch()` — pause, blur, and `visibilitychange`
+already do. Miss it and the player fires forever.
+
 ### Audio
 
 Fully synthesised via Web Audio — no files, nothing fetched. `audioInit()` must be triggered by a user
@@ -110,18 +134,8 @@ gesture (browsers block audio otherwise); it is wired to the PLAY button and a c
 `pointerdown`. **Gate anything that can fire many times per frame** with `gate(key, ms)` or a swarm
 dying at once stacks dozens of voices into clipping.
 
-## Challenger Deep architecture
-
-Tiles are objects owning a DOM element, positioned by `transform: translate()` in **pixels computed by
-`layout()`** — not CSS percentages, which resolve against the element's own size inside `translate()`
-and break. `layout()` re-measures on resize and repositions every tile.
-
-Merging moves the absorbed tile onto its target, then removes it after the transition; the surviving
-tile doubles and replays its pop animation (the class is removed and reflowed to restart it). Undo is a
-whole-board snapshot and rebuild, not a reverse animation.
-
 ## Conventions
 
-Both files are ES5 by choice — `var`, no arrow functions, no template literals — wrapped in a single
-IIFE with `"use strict"`. Keep that style: these files are commonly edited by exact-match string
-replacement, and consistent syntax keeps those edits predictable.
+The file is ES5 by choice — `var`, no arrow functions, no template literals — wrapped in a single
+IIFE with `"use strict"`. Keep that style: it is commonly edited by exact-match string replacement,
+and consistent syntax keeps those edits predictable.
