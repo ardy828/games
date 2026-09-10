@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Games</title>
+<meta name="description" content="Two browser games, each a single self-contained HTML file.">
+<meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Chivo+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#0f0f11;
+    --panel:#17171a;
+    --edge:#2a2a30;
+    --ink:#e6e3dd;
+    --muted:#8d8a84;
+    --rust:#c8552e;
+    --amber:#f0a830;
+    --teal:#4ef2c8;
+    --pixel:"Silkscreen","Courier New",monospace;
+    --mono:"Chivo Mono",ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--ground);color:var(--ink);font-family:var(--mono);
+    min-height:100vh;padding-inline:20px;padding-block:56px 64px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
+  .eyebrow{font-family:var(--pixel);font-size:.66rem;letter-spacing:.28em;color:var(--muted)}
+  h1{font-family:var(--pixel);font-weight:700;font-size:clamp(1.9rem,6vw,2.6rem);letter-spacing:.04em;line-height:1}
+  .lede{font-size:.84rem;line-height:1.75;color:var(--muted);max-width:56ch}
+  .lede b{color:var(--ink);font-weight:500}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}
+  a.card{
+    display:flex;flex-direction:column;gap:11px;
+    background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--accent);
+    padding:22px 22px 24px;text-decoration:none;color:inherit;
+    transition:background 140ms,border-color 140ms,transform 140ms;
+  }
+  a.card:hover{background:#1d1d21;border-color:var(--accent);transform:translateY(-2px)}
+  a.card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .card .nm{font-family:var(--pixel);font-weight:700;font-size:1.05rem;letter-spacing:.05em;color:var(--accent)}
+  .card .kind{font-family:var(--pixel);font-size:.6rem;letter-spacing:.2em;color:var(--muted)}
+  .card p{font-size:.75rem;line-height:1.7;color:var(--muted)}
+  .card .go{font-family:var(--pixel);font-size:.66rem;letter-spacing:.14em;color:var(--ink);margin-top:auto}
+  .scrapline{--accent:var(--amber)}
+  .deep{--accent:var(--teal)}
+  footer{
+    font-size:.7rem;line-height:1.8;color:var(--muted);
+    border-top:1px solid var(--edge);padding-top:18px;
+  }
+  footer code{background:var(--panel);border:1px solid var(--edge);padding:.1em .4em;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:12px">
+    <p class="eyebrow">BROWSER GAMES</p>
+    <h1>Games</h1>
+    <p class="lede">Two games, each a <b>single self-contained HTML file</b> — no build step, no dependencies, no bundler. Open the file and it runs. Click either one to play.</p>
+  </header>
+
+  <div class="grid">
+    <a class="card scrapline" href="scrapline/">
+      <span class="kind">TOP-DOWN SHOOTER</span>
+      <span class="nm">SCRAPLINE</span>
+      <p>Hold a scrapyard against malfunctioning salvage drones closing from every bearing. Mouse-aimed, endless procedurally varied waves, 26 upgrades picked three at a time, and a boss with four attacks. Sound is synthesised in the browser.</p>
+      <span class="go">PLAY →</span>
+    </a>
+    <a class="card deep" href="challenger-deep/">
+      <span class="kind">SLIDING PUZZLE</span>
+      <span class="nm">CHALLENGER DEEP</span>
+      <p>Every tile is a depth in metres. Merge equal depths to sink from the sunlight zone toward the trench floor at 10,935 m, watching the pressure gauge climb and the ocean zones change around you.</p>
+      <span class="go">PLAY →</span>
+    </a>
+  </div>
+
+  <footer>
+    Run either locally with <code>python3 -m http.server 8000</code> from its folder, then open <code>localhost:8000</code>.
+    Both are plain static HTML, so any web host will serve them as-is.
+  </footer>
+</div>
+</body>
+</html>
