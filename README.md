@@ -3,9 +3,11 @@
 A browser game in a **single self-contained HTML file** — no build step, no dependencies,
 no bundler. Open the file in a browser and it runs.
 
-| Game | Type | Folder |
-|---|---|---|
-| **Scrapline** | Top-down arena shooter | [`scrapline/`](scrapline/) |
+**▶ Play it: <https://ardy828.github.io/games/>**
+
+| Game | Type | Play | Folder |
+|---|---|---|---|
+| **Scrapline** | Top-down arena shooter | [Play](https://ardy828.github.io/games/scrapline/) | [`scrapline/`](scrapline/) |
 
 ## Scrapline
 
@@ -37,6 +39,9 @@ Then open <http://localhost:8000>. Opening the file directly over `file://` most
 `localStorage` behaves inconsistently there, so the high scores are more reliable over `http://`.
 
 ## Hosting
+
+Live on GitHub Pages at <https://ardy828.github.io/games/>, served from the root of `main` —
+pushing to `main` deploys.
 
 Plain static HTML — any static host will serve it unchanged. Drop the folder on Cloudflare
 Pages or Netlify, or upload `index.html` to the web root of any shared host.
