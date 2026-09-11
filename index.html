@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Games</title>
-<meta name="description" content="Browser games, each a single self-contained HTML file.">
+<title>Addict Games</title>
+<meta name="description" content="Browser games: Scrapline and Block Blast.">
 <meta name="color-scheme" content="dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,10 +28,7 @@
     -webkit-font-smoothing:antialiased;
   }
   .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
-  .eyebrow{font-family:var(--pixel);font-size:.66rem;letter-spacing:.28em;color:var(--muted)}
   h1{font-family:var(--pixel);font-weight:700;font-size:clamp(1.9rem,6vw,2.6rem);letter-spacing:.04em;line-height:1}
-  .lede{font-size:.84rem;line-height:1.75;color:var(--muted);max-width:56ch}
-  .lede b{color:var(--ink);font-weight:500}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}
   a.card{
     display:flex;flex-direction:column;gap:11px;
@@ -44,45 +41,29 @@
   a.card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   .card .nm{font-family:var(--pixel);font-weight:700;font-size:1.05rem;letter-spacing:.05em;color:var(--accent)}
   .card .kind{font-family:var(--pixel);font-size:.6rem;letter-spacing:.2em;color:var(--muted)}
-  .card p{font-size:.75rem;line-height:1.7;color:var(--muted)}
   .card .go{font-family:var(--pixel);font-size:.66rem;letter-spacing:.14em;color:var(--ink);margin-top:auto}
   .scrapline{--accent:var(--amber)}
   .blockblast{--accent:#5aa9f7}
-  footer{
-    font-size:.7rem;line-height:1.8;color:var(--muted);
-    border-top:1px solid var(--edge);padding-top:18px;
-  }
-  footer code{background:var(--panel);border:1px solid var(--edge);padding:.1em .4em;color:var(--ink)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header style="display:flex;flex-direction:column;gap:12px">
-    <p class="eyebrow">BROWSER GAMES</p>
-    <h1>Games</h1>
-    <p class="lede">Each one is a <b>single self-contained HTML file</b> — no build step, no dependencies, no bundler. Open the file and it runs. Click one to play.</p>
-  </header>
+  <h1>ADDICT GAMES</h1>
 
   <div class="grid">
     <a class="card scrapline" href="scrapline/">
       <span class="kind">TOP-DOWN SHOOTER</span>
       <span class="nm">SCRAPLINE</span>
-      <p>Hold a scrapyard against malfunctioning salvage drones closing from every bearing. Mouse-aimed on desktop, twin-stick on touch, with endless procedurally varied waves, 26 upgrades picked three at a time, and a boss with four attacks. Sound is synthesised in the browser.</p>
       <span class="go">PLAY →</span>
     </a>
 
     <a class="card blockblast" href="blockblast/">
       <span class="kind">GRID PUZZLE</span>
       <span class="nm">BLOCK BLAST</span>
-      <p>Drag pieces onto an 8×8 grid and fill whole rows and columns to blast them away. 42 block shapes, eight colours, and a combo multiplier for clearing on consecutive drops. The lines you are about to clear light up in the colour of the piece in your hand. Sound is synthesised in the browser.</p>
       <span class="go">PLAY →</span>
     </a>
   </div>
 
-  <footer>
-    Run them locally with <code>python3 -m http.server 8000</code> from the repo root, then open <code>localhost:8000</code>.
-    They are plain static HTML, so any web host will serve them as-is.
-  </footer>
 </div>
 </body>
 </html>
