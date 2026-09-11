@@ -240,6 +240,20 @@
   #b-mute2{display:none}
   body.touch #b-mute2{display:inline-block}
 
+  /* ---------------- admin panel ---------------- */
+  [hidden]{display:none!important}
+  #b-dbg{position:absolute;right:0;bottom:0;width:2.6em;height:2.6em;padding:0;opacity:0;box-shadow:none}
+  #s-dbg{justify-content:flex-start;overflow-y:auto;gap:.8em;color-scheme:dark}
+  #s-dbg input{font:inherit;font-size:.9em;width:5.5em;background:#241d18;color:var(--bone);border:1px solid var(--edge);padding:.2em .35em}
+  #s-dbg button{font-size:.72em;padding:.4em .9em}
+  .dbg{display:flex;flex-direction:column;gap:.8em;width:100%;max-width:46em}
+  .dbg-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(12.5em,1fr));gap:.35em .9em;font-size:.72em}
+  .dbg-g>*{display:flex;align-items:center;gap:.4em;border-bottom:1px solid var(--edge);padding-bottom:.25em}
+  .dbg-g span{flex:1;font-family:var(--pixel);letter-spacing:.06em;color:#8a7e70}
+  .dbg-g b{min-width:2.4em;text-align:center;font-variant-numeric:tabular-nums}
+  .dbg-g .ovr span{color:var(--amber)}
+  #s-dbg .dbg-g button{font-size:1em;padding:.1em .55em}
+
   @media (max-width:560px){
     .cards{gap:.5em}
     .card{width:9em;min-height:9.5em;padding:.7em .55em}
@@ -323,6 +337,14 @@
         </div>
       </div>
       <div class="row"><button id="b-resume">RESUME</button><button class="ghost" id="b-mute2">SOUND: ON</button><button class="ghost" id="b-quit">ABANDON RUN</button></div>
+      <button id="b-dbg" tabindex="-1" aria-label="Admin"></button>
+    </div>
+
+    <div class="screen" id="s-dbg">
+      <div class="head">ADMIN</div>
+      <form class="row" id="d-lock"><input id="d-pw" type="password" inputmode="numeric" autocomplete="off" placeholder="CODE" aria-label="Admin code"><button>UNLOCK</button></form>
+      <div class="dbg" id="d-panel" hidden></div>
+      <div class="row"><button id="d-resume">RESUME</button><button class="ghost" id="d-back">BACK</button></div>
     </div>
 
   </div>
@@ -654,9 +676,12 @@ function buildFloor(){
 function resize(){
   var dpr = window.devicePixelRatio || 1;
   var vw = window.innerWidth, vh = window.innerHeight;
-  scale = Math.max(1, Math.floor(Math.min(vw * dpr / W, vh * dpr / H)));
-  cv.width = W * scale; cv.height = H * scale;
-  cssW = (W * scale) / dpr; cssH = (H * scale) / dpr;
+  var fit = Math.min(vw * dpr / W, vh * dpr / H);
+  /* touch fills the screen: at phone DPRs whole-number steps are too coarse
+     (a 2.6 DPR phone fits 2.8, which floors to 2 and throws away a quarter of the arena) */
+  scale = Math.max(1, TOUCH ? fit : Math.floor(fit));
+  cv.width = Math.round(W * scale); cv.height = Math.round(H * scale);
+  cssW = cv.width / dpr; cssH = cv.height / dpr;
   cv.style.width = cssW + "px"; cv.style.height = cssH + "px";
   frame.style.width = cssW + "px"; frame.style.height = cssH + "px";
   frame.style.setProperty("--ui", Math.max(11, Math.round(cssW / 40)) + "px");
@@ -681,6 +706,7 @@ window.addEventListener("mouseup", function(e){ if (e.button === 0) mouse.down =
 window.addEventListener("blur", function(){ mouse.down = false; keys = {}; releaseTouch(); });
 cv.addEventListener("contextmenu", function(e){ e.preventDefault(); });
 window.addEventListener("keydown", function(e){
+  if (e.target.tagName === "INPUT" && e.key !== "Escape") return;
   keys[e.key.toLowerCase()] = true;
   if (e.key === " " || e.key.indexOf("Arrow") === 0) e.preventDefault();
   if (e.key === "Escape") togglePause();
@@ -956,6 +982,7 @@ var player, enemies, bullets, ebullets, parts, casings, pickups, floats, teles, 
 var drones, rings, arcs, mortars;
 var wave, kills, runTime, spawnQueue, waveMod, shots, shake, redFlash, mist, waveEndT;
 var lvl = {}, S = {}, offers = [];
+var dbg = {}, dbgUsed = false;     // admin stat overrides, laid over S by recalc()
 var best = { wave:0, kills:0 };
 
 function recalc(){
@@ -985,12 +1012,14 @@ function recalc(){
   S.strike  = L.strike;
   S.drones  = L.orbit;
   S.dashcd  = Math.max(0.55, 1.2 - 0.15 * L.strike);
+  for (var k in dbg) S[k] = dbg[k];
 }
 
 function newRun(){
   setSeed((Math.random() * 0xFFFFFFFF) >>> 0);
   runSeed = seed;
   for (var i = 0; i < UPGRADES.length; i++) lvl[UPGRADES[i].id] = 0;
+  dbg = {}; dbgUsed = false;
   recalc();
   player = { x:W/2, y:H/2, ang:0, hp:S.maxhp, cool:0, recoil:0, iframe:0,
              dashT:0, dashCd:0, ddx:0, ddy:0, step:0, adrnT:0, kx:0, ky:0, saves:0, hitSet:[], hbT:0 };
@@ -1008,7 +1037,7 @@ function startWave(){
   wave++;
   setSeed((runSeed ^ Math.imul(wave, 0x9E3779B9)) >>> 0);
   var boss = wave % 10 === 0;
-  var budget = Math.round(4 + wave * 2 + Math.pow(wave, 1.28));
+  var budget = Math.round((4 + wave * 2 + Math.pow(wave, 1.28)) * (1 + 0.04 * late()));
   waveMod = (!boss && wave >= 4 && rnd() < 0.5) ? pick(MODS) : null;
   if (boss) budget = Math.round(budget * 0.4);
 
@@ -1047,18 +1076,22 @@ function startWave(){
   showBanner();
 }
 
+/* waves past 100: regular drones hit harder and crowd in thicker */
+function late(){ return Math.max(0, wave - 100); }
+
 function spawnEnemy(key, ang, scaleUp){
-  var T = TYPES[key];
+  var T = TYPES[key], boss = key === "hulk", tier = Math.max(1, Math.floor(wave / 10));
   var hpMul = 1 + 0.07 * (wave - 1), spdMul = Math.min(1.5, 1 + 0.018 * (wave - 1));
   if (waveMod){
     if (waveMod.nm === "SWARM")   hpMul *= 0.5;
     if (waveMod.nm === "ARMORED"){ hpMul *= 1.6; spdMul *= 0.82; }
     if (waveMod.nm === "FRENZY")  spdMul *= 1.35;
   }
-  var hp = Math.max(1, Math.round(T.hp * hpMul * (scaleUp || 1)));
+  var hp = Math.max(1, Math.round(T.hp * hpMul * (scaleUp || 1) * (boss ? Math.pow(1.35, tier - 1) : 1)));
   var e = {
     key:key, spr:T.spr, x: W/2 + Math.cos(ang) * (W/2 + 20), y: H/2 + Math.sin(ang) * (H/2 + 20),
-    hp:hp, maxhp:hp, r:T.r, spd:T.spd * spdMul, dmg:T.dmg, ang:ang + Math.PI,
+    hp:hp, maxhp:hp, r:T.r, spd:T.spd * spdMul,
+    dmg: boss ? T.dmg + 4 * (tier - 1) : T.dmg * (1 + 0.12 * late()), ang:ang + Math.PI,
     frame:0, ft:rr(0, 0.4), flash:0, kx:0, ky:0, phase:rr(0, 6.2832),
     shootT:rr(0.8, 2.2), chargeT:2.5, charging:0, wind:0, addT:5, child:false, next:"charge"
   };
@@ -1073,35 +1106,40 @@ function bossPick(e, d){
   if (d < 95) opts.push("slam");
   return pick(opts);
 }
+/* enraged: every attack queues its follow-up on a short windup; follow-ups don't chain.
+   A charge's follow-up only starts winding once the charge ends. */
+var COMBO = { charge:"slam", slam:"flak", flak:"mortar", mortar:"charge" };
 function bossFire(e, ux, uy){
-  var i, a;
-  if (e.next === "charge"){
+  var i, a, tier = Math.floor(wave / 10), now = e.next;
+  if (e.enraged) e.combo = !e.combo;
+  if (e.combo){ e.next = COMBO[now]; e.wind = e.windMax = 0.45; SFX.warn(); }
+  if (now === "charge"){
     e.cang = Math.atan2(uy, ux);
     e.charging = 0.8;
     addShake(2.5);
     SFX.slug();
     return;
   }
-  if (e.next === "slam"){
-    rings.push({ x:e.x, y:e.y, r:9, max:80, dmg:15 + wave * 0.4, hit:[], foe:true, hitP:false });
+  if (now === "slam"){
+    rings.push({ x:e.x, y:e.y, r:9, max:80 + 3 * tier, dmg:15 + wave * 0.4, hit:[], foe:true, hitP:false });
     burst(e.x, e.y, 24, "#5d6b70", 95);
     addShake(6);
     SFX.shock();
     return;
   }
-  if (e.next === "flak"){
-    var n = 10 + Math.min(8, Math.floor(wave / 10) * 2);
+  if (now === "flak"){
+    var n = 10 + Math.min(16, tier * 2);
     var base = Math.atan2(uy, ux);
     for (i = 0; i < n; i++){
       a = base + (i / n) * 6.2832;
       ebullets.push({ x:e.x + Math.cos(a) * 13, y:e.y + Math.sin(a) * 13,
-        vx:Math.cos(a) * 72, vy:Math.sin(a) * 72, dmg:9, life:3.2, col:"#ff8a3a" });
+        vx:Math.cos(a) * 72, vy:Math.sin(a) * 72, dmg:9 + tier, life:3.2, col:"#ff8a3a" });
     }
     addShake(3);
     SFX.slug();
     return;
   }
-  var m = 3 + Math.min(3, Math.floor(wave / 10));
+  var m = 3 + Math.min(5, tier);
   for (i = 0; i < m; i++){
     mortars.push({
       x: Math.max(MINX, Math.min(MAXX, player.x + rr(-28, 28))),
@@ -1219,7 +1257,7 @@ function killEnemy(e, i){
   if (waveMod && waveMod.nm === "VOLATILE"){
     for (var b = 0; b < 5; b++){
       var a = (b / 5) * 6.2832 + rr(0, 1);
-      ebullets.push({ x:e.x, y:e.y, vx:Math.cos(a) * 62, vy:Math.sin(a) * 62, dmg:8, life:1.1, col:"#ff8a3a" });
+      ebullets.push({ x:e.x, y:e.y, vx:Math.cos(a) * 62, vy:Math.sin(a) * 62, dmg:8 * (1 + 0.12 * late()), life:1.1, col:"#ff8a3a" });
     }
   }
   SFX[e.key === "hulk" ? "bigkill" : "kill"]();
@@ -1360,6 +1398,12 @@ function updEnemies(dt){
         burst(e.x + ux * 8, e.y + uy * 8, 3, "#6fcf6a", 30);
       }
     } else if (e.key === "hulk"){
+      if (!e.enraged && wave >= 50 && e.hp < e.maxhp / 2){
+        e.enraged = true;
+        bannerText("HULK ENRAGED", "attacks now come <em>in pairs</em>");
+        addShake(5);
+        SFX.boss();
+      }
       if (e.charging > 0){
         e.charging -= dt;
         e.x += Math.cos(e.cang) * 122 * dt; e.y += Math.sin(e.cang) * 122 * dt;
@@ -1373,7 +1417,7 @@ function updEnemies(dt){
           e.next = bossPick(e, d);
           e.wind = e.next === "charge" ? 0.7 : 0.85;
           e.windMax = e.wind;
-          e.chargeT = Math.max(1.8, rr(3.2, 4.6) - wave * 0.02);
+          e.chargeT = Math.max(1.1, rr(3.2, 4.6) - wave * 0.025);
           SFX.warn();
         }
         e.x += ux * sp * dt; e.y += uy * sp * dt;
@@ -1382,7 +1426,7 @@ function updEnemies(dt){
       e.addT -= dt;
       if (e.addT <= 0 && enemies.length < 30){
         e.addT = 6.5;
-        for (var a2 = 0; a2 < 2; a2++){
+        for (var a2 = 0; a2 < 2 + Math.floor(wave / 30); a2++){
           var ch = spawnEnemy("crawler", 0, 0.8);
           ch.x = e.x + rr(-14, 14); ch.y = e.y + rr(-14, 14); ch.child = true; ch.entered = true;
         }
@@ -1555,7 +1599,7 @@ function updWave(dt){
       SFX.warn();
     }
   }
-  while (spawnQueue.length && waveT >= spawnQueue[0].at && enemies.length < 34){
+  while (spawnQueue.length && waveT >= spawnQueue[0].at && enemies.length < 34 + Math.min(30, 3 * late())){
     q = spawnQueue.shift();
     spawnEnemy(q.t, q.ang, 1);
   }
@@ -1870,7 +1914,7 @@ function renderMenu(dt){
 
 /* ---------------- screens + hud ---------------- */
 var runSeed = 0;
-var SCREENS = { menu:"s-menu", upgrade:"s-up", over:"s-over", paused:"s-pause" };
+var SCREENS = { menu:"s-menu", upgrade:"s-up", over:"s-over", paused:"s-pause", debug:"s-dbg" };
 var el = {};
 ["hud","hpbar","hpfill","hpnum","hpmax","dashpips","dlabel","hwave","hkills",
  "banner","bn","bm","up-eyebrow","up-cards","over-wave","o-kills","o-time",
@@ -1921,8 +1965,9 @@ function bannerText(main, sub){
   bannerTimer = setTimeout(function(){ el.banner.classList.remove("on"); }, 1700);
 }
 function showBanner(){
-  bannerText(wave % 10 === 0 ? "WAVE " + wave + " — HULK" : "WAVE " + wave,
-             waveMod ? waveMod.nm + " <em>·</em> " + waveMod.note : "");
+  var sub = waveMod ? waveMod.nm + " <em>·</em> " + waveMod.note : "";
+  if (late()) sub = "<em>OVERTIME +" + late() + "</em>" + (sub ? " · " + sub : "");
+  bannerText(wave % 10 === 0 ? "WAVE " + wave + " — HULK" : "WAVE " + wave, sub);
 }
 function paintPause(){
   var load = document.getElementById("p-load");
@@ -2028,6 +2073,13 @@ function fmtTime(t){
   return m + ":" + (s < 10 ? "0" : "") + s;
 }
 
+function gotoWave(n){
+  wave = Math.max(0, n - 1);
+  enemies.length = 0; bullets.length = 0; ebullets.length = 0;
+  teles.length = 0; pickups.length = 0; spawnQueue.length = 0; mortars.length = 0;
+  startWave();
+}
+
 function startRun(resume){
   newRun();
   if (resume){
@@ -2035,10 +2087,7 @@ function startRun(resume){
     for (var k in resume.lvl) if (k in lvl) lvl[k] = resume.lvl[k];
     recalc();
     kills = resume.kills || 0;
-    wave = Math.max(0, (resume.wave || 1) - 1);
-    enemies.length = 0; bullets.length = 0; ebullets.length = 0;
-    teles.length = 0; pickups.length = 0; spawnQueue.length = 0; mortars.length = 0;
-    startWave();
+    gotoWave(resume.wave || 1);
     player.hp = Math.min(S.maxhp, resume.hp || S.maxhp);
   }
   lastHp = lastWave = lastKills = lastDash = -1;
@@ -2052,7 +2101,7 @@ function gameOver(){
   SFX.over();
   burst(player.x, player.y, 34, "#e8dfc8", 110);
   addShake(7);
-  if (wave > best.wave || (wave === best.wave && kills > best.kills)){
+  if (!dbgUsed && (wave > best.wave || (wave === best.wave && kills > best.kills))){
     best = { wave: wave, kills: kills };
     saveBest();
   }
@@ -2084,6 +2133,93 @@ window.addEventListener("pointerdown", function(){ audioInit(); }, true);
 document.getElementById("b-menu").addEventListener("click", toMenu);
 document.getElementById("b-resume").addEventListener("click", togglePause);
 document.getElementById("b-quit").addEventListener("click", function(){ gameOver(); });
+
+/* ---------------- admin panel ----------------
+   Opened from an invisible button in the pause screen's bottom-right corner.
+   The code is a speed bump, not security: it sits in plain text right here.
+   Any use flags the run so it cannot set a best. */
+var dbgOpen = false;
+var dPanel = document.getElementById("d-panel");
+function fmtN(v){ return String(Math.round(v * 1000) / 1000); }
+
+function paintDebug(){
+  document.getElementById("d-lock").hidden = dbgOpen;
+  dPanel.hidden = !dbgOpen;
+  if (!dbgOpen){ document.getElementById("d-pw").focus(); return; }
+  var h = '<div class="panel"><h4>WAVE</h4><div class="row">' +
+          '<input id="d-wave" type="number" min="1" value="' + wave + '"><button data-act="wave">GO</button></div></div>';
+
+  h += '<div class="panel"><h4>SPAWN</h4><div class="row"><input id="d-n" type="number" min="1" max="100" value="1" aria-label="Spawn count">';
+  for (var t in TYPES) h += '<button class="ghost" data-spawn="' + t + '">' + t.toUpperCase() + '</button>';
+  h += '</div></div>';
+
+  h += '<div class="panel"><h4>UPGRADES</h4><div class="row" style="margin-bottom:.7em">' +
+       '<button class="ghost" data-act="max">MAX ALL</button><button class="ghost" data-act="clear">CLEAR ALL</button></div><div class="dbg-g">';
+  for (var i = 0; i < UPGRADES.length; i++){
+    var u = UPGRADES[i];
+    h += '<div><span>' + u.nm + '</span>' +
+         '<button class="ghost" data-u="' + u.id + '" data-m="' + u.max + '" data-d="-1">&minus;</button>' +
+         '<b>' + lvl[u.id] + '/' + u.max + '</b>' +
+         '<button class="ghost" data-u="' + u.id + '" data-m="' + u.max + '" data-d="1">+</button></div>';
+  }
+  h += '</div></div>';
+
+  h += '<div class="panel"><h4>STATS &middot; BLANK A FIELD TO UNLOCK IT</h4><div class="row" style="margin-bottom:.7em">' +
+       '<button class="ghost" data-act="reset">RESET OVERRIDES</button></div><div class="dbg-g">' +
+       '<label><span>HP NOW</span><input type="number" step="any" data-s="hp" value="' + fmtN(player.hp) + '"></label>';
+  for (var k in S){
+    h += '<label' + (k in dbg ? ' class="ovr"' : '') + '><span>' + k.toUpperCase() + '</span>' +
+         '<input type="number" step="any" data-s="' + k + '" value="' + fmtN(S[k]) + '"></label>';
+  }
+  dPanel.innerHTML = h + '</div></div>';
+}
+
+dPanel.addEventListener("click", function(e){
+  var b = e.target.closest ? e.target.closest("button") : null;
+  if (!b) return;
+  var i, act = b.getAttribute("data-act"), id = b.getAttribute("data-u"), sp = b.getAttribute("data-spawn");
+  dbgUsed = true;
+  SFX.click();
+  if (sp){
+    var n = Math.max(1, Math.min(100, Math.floor(+document.getElementById("d-n").value) || 1));
+    for (i = 0; i < n; i++) spawnEnemy(sp, Math.random() * 6.2832, 1);
+    return;
+  }
+  if (id) lvl[id] = Math.max(0, Math.min(+b.getAttribute("data-m"), lvl[id] + +b.getAttribute("data-d")));
+  if (act === "max" || act === "clear") for (i = 0; i < UPGRADES.length; i++) lvl[UPGRADES[i].id] = act === "max" ? UPGRADES[i].max : 0;
+  if (act === "reset") dbg = {};
+  if (act === "wave") gotoWave(Math.max(1, Math.floor(+document.getElementById("d-wave").value) || 1));
+  recalc();
+  player.hp = Math.min(player.hp, S.maxhp);
+  lastHp = -1;
+  paintDebug();
+});
+dPanel.addEventListener("change", function(e){
+  var k = e.target.getAttribute("data-s");
+  if (!k) return;
+  var v = parseFloat(e.target.value);
+  dbgUsed = true;
+  if (k === "hp"){ if (!isNaN(v)) player.hp = v; }
+  else {
+    if (isNaN(v)) delete dbg[k]; else dbg[k] = v;
+    recalc();
+    e.target.value = fmtN(S[k]);
+    e.target.parentNode.classList.toggle("ovr", k in dbg);
+  }
+  player.hp = Math.max(1, Math.min(player.hp, S.maxhp));
+  lastHp = -1;
+});
+document.getElementById("d-lock").addEventListener("submit", function(e){
+  e.preventDefault();
+  var pw = document.getElementById("d-pw");
+  dbgOpen = pw.value === "6062";
+  pw.value = "";
+  pw.placeholder = dbgOpen ? "CODE" : "DENIED";
+  paintDebug();
+});
+document.getElementById("b-dbg").addEventListener("click", function(){ show("debug"); paintDebug(); });
+document.getElementById("d-back").addEventListener("click", function(){ paintPause(); show("paused"); });
+document.getElementById("d-resume").addEventListener("click", togglePause);
 
 /* ---------------- main loop ---------------- */
 var last = 0;

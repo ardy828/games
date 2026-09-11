@@ -37,7 +37,8 @@ Hold a scrapyard against malfunctioning salvage drones converging from every bea
   and the dash button sits beside the fire stick. Both sticks float, so they plant wherever your thumb
   lands rather than at a fixed spot. Pause is the button in the top-right corner. Touch controls switch
   themselves on for coarse pointers; landscape gives the larger arena, portrait keeps the sticks off it.
-- Fixed 384×240 logical resolution, integer-scaled to the window so the pixels stay square at any size.
+- Fixed 384×240 logical resolution, integer-scaled to the window so the pixels stay square at any size
+  (touch screens scale fractionally instead, so the arena fills the phone).
   Sprites are authored as character maps in the source and baked to canvases at boot.
 - Six enemy types unlock on a schedule; a hulk boss every tenth wave picks between a charge, a ground
   slam, a flak ring and mortar strikes.

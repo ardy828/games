@@ -64,7 +64,8 @@ knowing before touching any drawing code:
 - Sprite rotation happens at 1px resolution, which is *why* rotated sprites look chunky. Rendering
   sprites directly to the upscaled canvas instead would lose that look.
 - `resize()` folds `devicePixelRatio` into the integer scale so backing pixels map 1:1 to device
-  pixels. Don't set canvas dimensions anywhere else.
+  pixels — except on touch, where the scale is fractional so the arena fills the phone (whole-number
+  steps at a 2.6 DPR waste a quarter of the width). Don't set canvas dimensions anywhere else.
 - Mouse input is divided back into logical space in `toLogical()`.
 - `blit()` rounds translation to integers to keep the pixel grid aligned.
 
@@ -164,6 +165,9 @@ canvas — the only DOM is two icon buttons and the game-over panel, positioned 
 `UNITS` tall in multiples of `u`, so the whole screen scales from that one value and every position
 in the file is written as a multiple of it. Change a vertical proportion and you must change `UNITS`
 to match, or the layout stops being centred.
+
+Phones (`W < 500`) are width-bound, so there the side margin shrinks to just the board frame's lip and
+tray pieces draw at `pieceK` = 0.7u instead of 0.58u, using the spare height.
 
 ### Board coordinates vs screen coordinates
 

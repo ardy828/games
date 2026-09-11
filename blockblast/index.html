@@ -202,7 +202,7 @@ var shake = 0, shakeT = 0;
 var touchMode = false;
 
 /* layout, recomputed on resize */
-var W=0, H=0, u=0, boardX=0, boardY=0, boardW=0, trayY=0, trayH=0, headY=0;
+var W=0, H=0, u=0, boardX=0, boardY=0, boardW=0, trayY=0, trayH=0, headY=0, pieceK=0.58;
 
 /* ---------------------------------------------------------------- audio */
 
@@ -510,9 +510,12 @@ function layout(){
   cv.height = Math.round(H * dpr);
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  var pad = 14;
+  /* phones are width-bound: trade the side margin for board (keeping room for the
+     frame's 0.16u lip each side) and grow the tray pieces into the spare height */
+  var narrow = W < 500, pad = narrow ? 3 : 14;
   var UNITS = 3.0 + GRID + 0.55 + 2.75;          /* header + board + gap + tray */
-  u = Math.min((W - pad*2) / GRID, (H - pad*2) / UNITS, 76);
+  u = Math.min((W - pad*2) / (narrow ? GRID + 0.32 : GRID), (H - pad*2) / UNITS, 76);
+  pieceK = narrow ? 0.7 : 0.58;
 
   boardW = u * GRID;
   boardX = (W - boardW) / 2;
@@ -836,7 +839,7 @@ function draw(){
   for(i=0;i<3;i++){
     if(!tray[i] || (drag && drag.slot === i)) continue;
     sh = tray[i].sh;
-    cs = Math.min(u*0.58, (slotW - u*0.3)/sh.w, (trayH - u*0.3)/sh.h);
+    cs = Math.min(u*pieceK, (slotW - u*0.3)/sh.w, (trayH - u*0.3)/sh.h);
     px = boardX + slotW*i + (slotW - sh.w*cs)/2;
     py = trayY + (trayH - sh.h*cs)/2;
     var dead = !fitsAnywhere(sh);
@@ -896,7 +899,7 @@ function pos(e){
 
 function trayCell(sh){
   var slotW = boardW/3;
-  return Math.min(u*0.58, (slotW - u*0.3)/sh.w, (trayH - u*0.3)/sh.h);
+  return Math.min(u*pieceK, (slotW - u*0.3)/sh.w, (trayH - u*0.3)/sh.h);
 }
 
 function slotAt(p){
