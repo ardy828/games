@@ -110,6 +110,8 @@
   }
   .best{font-family:var(--pixel);font-size:.72em;letter-spacing:.14em;color:#7b7064}
   .best b{color:var(--amber);font-weight:400}
+  .trophy{width:4.5em;height:auto;image-rendering:crisp-edges;image-rendering:pixelated;animation:trophy 2.4s ease-in-out infinite}
+  @keyframes trophy{0%,100%{filter:drop-shadow(0 0 .2em #f0a830)}50%{filter:drop-shadow(0 0 .8em #ffd93b) brightness(1.15)}}
 
   /* ---------------- upgrade cards ---------------- */
   .cards{display:flex;gap:.7em;flex-wrap:wrap;justify-content:center;max-width:100%}
@@ -125,6 +127,8 @@
   .card:nth-child(1){animation-delay:40ms}
   .card:nth-child(2){animation-delay:130ms}
   .card:nth-child(3){animation-delay:220ms}
+  .card:nth-child(4){animation-delay:310ms}
+  .card:nth-child(5){animation-delay:400ms}
   @keyframes deal{to{opacity:1;transform:none}}
   .card:hover{border-color:var(--amber);background:#231c16;transform:translateY(-.15em)}
   .card:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
@@ -304,6 +308,7 @@
         <div><b>DASH</b>burst</div>
       </div>
       <div class="best" id="menubest">NO RUNS LOGGED</div>
+      <canvas class="trophy" id="trophy" hidden title="Reached wave 1000"></canvas>
     </div>
 
     <div class="screen" id="s-up">
@@ -393,9 +398,11 @@ var P = {
   "o": "#8a3a20",   /* rust shade   */
   "a": "#f0a830",   /* amber        */
   "e": "#ff5a4a",   /* eye          */
-  "g": "#6fcf6a"    /* green        */
+  "g": "#6fcf6a",   /* green        */
+  "y": "#ffd93b"    /* smiley       */
 };
 var HULK_PAL = { "@":"#5d6b70", "o":"#3c464a", "s":"#2b3336", "t":"#20272a", "e":"#f0a830" };
+var COLOSSUS_PAL = { "@":"#5a1a2a", "o":"#3a0f1c", "s":"#26202a", "t":"#171319", "e":"#7fe8ff" };
 
 var MAPS = {
   body: [[
@@ -537,6 +544,88 @@ var MAPS = {
     ".#@@b@@#.",
     "..#####.."
   ]],
+  lurker: [[
+    "..#####..",
+    ".#ttttt#.",
+    "#tssssst#",
+    "#ts@e@st#",
+    "#tsseest#",
+    "#ts@e@st#",
+    "#tssssst#",
+    ".#ttttt#.",
+    "..#####.."
+  ],[
+    ".#.###.#.",
+    ".#ttttt#.",
+    "#tssssst#",
+    "#ts@e@st#",
+    "#tsseest#",
+    "#ts@e@st#",
+    "#tssssst#",
+    ".#ttttt#.",
+    ".#.###.#."
+  ]],
+  bomber: [[
+    "..#####..",
+    ".#aaaaa#.",
+    "#a@@@@@a#",
+    "#a@eee@a#",
+    "#a@e#e@a#",
+    "#a@eee@a#",
+    "#a@@@@@a#",
+    ".#aaaaa#.",
+    "..#####.."
+  ],[
+    "..#####..",
+    ".#@@@@@#.",
+    "#@aaaaa@#",
+    "#@aeeea@#",
+    "#@ae#ea@#",
+    "#@aeeea@#",
+    "#@aaaaa@#",
+    ".#@@@@@#.",
+    "..#####.."
+  ]],
+  lancer: [[
+    "..#####..",
+    ".#sssss#.",
+    "#ss@@@ss#",
+    "#s@@e@@s#ttbb",
+    "#s@eee@s#tbbb",
+    "#s@@e@@s#ttbb",
+    "#ss@@@ss#",
+    ".#sssss#.",
+    "..#####.."
+  ],[
+    "..#####..",
+    ".#sssss#.",
+    "#ss@@@ss#",
+    "#s@@e@@s#ttbb",
+    "#s@eee@s#tbbb",
+    "#s@@e@@s#ttbb",
+    "#ss@@@ss#",
+    ".#sssss#.",
+    "..#####.."
+  ]],
+  trophy: [[
+    ".#############.",
+    "#aayyyyyyyyyaa#",
+    "#a#yyyyyyyyy#a#",
+    "#a#yybyyybyy#a#",
+    "#a#yyyyyyyyy#a#",
+    ".##yyyyyyyyy##.",
+    "..#ayyyyyyya#..",
+    "...#aayyyaa#...",
+    "....#aaaaa#....",
+    ".....#aaa#.....",
+    "......#a#......",
+    ".....#aaa#.....",
+    "....#aaaaa#....",
+    "...#ttttttt#...",
+    "..#tt#ooo#tt#..",
+    "..#ttt###ttt#..",
+    "..###########.."
+  ]],
   drone: [[
     ".###.",
     "#bsb#",
@@ -550,14 +639,18 @@ var MAPS = {
     "#sbs#",
     ".###."
   ]],
-  medkit: [[
-    "#######",
-    "#ggggg#",
-    "#gg#gg#",
-    "#g###g#",
-    "#gg#gg#",
-    "#ggggg#",
-    "#######"
+  smile: [[
+    "...#####...",
+    "..#yyyyy#..",
+    ".#yyyyyyy#.",
+    "#yy#yyy#yy#",
+    "#yy#yyy#yy#",
+    "#yyyyyyyyy#",
+    "#y#yyyyy#y#",
+    "#yy#####yy#",
+    ".#yyyyyyy#.",
+    "..#yyyyy#..",
+    "...#####..."
   ]]
 };
 
@@ -602,16 +695,22 @@ var SPR = {};
 function buildSprites(){
   SPR.body = bakeSet("body");
   SPR.gun = bakeSet("gun");
-  SPR.medkit = bakeSet("medkit");
   SPR.drone = bakeSet("drone");
   SPR.crawler = bakeSet("crawler");
   SPR.darter = bakeSet("darter");
   SPR.brute = bakeSet("brute");
   SPR.spitter = bakeSet("spitter");
   SPR.splitter = bakeSet("splitter");
+  SPR.lurker = bakeSet("lurker");
+  SPR.bomber = bakeSet("bomber");
+  SPR.lancer = bakeSet("lancer");
+  SPR.trophy = bakeSet("trophy");
   SPR.hulk = bakeSet("brute", HULK_PAL, 2);
+  SPR.colossus = bakeSet("brute", COLOSSUS_PAL, 3);
+  SPR.smile = bakeSet("smile");
+  SPR.sentry = bakeSet("drone", { "a":"#ff8a3a" }, 2);
   SPR.flash = {};
-  var keys = ["crawler","darter","brute","spitter","splitter","hulk"];
+  var keys = ["crawler","darter","brute","spitter","splitter","lurker","bomber","lancer","hulk","colossus"];
   for (var i = 0; i < keys.length; i++){
     var arr = SPR[keys[i]], out = [];
     for (var j = 0; j < arr.length; j++) out.push(silhouette(arr[j]));
@@ -705,13 +804,25 @@ cv.addEventListener("mousedown", function(e){ if (e.button === 0){ toLogical(e);
 window.addEventListener("mouseup", function(e){ if (e.button === 0) mouse.down = false; });
 window.addEventListener("blur", function(){ mouse.down = false; keys = {}; releaseTouch(); });
 cv.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+var egBuf = "", smiley = false, adminOn = false;
 window.addEventListener("keydown", function(e){
+  /* easter egg: type "verity" anywhere on the admin screen */
+  if (adminOn && e.key.length === 1){
+    egBuf = (egBuf + e.key.toLowerCase()).slice(-6);
+    if (egBuf === "verity"){
+      egBuf = ""; smiley = !smiley;
+      audioInit(); SFX.upgrade();
+      var pwEl = document.getElementById("d-pw");
+      pwEl.placeholder = smiley ? ":)" : "CODE";
+      setTimeout(function(){ pwEl.value = ""; }, 0);
+    }
+  }
   if (e.target.tagName === "INPUT" && e.key !== "Escape") return;
   keys[e.key.toLowerCase()] = true;
   if (e.key === " " || e.key.indexOf("Arrow") === 0) e.preventDefault();
   if (e.key === "Escape") togglePause();
   if (e.key === "m" || e.key === "M") setMuted(!muted);
-  if (state === "upgrade" && "123".indexOf(e.key) > -1) chooseUpgrade(+e.key - 1);
+  if (state === "upgrade" && "12345".indexOf(e.key) > -1) chooseUpgrade(+e.key - 1);
 });
 window.addEventListener("keyup", function(e){ keys[e.key.toLowerCase()] = false; });
 
@@ -841,8 +952,18 @@ var TYPES = {
   brute:    { spr:"brute",    cost:5, hp:46,  spd:18, r:6,  dmg:20, unlock:5  },
   spitter:  { spr:"spitter",  cost:4, hp:18,  spd:24, r:4,  dmg:11, unlock:7  },
   splitter: { spr:"splitter", cost:4, hp:24,  spd:23, r:4,  dmg:13, unlock:9  },
-  hulk:     { spr:"hulk",     cost:0, hp:260, spd:17, r:11, dmg:30, unlock:99 }
+  lurker:   { spr:"lurker",   cost:5, hp:30,  spd:20, r:4,  dmg:16, unlock:12 },  /* blinks in beside you */
+  bomber:   { spr:"bomber",   cost:4, hp:20,  spd:32, r:4,  dmg:18, unlock:15 },  /* detonates on contact or death */
+  lancer:   { spr:"lancer",   cost:6, hp:40,  spd:16, r:4,  dmg:22, unlock:18 },  /* winds up, then charges */
+  hulk:     { spr:"hulk",     cost:40, hp:260, spd:17, r:11, dmg:30, unlock:101, boss:true },
+  colossus: { spr:"colossus", cost:0,  hp:600, spd:15, r:16, dmg:40, unlock:999, boss:true }
 };
+/* which boss anchors this wave, if any: hulk every 10th, colossus from 110 on.
+   Past 100 the hulk also walks in as a (half-size) regular drone. */
+function bossKey(){ return wave % 10 ? null : (wave >= 110 ? "colossus" : "hulk"); }
+function isBoss(e){ return !!TYPES[e.key].boss; }
+/* how much salvage the player is carrying; drones scale with it */
+function power(){ var n = 0; for (var k in lvl) n += lvl[k]; return n; }
 var MODS = [
   { nm:"SWARM",    note:"twice the bodies, half the armour" },
   { nm:"ARMORED",  note:"reinforced plating, slower" },
@@ -859,27 +980,36 @@ var UPGRADES = [
   { id:"split",  nm:"SPLIT SHOT", max:3, ds:"+2 pellets per shot, wider spread" },
   { id:"pierce", nm:"PUNCH THROUGH", max:3, ds:"bullets pass through one more drone" },
   { id:"boots",  nm:"SPRINT BOOTS", max:4, ds:"+16% movement speed" },
-  { id:"plate",  nm:"PLATING", max:4, ds:"+25 max health, patched to full" },
-  { id:"scav",   nm:"SCAVENGER", max:3, ds:"+70% pickup reach, more medkits drop" },
-  { id:"bounce", nm:"RICOCHET", max:2, ds:"bullets bounce off the walls once more" },
+  { id:"plate",  nm:"PLATING", max:4, ds:"+25 max health, 6% damage resist, patched to full" },
+  { id:"bounce", nm:"RICOCHET", max:2, ds:"bullets bounce off the walls once more, +30% damage after a bounce" },
   { id:"crit",   nm:"WEAK POINTS", max:4, ds:"+14% chance to hit for 2.5×" },
   { id:"knock",  nm:"STOPPING POWER", max:3, ds:"+60% knockback on every hit" },
-  { id:"slug",   nm:"OVERCHARGE", max:3, ds:"every 8th shot is a heavy slug" },
+  { id:"slug",   nm:"OVERCHARGE", max:3, ds:"every 8th shot is a heavy slug, one shot sooner per level" },
   { id:"adrn",   nm:"ADRENALINE", max:3, ds:"+30% fire rate for 3s after taking a hit" },
-  { id:"siphon", nm:"SIPHON", max:3, ds:"drain 1.5 health from every kill" },
   { id:"barrel", nm:"LONG BARREL", max:3, ds:"+30% bullet speed and range" },
-  { id:"orbit",  nm:"SCRAP DRONE", max:3, ds:"a salvaged drone orbits you and fires on its own" },
+  { id:"orbit",  nm:"SCRAP DRONE", max:3, ds:"a salvaged drone orbits you and fires on its own; drones can crit" },
   { id:"shock",  nm:"SHOCK PLATING", max:3, ds:"taking a hit releases a damaging shockwave" },
   { id:"burn",   nm:"INCENDIARY", max:3, ds:"hits set drones alight for 3s of burn damage" },
-  { id:"arc",    nm:"ARC WELDER", max:3, ds:"kills arc lightning into the nearest drone" },
+  { id:"arc",    nm:"ARC WELDER", max:3, ds:"kills arc lightning into the nearest drone, one more target per level" },
   { id:"exec",   nm:"EXECUTIONER", max:4, ds:"+35% damage to drones under a third health" },
   { id:"frag",   nm:"FRAG ROUNDS", max:2, ds:"dying drones burst into live shrapnel" },
   { id:"strike", nm:"DASH STRIKE", max:3, ds:"dashing carves through drones, −0.15s cooldown" },
-  { id:"wind",   nm:"SECOND WIND", max:2, ds:"survive one killing blow per wave at 30% health" },
-  { id:"medic",  nm:"FIELD MEDIC", max:4, ds:"regenerate 0.6 health per second" },
-  { id:"stasis", nm:"STASIS FIELD", max:3, ds:"drones near you are slowed by 18%" },
+  { id:"wind",   nm:"SECOND WIND", max:3, ds:"survive one killing blow per wave at 30% health" },
+  { id:"stasis", nm:"STASIS FIELD", max:3, ds:"drones near you are slowed by 18%, field grows each level" },
   { id:"eye",    nm:"DEADEYE", max:3, ds:"critical hits go from 2.5× to 3.5× and up" },
-  { id:"cal",    nm:"WIDE CALIBER", max:3, ds:"fatter bullets, easier to land" }
+  { id:"cal",    nm:"WIDE CALIBER", max:3, ds:"fatter bullets, easier to land" },
+  { id:"home",   nm:"HOMING ROUNDS", max:3, ds:"bullets steer toward the nearest drone" },
+  { id:"cryo",   nm:"CRYO ROUNDS", max:3, ds:"hits chill drones: −15% speed for 1.5s" },
+  { id:"blast",  nm:"BLAST CAPS", max:3, ds:"hits splash 30% damage to drones close by" },
+  { id:"thorn",  nm:"SPIKED HULL", max:3, ds:"drones that hit you take 3× your bullet damage" },
+  { id:"streak", nm:"MOMENTUM", max:3, ds:"each kill +3% fire rate for 4s, stacks 10 deep" },
+  { id:"hunter", nm:"BIG GAME HUNTER", max:3, ds:"+30% damage to hulks and the colossus" },
+  { id:"refund", nm:"SERVO RECOVERY", max:3, ds:"kills shave 0.08s off the dash cooldown" },
+  { id:"glass",  nm:"GLASS CANNON", max:2, ds:"+45% bullet damage, −20 max health" },
+  { id:"shield", nm:"CAPACITOR SHIELD", max:3, ds:"absorb one hit, recharges in 12s, faster per level" },
+  { id:"lucky",  nm:"LUCKY SALVAGE", max:2, ds:"one more card to choose from after every wave" },
+  { id:"nova",   nm:"OVERLOAD", max:3, ds:"every 11th kill sets off a shockwave, sooner per level" },
+  { id:"turret", nm:"SENTRY", max:2, ds:"a sentry drops where you stand at the start of each wave" }
 ];
 
 /* ============================================================
@@ -978,40 +1108,50 @@ var SFX = {
 
 /* ---------------- run state ---------------- */
 var state = "menu";
-var player, enemies, bullets, ebullets, parts, casings, pickups, floats, teles, decals;
-var drones, rings, arcs, mortars;
+var player, enemies, bullets, ebullets, parts, casings, floats, teles, decals;
+var drones, rings, arcs, mortars, sentries;
 var wave, kills, runTime, spawnQueue, waveMod, shots, shake, redFlash, mist, waveEndT;
 var lvl = {}, S = {}, offers = [];
 var dbg = {}, dbgUsed = false;     // admin stat overrides, laid over S by recalc()
-var best = { wave:0, kills:0 };
+var best = { wave:0, kills:0 }, trophy = false;
 
 function recalc(){
   var L = lvl;
-  S.dmg     = 8 * (1 + 0.40 * L.dmg);
+  S.dmg     = 8 * (1 + 0.40 * L.dmg) * (1 + 0.45 * L.glass);
   S.rate    = 3.4 * (1 + 0.22 * L.rate) * Math.pow(0.92, L.dmg);
   S.pellets = 1 + 2 * L.split;
   S.spread  = L.split ? 0.10 + 0.035 * L.split : 0.028;
   S.pierce  = L.pierce;
   S.speed   = 64 * (1 + 0.16 * L.boots);
-  S.maxhp   = 100 + 25 * L.plate;
+  S.maxhp   = 100 + 25 * L.plate - 20 * L.glass;
+  S.armor   = 0.06 * L.plate;
   S.bspd    = 210 * (1 + 0.30 * L.barrel);
   S.range   = 210 * (1 + 0.30 * L.barrel);
   S.crit    = 0.14 * L.crit;
   S.knock   = 34 * (1 + 0.60 * L.knock);
-  S.magnet  = 22 * (1 + 0.70 * L.scav);
-  S.drop    = 0.05 + 0.03 * L.scav;
   S.bounce  = L.bounce;
-  S.siphon  = 1.5 * L.siphon;
   S.critMul = 2.5 + 1.0 * L.eye;
   S.cal     = L.cal;
   S.burn    = L.burn ? 3.5 * L.burn : 0;
   S.arc     = L.arc ? 0.55 * S.dmg * L.arc : 0;
   S.exec    = 0.35 * L.exec;
-  S.regen   = 0.6 * L.medic;
   S.stasis  = 1 - 0.18 * L.stasis;
   S.strike  = L.strike;
   S.drones  = L.orbit;
   S.dashcd  = Math.max(0.55, 1.2 - 0.15 * L.strike);
+  S.slugN   = 9 - L.slug;
+  S.stasisR = 48 + 10 * L.stasis;
+  S.home    = 3 * L.home;
+  S.cryo    = 0.15 * L.cryo;
+  S.blast   = 0.30 * L.blast;
+  S.thorn   = L.thorn ? 3 * S.dmg * L.thorn : 0;
+  S.streak  = 0.03 * L.streak;
+  S.hunter  = 0.30 * L.hunter;
+  S.refund  = 0.08 * L.refund;
+  S.shieldCd= L.shield ? 12 - 3 * (L.shield - 1) : 0;
+  S.cards   = 3 + L.lucky;
+  S.novaN   = L.nova ? 14 - 3 * L.nova : 0;
+  S.sentries= L.turret;
   for (var k in dbg) S[k] = dbg[k];
 }
 
@@ -1022,10 +1162,11 @@ function newRun(){
   dbg = {}; dbgUsed = false;
   recalc();
   player = { x:W/2, y:H/2, ang:0, hp:S.maxhp, cool:0, recoil:0, iframe:0,
-             dashT:0, dashCd:0, ddx:0, ddy:0, step:0, adrnT:0, kx:0, ky:0, saves:0, hitSet:[], hbT:0 };
+             dashT:0, dashCd:0, ddx:0, ddy:0, step:0, adrnT:0, kx:0, ky:0, saves:0, hitSet:[], hbT:0,
+             streak:0, streakT:0, shield:false, shieldT:0, novaK:0 };
   enemies = []; bullets = []; ebullets = []; parts = []; casings = [];
-  pickups = []; floats = []; teles = []; decals = [];
-  drones = []; rings = []; arcs = []; mortars = [];
+  floats = []; teles = []; decals = [];
+  drones = []; rings = []; arcs = []; mortars = []; sentries = [];
   wave = 0; kills = 0; runTime = 0; shots = 0;
   shake = 0; redFlash = 0; mist = 0; waveEndT = 0;
   spawnQueue = []; waveMod = null;
@@ -1036,26 +1177,28 @@ function newRun(){
 function startWave(){
   wave++;
   setSeed((runSeed ^ Math.imul(wave, 0x9E3779B9)) >>> 0);
-  var boss = wave % 10 === 0;
-  var budget = Math.round((4 + wave * 2 + Math.pow(wave, 1.28)) * (1 + 0.04 * late()));
+  var boss = wave === 999 ? "colossus" : bossKey();
+  var budget = Math.round((4 + wave * 2 + Math.pow(wave, 1.28)) * (1 + 0.04 * late()) * (1 + 0.004 * power()));
   waveMod = (!boss && wave >= 4 && rnd() < 0.5) ? pick(MODS) : null;
   if (boss) budget = Math.round(budget * 0.4);
 
   var roster = [];
   for (var k in TYPES) if (wave >= TYPES[k].unlock) roster.push(k);
 
+  /* list entries: { t:type, sc:hp scale, lead:true for the wave boss } */
   var list = [];
-  if (boss) list.push("hulk");
+  if (boss) list.push({ t:boss, sc:1, lead:true });
+  if (wave === 999){ budget = 0; for (var cI = 1; cI < 100; cI++) list.push({ t:"colossus", sc:1 }); }
   var guard = 0;
   while (budget > 0 && guard++ < 400){
-    var affordable = roster.filter(function(k){ return TYPES[k].cost <= budget; });
+    var affordable = roster.filter(function(k){ return !TYPES[k].boss && TYPES[k].cost <= budget; });
     if (!affordable.length) break;
     var t = pick(affordable);
-    list.push(t); budget -= TYPES[t].cost;
+    list.push({ t:t, sc:1 }); budget -= TYPES[t].cost;
   }
   if (waveMod && waveMod.nm === "SWARM"){
     var extra = [];
-    for (var i = 0; i < list.length; i++) if (list[i] !== "hulk") extra.push(list[i]);
+    for (var i = 0; i < list.length; i++) if (!TYPES[list[i].t].boss) extra.push(list[i]);
     list = list.concat(extra);
   }
 
@@ -1065,35 +1208,51 @@ function startWave(){
   spawnQueue = [];
   for (var j = 0; j < list.length; j++){
     var ang = (waveMod && waveMod.nm === "PACK") ? packAng + rr(-0.3, 0.3) : rr(0, 6.2832);
-    spawnQueue.push({ t:list[j], at: (list[j] === "hulk" ? 0.4 : rr(0, win)), ang:ang, told:false });
+    spawnQueue.push({ t:list[j].t, sc:list[j].sc, at: (list[j].lead ? 0.4 : rr(0, win)), ang:ang, told:false });
   }
   spawnQueue.sort(function(a, b){ return a.at - b.at; });
   waveEndT = 0; waveT = 0;
   if (mortars){ mortars.length = 0; rings.length = 0; arcs.length = 0; }
   mist = (waveMod && waveMod.nm === "MIST") ? 1 : 0;
-  if (player) player.saves = lvl.wind;
+  if (player){
+    player.saves = lvl.wind;
+    player.hp = S.maxhp;   /* no medkits: health resets between waves */
+    player.shield = lvl.shield > 0; player.shieldT = 0;
+    sentries = [];
+    for (var sI = 0; sI < S.sentries; sI++) sentries.push({ x:player.x + rr(-8, 8), y:player.y + rr(-8, 8), cool:rr(0, 0.5), frame:0, ft:0 });
+  }
   if (boss) SFX.boss(); else SFX.wave();
+  if (wave >= 1000 && !dbgUsed && !trophy){
+    trophy = true;
+    try { localStorage.setItem("scrapline.trophy", "1"); } catch (err) {}
+    paintBest();
+  }
   showBanner();
 }
 
 /* waves past 100: regular drones hit harder and crowd in thicker */
 function late(){ return Math.max(0, wave - 100); }
 
+/* colossus tier: 1 at wave 110, +1 every ten waves after */
+function ctier(){ return Math.max(1, Math.floor((wave - 100) / 10)); }
+
 function spawnEnemy(key, ang, scaleUp){
-  var T = TYPES[key], boss = key === "hulk", tier = Math.max(1, Math.floor(wave / 10));
-  var hpMul = 1 + 0.07 * (wave - 1), spdMul = Math.min(1.5, 1 + 0.018 * (wave - 1));
+  var T = TYPES[key], boss = !!T.boss, big = key === "colossus", tier = Math.max(1, Math.floor(wave / 10)), pw = power();
+  var hpMul = (1 + 0.07 * (wave - 1)) * (1 + 0.01 * pw), spdMul = Math.min(1.5, 1 + 0.018 * (wave - 1));
   if (waveMod){
     if (waveMod.nm === "SWARM")   hpMul *= 0.5;
     if (waveMod.nm === "ARMORED"){ hpMul *= 1.6; spdMul *= 0.82; }
     if (waveMod.nm === "FRENZY")  spdMul *= 1.35;
   }
-  var hp = Math.max(1, Math.round(T.hp * hpMul * (scaleUp || 1) * (boss ? Math.pow(1.35, tier - 1) : 1)));
+  var hp = Math.max(1, Math.round(T.hp * hpMul * (scaleUp || 1) * (boss ? 0.64 * Math.pow(1.5, tier - 1) * (1 + 0.06 * pw) * (1 + 0.05 * late()) : 1) * (big ? Math.pow(1.4, ctier() - 1) : 1)));
   var e = {
     key:key, spr:T.spr, x: W/2 + Math.cos(ang) * (W/2 + 20), y: H/2 + Math.sin(ang) * (H/2 + 20),
     hp:hp, maxhp:hp, r:T.r, spd:T.spd * spdMul,
-    dmg: boss ? T.dmg + 4 * (tier - 1) : T.dmg * (1 + 0.12 * late()), ang:ang + Math.PI,
+    dmg: (boss ? (T.dmg + 8 * (tier - 1) + (big ? 8 * (ctier() - 1) : 0)) * (1 + 0.01 * pw) * (1 + 0.02 * late()) : T.dmg * (1 + 0.12 * late()) * (1 + 0.003 * pw)),
+    ang:ang + Math.PI,
     frame:0, ft:rr(0, 0.4), flash:0, kx:0, ky:0, phase:rr(0, 6.2832),
-    shootT:rr(0.8, 2.2), chargeT:2.5, charging:0, wind:0, addT:5, child:false, next:"charge"
+    shootT:rr(0.8, 2.2), chargeT:2.5, charging:0, wind:0, addT:5, child:false, next:"charge",
+    enraged:big, spiral:0, chillT:0
   };
   enemies.push(e);
   return e;
@@ -1104,50 +1263,79 @@ function bossPick(e, d){
   var opts = ["flak", "mortar"];
   if (d > 55) opts.push("charge", "charge");
   if (d < 95) opts.push("slam");
+  opts.push("wall", "wall");
+  if (e.key === "colossus") opts.push("spiral", "spiral");
   return pick(opts);
 }
 /* enraged: every attack queues its follow-up on a short windup; follow-ups don't chain.
    A charge's follow-up only starts winding once the charge ends. */
-var COMBO = { charge:"slam", slam:"flak", flak:"mortar", mortar:"charge" };
+var COMBO = { charge:"slam", slam:"flak", flak:"wall", wall:"charge", mortar:"charge", spiral:"wall" };
 function bossFire(e, ux, uy){
-  var i, a, tier = Math.floor(wave / 10), now = e.next;
+  var i, a, tier = Math.floor(wave / 10), now = e.next, big = e.key === "colossus" ? ctier() : 0;
   if (e.enraged) e.combo = !e.combo;
-  if (e.combo){ e.next = COMBO[now]; e.wind = e.windMax = 0.45; SFX.warn(); }
+  if (e.combo){ e.next = COMBO[now]; e.wind = e.windMax = 0.35; SFX.warn(); }
   if (now === "charge"){
     e.cang = Math.atan2(uy, ux);
-    e.charging = 0.8;
+    e.charging = big ? 1.0 : 0.8;
     addShake(2.5);
     SFX.slug();
     return;
   }
+  if (now === "spiral"){
+    e.spiral = 1.4 + 0.1 * big; e.spa = rr(0, 6.2832); e.spt = 0;
+    SFX.slug();
+    return;
+  }
+  if (now === "wall"){
+    /* travels along whichever axis the player is mostly on */
+    var horiz = Math.abs(ux) > Math.abs(uy), dir = horiz ? (ux > 0 ? 1 : -1) : (uy > 0 ? 1 : -1);
+    var span = horiz ? H : W, slots = Math.floor(span / 12), g1 = 2 + ri(slots - 4), g2 = 2 + ri(slots - 4);
+    var v = 100 + 4 * tier + 6 * big;
+    for (i = 0; i < slots; i++){
+      if (Math.abs(i - g1) < 2 || Math.abs(i - g2) < 2) continue;
+      var o = 6 + i * 12;
+      ebullets.push({ x: horiz ? e.x : o, y: horiz ? o : e.y, vx: horiz ? dir * v : 0, vy: horiz ? 0 : dir * v,
+        dmg:14 + 2 * tier + 3 * big, life:9, col:"#ff5a4a", hard:true });
+    }
+    addShake(3);
+    SFX.slug();
+    return;
+  }
   if (now === "slam"){
-    rings.push({ x:e.x, y:e.y, r:9, max:80 + 3 * tier, dmg:15 + wave * 0.4, hit:[], foe:true, hitP:false });
+    rings.push({ x:e.x, y:e.y, r:9, max:80 + 5 * tier + 8 * big, dmg:18 + wave * 0.7 + 8 * big, hit:[], foe:true, hitP:false });
     burst(e.x, e.y, 24, "#5d6b70", 95);
     addShake(6);
     SFX.shock();
     return;
   }
   if (now === "flak"){
-    var n = 10 + Math.min(16, tier * 2);
+    var n = 10 + Math.min(30, tier * 3) + 3 * big;
     var base = Math.atan2(uy, ux);
     for (i = 0; i < n; i++){
       a = base + (i / n) * 6.2832;
       ebullets.push({ x:e.x + Math.cos(a) * 13, y:e.y + Math.sin(a) * 13,
-        vx:Math.cos(a) * 72, vy:Math.sin(a) * 72, dmg:9 + tier, life:3.2, col:"#ff8a3a" });
+        vx:Math.cos(a) * (104 + 3 * tier), vy:Math.sin(a) * (104 + 3 * tier), dmg:11 + 2 * tier + 3 * big, life:3.2, col:"#ff8a3a" });
     }
     addShake(3);
     SFX.slug();
     return;
   }
-  var m = 3 + Math.min(5, tier);
+  var m = 3 + Math.min(12, tier) + 2 * big;
   for (i = 0; i < m; i++){
     mortars.push({
       x: Math.max(MINX, Math.min(MAXX, player.x + rr(-28, 28))),
       y: Math.max(MINY, Math.min(MAXY, player.y + rr(-28, 28))),
-      t:0, life:1.15, r:18
+      t:0, life:0.75, r:18
     });
   }
   SFX.warn();
+}
+/* distance from point p to segment a-b: a dash covers several pixels a frame, so shots are
+   tested against the whole path instead of the end point and cannot be tunnelled through */
+function segDist(px, py, ax, ay, bx, by){
+  var dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+  var t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
+  return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
 }
 function updMortars(dt){
   for (var i = mortars.length - 1; i >= 0; i--){
@@ -1159,7 +1347,7 @@ function updMortars(dt){
     scorch(mo.x, mo.y, mo.r * 0.55);
     addShake(3.5);
     SFX.boom();
-    if (Math.hypot(player.x - mo.x, player.y - mo.y) < mo.r) hurtPlayer(17 + wave * 0.3, mo.x, mo.y);
+    if (Math.hypot(player.x - mo.x, player.y - mo.y) < mo.r) hurtPlayer(20 + wave * 0.3, mo.x, mo.y);
     mortars.splice(i, 1);
   }
 }
@@ -1187,7 +1375,7 @@ function scorch(x, y, r){
 function fire(){
   var ang = player.ang;
   shots++;
-  var slug = lvl.slug > 0 && shots % 8 === 0;
+  var slug = lvl.slug > 0 && shots % S.slugN === 0;
   var mx = player.x + Math.cos(ang) * 10, my = player.y + Math.sin(ang) * 10;
   var n = slug ? 1 : S.pellets;
   for (var i = 0; i < n; i++){
@@ -1210,7 +1398,16 @@ function fire(){
 }
 
 function hurtPlayer(amount, fromX, fromY){
-  if (player.iframe > 0 || player.dashT > 0) return;
+  if (player.iframe > 0) return;
+  if (player.shield){
+    player.shield = false; player.shieldT = S.shieldCd;
+    player.iframe = 0.4;
+    burst(player.x, player.y, 14, "#bfe6ff", 80);
+    addFloat(player.x, player.y - 8, "0", "#bfe6ff");
+    SFX.rico();
+    return;
+  }
+  amount *= 1 - S.armor;
   player.hp -= amount;
   player.iframe = 0.7;
   player.adrnT = lvl.adrn > 0 ? 3 : 0;
@@ -1243,38 +1440,45 @@ function hurtPlayer(amount, fromX, fromY){
 }
 
 function killEnemy(e, i){
-  var col = e.key === "hulk" ? "#5d6b70" : "#c8552e";
-  burst(e.x, e.y, e.key === "hulk" ? 40 : 12 + e.r, col, 60 + e.r * 6);
+  var big = isBoss(e);
+  var col = e.key === "colossus" ? "#5a1a2a" : (e.key === "hulk" ? "#5d6b70" : "#c8552e");
+  burst(e.x, e.y, big ? 40 : 12 + e.r, col, 60 + e.r * 6);
   burst(e.x, e.y, 5, "#0d0b0a", 40);
   scorch(e.x, e.y, e.r + 1);
   kills++;
-  addShake(e.key === "hulk" ? 6 : 0.8);
-
-  if (S.siphon > 0 && player.hp < S.maxhp){
-    player.hp = Math.min(S.maxhp, player.hp + S.siphon);
-    addFloat(player.x, player.y - 10, "+" + S.siphon.toFixed(1), "#6fcf6a");
+  addShake(big ? 6 : 0.8);
+  if (S.streak > 0){ player.streak = Math.min(10, player.streak + 1); player.streakT = 4; }
+  if (S.refund > 0) player.dashCd -= S.refund;
+  if (S.novaN > 0 && ++player.novaK >= S.novaN){
+    player.novaK = 0;
+    rings.push({ x:player.x, y:player.y, r:5, max:46, dmg:S.dmg * 2, hit:[] });
+    SFX.shock();
   }
+
   if (waveMod && waveMod.nm === "VOLATILE"){
     for (var b = 0; b < 5; b++){
       var a = (b / 5) * 6.2832 + rr(0, 1);
       ebullets.push({ x:e.x, y:e.y, vx:Math.cos(a) * 62, vy:Math.sin(a) * 62, dmg:8 * (1 + 0.12 * late()), life:1.1, col:"#ff8a3a" });
     }
   }
-  SFX[e.key === "hulk" ? "bigkill" : "kill"]();
+  SFX[big ? "bigkill" : "kill"]();
   if (S.arc > 0){
-    var near = null, nd = 66;
-    for (var q = 0; q < enemies.length; q++){
-      if (enemies[q] === e) continue;
-      var qd = Math.hypot(enemies[q].x - e.x, enemies[q].y - e.y);
-      if (qd < nd){ nd = qd; near = enemies[q]; }
-    }
-    if (near){
+    var hitA = [];
+    for (var aN = 0; aN < lvl.arc; aN++){
+      var near = null, nd = 66;
+      for (var q = 0; q < enemies.length; q++){
+        if (enemies[q] === e || hitA.indexOf(enemies[q]) > -1) continue;
+        var qd = Math.hypot(enemies[q].x - e.x, enemies[q].y - e.y);
+        if (qd < nd){ nd = qd; near = enemies[q]; }
+      }
+      if (!near) break;
+      hitA.push(near);
       near.hp -= S.arc;
       near.flash = 0.1;
       arcs.push({ x1:e.x, y1:e.y, x2:near.x, y2:near.y, t:0 });
       addFloat(near.x, near.y - near.r - 2, Math.round(S.arc) + "", "#bfe6ff");
-      SFX.arc();
     }
+    if (hitA.length) SFX.arc();
   }
   if (lvl.frag > 0){
     var nf = 3 + lvl.frag;
@@ -1285,14 +1489,17 @@ function killEnemy(e, i){
         life:0.55, hit:[], px:e.x, py:e.y, cal:S.cal });
     }
   }
+  if (e.key === "bomber"){
+    rings.push({ x:e.x, y:e.y, r:4, max:30, dmg:e.dmg, hit:[], foe:true, hitP:false });
+    burst(e.x, e.y, 16, "#f0a830", 80);
+    addShake(2.5);
+    SFX.boom();
+  }
   if (e.key === "splitter" && !e.child){
     for (var c = 0; c < 2; c++){
       var ch = spawnEnemy("crawler", 0, 0.7);
       ch.x = e.x + rr(-6, 6); ch.y = e.y + rr(-6, 6); ch.child = true;
     }
-  }
-  if (e.key === "hulk" || rnd() < S.drop){
-    pickups.push({ x:e.x, y:e.y, t:0, vx:rr(-14, 14), vy:rr(-14, 14), heal:e.key === "hulk" ? 60 : 22 });
   }
   enemies.splice(i, 1);
 }
@@ -1320,6 +1527,7 @@ function updPlayer(dt){
   }
   if (TOUCH && player.dashT > 0 && !ax && !ay){ ax = player.ddx; ay = player.ddy; len = 1; }
   var spd = S.speed * (player.dashT > 0 ? 3.2 : 1);
+  player.lx = player.x; player.ly = player.y;   /* last position, for swept shot collision */
   player.x += ax * spd * dt + player.kx * dt;
   player.y += ay * spd * dt + player.ky * dt;
   player.kx *= 0.86; player.ky *= 0.86;
@@ -1350,14 +1558,19 @@ function updPlayer(dt){
       }
     }
   }
-  if (S.regen > 0 && player.hp < S.maxhp){
-    player.hp = Math.min(S.maxhp, player.hp + S.regen * dt);
+  if (false){
     lastHp = -1;
   }
   player.hbT -= dt;
   if (player.hp / S.maxhp < 0.3 && player.hbT <= 0){ player.hbT = 0.78; SFX.thump(); }
+  if (S.shieldCd > 0 && !player.shield){
+    player.shieldT -= dt;
+    if (player.shieldT <= 0){ player.shield = true; burst(player.x, player.y, 6, "#bfe6ff", 30); }
+  }
+  player.streakT -= dt;
+  if (player.streakT <= 0) player.streak = 0;
 
-  var rate = S.rate * (player.adrnT > 0 ? 1 + 0.30 * lvl.adrn : 1);
+  var rate = S.rate * (player.adrnT > 0 ? 1 + 0.30 * lvl.adrn : 1) * (1 + S.streak * player.streak);
   player.cool -= dt;
   if ((TOUCH ? stickR.mag > 0 : mouse.down) && player.cool <= 0){ fire(); player.cool = 1 / rate; }
 }
@@ -1376,7 +1589,8 @@ function updEnemies(dt){
     var dx = player.x - e.x, dy = player.y - e.y;
     var d = Math.hypot(dx, dy) || 1;
     var ux = dx / d, uy = dy / d;
-    var sp = (S.stasis < 1 && d < 48) ? e.spd * S.stasis : e.spd;
+    var sp = (S.stasis < 1 && d < S.stasisR) ? e.spd * S.stasis : e.spd;
+    if (e.chillT > 0){ e.chillT -= dt; sp *= 1 - S.cryo; }
 
     if (e.key === "darter"){
       e.phase += dt * 7;
@@ -1397,17 +1611,68 @@ function updEnemies(dt){
         ebullets.push({ x:e.x + ux * 7, y:e.y + uy * 7, vx:Math.cos(sa) * 78, vy:Math.sin(sa) * 78, dmg:e.dmg, life:2.6, col:"#6fcf6a" });
         burst(e.x + ux * 8, e.y + uy * 8, 3, "#6fcf6a", 30);
       }
-    } else if (e.key === "hulk"){
-      if (!e.enraged && wave >= 50 && e.hp < e.maxhp / 2){
+    } else if (e.key === "lurker"){
+      e.shootT -= dt;
+      if (e.shootT <= 0){
+        /* blink to a spot beside the player; telegraphed with a burst at both ends */
+        e.shootT = rr(2.6, 3.6);
+        var la = rr(0, 6.2832);
+        burst(e.x, e.y, 8, "#3c464a", 40);
+        e.x = Math.max(WALL + 4, Math.min(W - WALL - 4, player.x + Math.cos(la) * 34));
+        e.y = Math.max(WALL + 4, Math.min(H - WALL - 4, player.y + Math.sin(la) * 34));
+        e.entered = true; e.kx = e.ky = 0;
+        burst(e.x, e.y, 8, "#f0a830", 40);
+        SFX.warn();
+      }
+      e.x += ux * sp * dt; e.y += uy * sp * dt;
+      e.ang = Math.atan2(uy, ux);
+    } else if (e.key === "lancer"){
+      if (e.charging > 0){
+        e.charging -= dt;
+        e.x += Math.cos(e.cang) * 150 * dt; e.y += Math.sin(e.cang) * 150 * dt;
+        if (rnd() < 0.4) burst(e.x, e.y, 1, "#5d6b70", 16);
+      } else if (e.wind > 0){
+        e.wind -= dt;
+        e.ang = Math.atan2(uy, ux);
+        if (e.wind <= 0){ e.cang = e.ang; e.charging = 0.45; SFX.slug(); }
+      } else {
+        e.chargeT -= dt;
+        if (e.chargeT <= 0 && d < 120){ e.chargeT = rr(2.2, 3.2); e.wind = e.windMax = 0.5; SFX.warn(); }
+        e.x += ux * sp * dt; e.y += uy * sp * dt;
+        e.ang = Math.atan2(uy, ux);
+      }
+      if (e.charging > 0) e.ang = e.cang;
+    } else if (isBoss(e)){
+      var big = e.key === "colossus";
+      if (!e.enraged && wave >= 30 && e.hp < e.maxhp * 0.65){
         e.enraged = true;
         bannerText("HULK ENRAGED", "attacks now come <em>in pairs</em>");
         addShake(5);
         SFX.boss();
       }
+      if (big && !e.fury && e.hp < e.maxhp / 2){
+        e.fury = true; e.spd *= 1.25;
+        bannerText("COLOSSUS FURIOUS", "faster, <em>no pause</em> between attacks");
+        addShake(6);
+        SFX.boss();
+      }
       if (e.charging > 0){
         e.charging -= dt;
-        e.x += Math.cos(e.cang) * 122 * dt; e.y += Math.sin(e.cang) * 122 * dt;
-        if (rnd() < 0.5) burst(e.x, e.y, 1, "#5d6b70", 20);
+        var cs = big ? 185 : 165;
+        e.x += Math.cos(e.cang) * cs * dt; e.y += Math.sin(e.cang) * cs * dt;
+        if (rnd() < 0.5) burst(e.x, e.y, 1, big ? "#5a1a2a" : "#5d6b70", 20);
+      } else if (e.spiral > 0){
+        e.spiral -= dt; e.spt += dt; e.spa += dt * 8;
+        var arms = 2 + Math.floor(ctier() / 2);
+        while (e.spt > 0.07){
+          e.spt -= 0.07;
+          for (var sk = 0; sk < arms; sk++){
+            var sa2 = e.spa + sk * 6.2832 / arms;
+            ebullets.push({ x:e.x + Math.cos(sa2) * 16, y:e.y + Math.sin(sa2) * 16,
+              vx:Math.cos(sa2) * 112, vy:Math.sin(sa2) * 112, dmg:12 + 2 * ctier(), life:3, col:"#7fe8ff", hard:true });
+          }
+        }
+        if (e.spiral <= 0 && e.combo){ e.wind = e.windMax = 0.35; }
       } else if (e.wind > 0){
         e.wind -= dt;
         if (e.wind <= 0) bossFire(e, ux, uy);
@@ -1415,9 +1680,9 @@ function updEnemies(dt){
         e.chargeT -= dt;
         if (e.chargeT <= 0){
           e.next = bossPick(e, d);
-          e.wind = e.next === "charge" ? 0.7 : 0.85;
+          e.wind = e.next === "charge" ? 0.5 : 0.55;
           e.windMax = e.wind;
-          e.chargeT = Math.max(1.1, rr(3.2, 4.6) - wave * 0.025);
+          e.chargeT = Math.max(e.fury ? 0.6 : 0.9, rr(2.4, 3.6) - wave * 0.025);
           SFX.warn();
         }
         e.x += ux * sp * dt; e.y += uy * sp * dt;
@@ -1426,8 +1691,9 @@ function updEnemies(dt){
       e.addT -= dt;
       if (e.addT <= 0 && enemies.length < 30){
         e.addT = 6.5;
-        for (var a2 = 0; a2 < 2 + Math.floor(wave / 30); a2++){
-          var ch = spawnEnemy("crawler", 0, 0.8);
+        var nAdd = big ? 2 + ctier() : 2 + Math.floor(wave / 30);
+        for (var a2 = 0; a2 < nAdd; a2++){
+          var ch = spawnEnemy(big ? (a2 % 2 ? "lurker" : "brute") : "crawler", 0, 0.8);
           ch.x = e.x + rr(-14, 14); ch.y = e.y + rr(-14, 14); ch.child = true; ch.entered = true;
         }
       }
@@ -1447,9 +1713,14 @@ function updEnemies(dt){
 
     /* contact */
     if (d < e.r + 5){
+      if (S.thorn > 0 && player.iframe <= 0 && player.dashT <= 0){
+        e.hp -= S.thorn; e.flash = 0.1;
+        addFloat(e.x, e.y - e.r - 2, Math.round(S.thorn) + "", "#bfe6ff");
+      }
+      if (e.key === "bomber"){ e.hp = 0; continue; }
       hurtPlayer(e.dmg, e.x, e.y);
-      if (e.key !== "brute" && e.key !== "hulk"){ e.kx -= ux * 90; e.ky -= uy * 90; }
-      if (e.key === "hulk") e.charging = 0;
+      if (e.key !== "brute" && !isBoss(e) && e.charging <= 0){ e.kx -= ux * 90; e.ky -= uy * 90; }
+      if (isBoss(e)) e.charging = 0;
     }
   }
 
@@ -1472,10 +1743,19 @@ function updEnemies(dt){
 
 function hitEnemy(e, dmg, dirx, diry, crit){
   if (S.exec > 0 && e.hp < e.maxhp * 0.34) dmg *= 1 + S.exec;
+  if (S.hunter > 0 && isBoss(e)) dmg *= 1 + S.hunter;
   e.hp -= dmg;
   if (S.burn > 0){ e.burn = S.burn; e.burnT = 3; }
+  if (S.cryo > 0) e.chillT = 1.5;
+  if (S.blast > 0){
+    for (var bq = 0; bq < enemies.length; bq++){
+      var be = enemies[bq];
+      if (be === e || Math.hypot(be.x - e.x, be.y - e.y) > 14 + be.r) continue;
+      be.hp -= dmg * S.blast; be.flash = 0.1;
+    }
+  }
   e.flash = 0.1;
-  var res = (e.key === "brute" || e.key === "hulk") ? 0.28 : 1;
+  var res = e.key === "colossus" ? 0.1 : ((e.key === "brute" || e.key === "hulk") ? 0.28 : 1);
   e.kx += dirx * S.knock * res; e.ky += diry * S.knock * res;
   addFloat(e.x + rr(-3, 3), e.y - e.r - 2, (crit ? "+" : "") + Math.round(dmg), crit ? "#f0a830" : "#e8dfc8");
   burst(e.x + dirx * e.r * 0.6, e.y + diry * e.r * 0.6, crit ? 6 : 3, "#c8552e", 45);
@@ -1486,6 +1766,21 @@ function updBullets(dt){
   for (var i = bullets.length - 1; i >= 0; i--){
     var b = bullets[i];
     b.px = b.x; b.py = b.y;
+    if (S.home > 0 && !b.slug){
+      var ht = null, hd = 70;
+      for (var hq = 0; hq < enemies.length; hq++){
+        if (b.hit.indexOf(enemies[hq]) > -1) continue;
+        var hdd = Math.hypot(enemies[hq].x - b.x, enemies[hq].y - b.y);
+        if (hdd < hd){ hd = hdd; ht = enemies[hq]; }
+      }
+      if (ht){
+        var cur = Math.atan2(b.vy, b.vx), want = Math.atan2(ht.y - b.y, ht.x - b.x);
+        var diff = Math.atan2(Math.sin(want - cur), Math.cos(want - cur));
+        var turn = Math.max(-S.home * dt, Math.min(S.home * dt, diff));
+        var spd0 = Math.hypot(b.vx, b.vy);
+        b.vx = Math.cos(cur + turn) * spd0; b.vy = Math.sin(cur + turn) * spd0;
+      }
+    }
     b.x += b.vx * dt; b.y += b.vy * dt;
     b.life -= dt;
     var dead = b.life <= 0;
@@ -1495,6 +1790,7 @@ function updBullets(dt){
       if (bx || by){
         if (b.bounce > 0){
           b.bounce--;
+          b.dmg *= 1.3;
           if (bx) b.vx = -b.vx;
           if (by) b.vy = -b.vy;
           b.x = Math.max(WALL + 1, Math.min(W - WALL - 1, b.x));
@@ -1528,7 +1824,8 @@ function updBullets(dt){
     var eb = ebullets[k];
     eb.x += eb.vx * dt; eb.y += eb.vy * dt; eb.life -= dt;
     var gone = eb.life <= 0 || eb.x < 2 || eb.x > W - 2 || eb.y < 2 || eb.y > H - 2;
-    if (!gone && Math.hypot(player.x - eb.x, player.y - eb.y) < 6){
+    /* shots only break when they actually land; an invulnerable player lets them pass through */
+    if (!gone && player.iframe <= 0 && segDist(eb.x, eb.y, player.lx === undefined ? player.x : player.lx, player.ly === undefined ? player.y : player.ly, player.x, player.y) < 6){
       hurtPlayer(eb.dmg, eb.x, eb.y);
       burst(eb.x, eb.y, 6, eb.col, 50);
       gone = true;
@@ -1560,24 +1857,6 @@ function updStuff(dt){
     teles[i].t += dt;
     if (teles[i].t >= teles[i].life) teles.splice(i, 1);
   }
-  for (i = pickups.length - 1; i >= 0; i--){
-    var u = pickups[i];
-    u.t += dt;
-    u.x += u.vx * dt; u.y += u.vy * dt; u.vx *= 0.9; u.vy *= 0.9;
-    u.x = Math.max(MINX, Math.min(MAXX, u.x)); u.y = Math.max(MINY, Math.min(MAXY, u.y));
-    var dd = Math.hypot(player.x - u.x, player.y - u.y);
-    if (dd < S.magnet){
-      u.x += (player.x - u.x) / dd * 70 * dt;
-      u.y += (player.y - u.y) / dd * 70 * dt;
-    }
-    if (dd < 7){
-      player.hp = Math.min(S.maxhp, player.hp + u.heal);
-      addFloat(player.x, player.y - 10, "+" + u.heal, "#6fcf6a");
-      burst(u.x, u.y, 9, "#6fcf6a", 50);
-      SFX.pickup();
-      pickups.splice(i, 1);
-    }
-  }
   shake *= Math.pow(0.0015, dt);
   if (shake < 0.05) shake = 0;
   redFlash = Math.max(0, redFlash - dt * 2.6);
@@ -1601,7 +1880,7 @@ function updWave(dt){
   }
   while (spawnQueue.length && waveT >= spawnQueue[0].at && enemies.length < 34 + Math.min(30, 3 * late())){
     q = spawnQueue.shift();
-    spawnEnemy(q.t, q.ang, 1);
+    spawnEnemy(q.t, q.ang, q.sc || 1);
   }
   if (!spawnQueue.length && !enemies.length){
     waveEndT += dt;
@@ -1628,18 +1907,37 @@ function updDrones(dt){
     }
     if (!tgt) continue;
     dr.cool = 1.05;
-    var a = Math.atan2(tgt.y - dr.y, tgt.x - dr.x);
+    var a = Math.atan2(tgt.y - dr.y, tgt.x - dr.x), dc = rnd() < S.crit;
     bullets.push({ x:dr.x, y:dr.y, vx:Math.cos(a) * 200, vy:Math.sin(a) * 200,
-      dmg:S.dmg * 0.5, pierce:0, bounce:0, crit:false, slug:false,
+      dmg:S.dmg * 0.5 * (dc ? S.critMul : 1), pierce:0, bounce:0, crit:dc, slug:false,
       life:1, hit:[], px:dr.x, py:dr.y, cal:S.cal });
     burst(dr.x, dr.y, 2, "#f0a830", 34);
+    SFX.drone();
+  }
+  for (var si = 0; si < sentries.length; si++){
+    var st = sentries[si];
+    st.ft += dt; if (st.ft > 0.2){ st.ft = 0; st.frame ^= 1; }
+    st.cool -= dt;
+    if (st.cool > 0) continue;
+    var stg = null, std = 120;
+    for (var sj = 0; sj < enemies.length; sj++){
+      var sdd = Math.hypot(enemies[sj].x - st.x, enemies[sj].y - st.y);
+      if (sdd < std){ std = sdd; stg = enemies[sj]; }
+    }
+    if (!stg) continue;
+    st.cool = 0.8;
+    var sa = Math.atan2(stg.y - st.y, stg.x - st.x);
+    bullets.push({ x:st.x, y:st.y, vx:Math.cos(sa) * 200, vy:Math.sin(sa) * 200,
+      dmg:S.dmg * 0.6, pierce:0, bounce:0, crit:false, slug:false,
+      life:0.7, hit:[], px:st.x, py:st.y, cal:S.cal });
+    burst(st.x, st.y, 2, "#ff8a3a", 34);
     SFX.drone();
   }
 }
 function updRings(dt){
   for (var i = rings.length - 1; i >= 0; i--){
     var rg = rings[i];
-    rg.r += dt * 155;
+    rg.r += dt * (rg.foe ? 240 : 155);
     if (rg.foe){
       if (!rg.hitP && Math.hypot(player.x - rg.x, player.y - rg.y) < rg.r + 5){
         rg.hitP = true;
@@ -1697,7 +1995,7 @@ function pxText(str, x, y, col){
 
 /* ---------------- drawing ---------------- */
 var PIV = { body:[5,5], gun:[0,1], crawler:[4,4], darter:[3,3], brute:[6,6],
-            spitter:[4,4], splitter:[4,4], hulk:[13,13], medkit:[3,3], drone:[2,2] };
+            spitter:[4,4], splitter:[4,4], lurker:[4,4], bomber:[4,4], lancer:[4,4], hulk:[13,13], colossus:[19,19], drone:[2,2] };
 
 function blit(img, x, y, ang, px, py){
   g.save();
@@ -1739,10 +2037,6 @@ function render(){
     g.save(); g.translate(Math.round(c.x), Math.round(c.y)); g.rotate(c.rot);
     g.fillRect(-1, 0, 2, 1); g.restore();
   }
-  for (i = 0; i < pickups.length; i++){
-    var u = pickups[i];
-    blit(SPR.medkit[0], u.x, u.y + Math.sin(u.t * 4) * 1.2, 0, 3, 3);
-  }
   for (i = 0; i < teles.length; i++){
     var tl = teles[i];
     var al = 0.3 + 0.55 * Math.abs(Math.sin(tl.t * 17));
@@ -1762,7 +2056,7 @@ function render(){
     blit(img, e.x, e.y, e.ang, pv[0], pv[1]);
     if (e.wind > 0){
       var wt = 1 - e.wind / (e.windMax || 0.7);
-      var wcol = e.next === "slam" ? "160,44,44" : (e.next === "flak" ? "111,207,106" : (e.next === "mortar" ? "255,138,58" : "240,168,48"));
+      var wcol = e.next === "slam" ? "160,44,44" : (e.next === "flak" ? "111,207,106" : (e.next === "mortar" ? "255,138,58" : (e.next === "spiral" ? "127,232,255" : (e.next === "wall" ? "255,90,74" : "240,168,48"))));
       g.strokeStyle = "rgba(" + wcol + "," + (0.3 + 0.55 * Math.abs(Math.sin(wt * 22))).toFixed(3) + ")";
       g.lineWidth = 1;
       g.beginPath(); g.arc(Math.round(e.x), Math.round(e.y), e.r + 3 + wt * 6, 0, 6.2832); g.stroke();
@@ -1776,10 +2070,22 @@ function render(){
   }
 
   for (i = 0; i < rings.length; i++){
-    var rg = rings[i];
-    g.strokeStyle = (rg.foe ? "rgba(255,138,58," : "rgba(191,230,255,") + (0.8 * (1 - rg.r / rg.max)).toFixed(3) + ")";
-    g.lineWidth = 2;
-    g.beginPath(); g.arc(Math.round(rg.x), Math.round(rg.y), rg.r, 0, 6.2832); g.stroke();
+    var rg = rings[i], rk = 1 - rg.r / rg.max, rx = Math.round(rg.x), ry = Math.round(rg.y);
+    if (rg.foe){
+      g.fillStyle = "rgba(255,90,40," + (0.45 * rk).toFixed(3) + ")";
+      g.beginPath(); g.arc(rx, ry, rg.r, 0, 6.2832); g.fill();
+      g.strokeStyle = "rgba(255,138,58," + (0.6 * rk).toFixed(3) + ")";
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(rx, ry, rg.r * 0.7, 0, 6.2832); g.stroke();
+      g.strokeStyle = "rgba(255,240,200," + (0.9 * rk + 0.1).toFixed(3) + ")";
+      g.lineWidth = 3;
+      g.beginPath(); g.arc(rx, ry, rg.r, 0, 6.2832); g.stroke();
+      if (Math.random() < 0.6) burst(rg.x + Math.cos(Math.random() * 6.2832) * rg.r, rg.y + Math.sin(Math.random() * 6.2832) * rg.r, 1, "#ff8a3a", 30);
+    } else {
+      g.strokeStyle = "rgba(191,230,255," + (0.8 * rk).toFixed(3) + ")";
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(rx, ry, rg.r, 0, 6.2832); g.stroke();
+    }
   }
   for (i = 0; i < arcs.length; i++){
     var ar = arcs[i];
@@ -1797,8 +2103,9 @@ function render(){
   }
   if (S.stasis < 1){
     g.strokeStyle = "rgba(191,230,255,.12)"; g.lineWidth = 1;
-    g.beginPath(); g.arc(Math.round(player.x), Math.round(player.y), 48, 0, 6.2832); g.stroke();
+    g.beginPath(); g.arc(Math.round(player.x), Math.round(player.y), S.stasisR, 0, 6.2832); g.stroke();
   }
+  for (i = 0; i < sentries.length; i++) blit(SPR.sentry[sentries[i].frame], sentries[i].x, sentries[i].y, 0, 5, 5);
 
   /* player */
   var blink = player.iframe > 0 && Math.floor(player.iframe * 16) % 2 === 0;
@@ -1806,7 +2113,8 @@ function render(){
     var rec = player.recoil;
     var bx = player.x - Math.cos(player.ang) * rec * 0.3;
     var by2 = player.y - Math.sin(player.ang) * rec * 0.3;
-    blit(SPR.body[Math.floor(player.step) % 2], bx, by2, player.ang, 5, 5);
+    if (smiley) blit(SPR.smile[0], bx, by2, 0, 5, 5);
+    else blit(SPR.body[Math.floor(player.step) % 2], bx, by2, player.ang, 5, 5);
     var gx = bx + Math.cos(player.ang) * (4 - rec * 0.5);
     var gy = by2 + Math.sin(player.ang) * (4 - rec * 0.5);
     blit(SPR.gun[0], gx, gy, player.ang, 0, 1);
@@ -1822,6 +2130,10 @@ function render(){
   if (player.dashCd > 0.95 && player.dashT <= 0){
     g.strokeStyle = "rgba(232,223,200,.25)"; g.lineWidth = 1;
     g.beginPath(); g.arc(Math.round(player.x), Math.round(player.y), 8, 0, 6.2832); g.stroke();
+  }
+  if (player.shield){
+    g.strokeStyle = "rgba(191,230,255,.55)"; g.lineWidth = 1;
+    g.beginPath(); g.arc(Math.round(player.x), Math.round(player.y), 9, 0, 6.2832); g.stroke();
   }
 
   for (i = 0; i < drones.length; i++){
@@ -1842,6 +2154,7 @@ function render(){
     g.fillRect(Math.round(eb.x) - 2, Math.round(eb.y) - 2, 4, 4);
     g.fillStyle = eb.col;
     g.fillRect(Math.round(eb.x) - 1, Math.round(eb.y) - 1, 3, 3);
+    if (eb.hard){ g.fillStyle = "#20272a"; g.fillRect(Math.round(eb.x), Math.round(eb.y), 1, 1); }
   }
   for (i = 0; i < parts.length; i++){
     var p = parts[i];
@@ -1918,9 +2231,10 @@ var SCREENS = { menu:"s-menu", upgrade:"s-up", over:"s-over", paused:"s-pause", 
 var el = {};
 ["hud","hpbar","hpfill","hpnum","hpmax","dashpips","dlabel","hwave","hkills",
  "banner","bn","bm","up-eyebrow","up-cards","over-wave","o-kills","o-time",
- "o-best","o-seed","menubest"].forEach(function(id){ el[id] = document.getElementById(id); });
+ "o-best","o-seed","menubest","trophy"].forEach(function(id){ el[id] = document.getElementById(id); });
 
 function show(which){
+  adminOn = which === "debug"; egBuf = "";
   for (var k in SCREENS) document.getElementById(SCREENS[k]).classList.toggle("on", k === which);
   el.hud.classList.toggle("on", which === null || which === "paused" || which === "upgrade");
   syncPad(which);
@@ -1967,7 +2281,8 @@ function bannerText(main, sub){
 function showBanner(){
   var sub = waveMod ? waveMod.nm + " <em>·</em> " + waveMod.note : "";
   if (late()) sub = "<em>OVERTIME +" + late() + "</em>" + (sub ? " · " + sub : "");
-  bannerText(wave % 10 === 0 ? "WAVE " + wave + " — HULK" : "WAVE " + wave, sub);
+  var bk = bossKey();
+  bannerText(bk ? "WAVE " + wave + " — " + bk.toUpperCase() : "WAVE " + wave, sub);
 }
 function paintPause(){
   var load = document.getElementById("p-load");
@@ -1996,7 +2311,9 @@ function paintPause(){
     ["SPEED", Math.round(S.speed)],
     ["DASH", S.dashcd.toFixed(2) + "s"],
     ["HEALTH", Math.round(player.hp) + " / " + Math.round(S.maxhp)],
-    ["DRONES", S.drones]
+    ["ARMOR", Math.round(S.armor * 100) + "%"],
+    ["DRONES", S.drones + (S.sentries ? " + " + S.sentries + " sentry" : "")],
+    ["SALVAGE", power()]
   ];
   var sh = "";
   for (i = 0; i < rows.length; i++) sh += "<div><span>" + rows[i][0] + "</span><b>" + rows[i][1] + "</b></div>";
@@ -2015,7 +2332,7 @@ function openUpgrades(){
   for (var i = 0; i < UPGRADES.length; i++) if (lvl[UPGRADES[i].id] < UPGRADES[i].max) avail.push(UPGRADES[i]);
   if (!avail.length){ startWave(); return; }
   offers = [];
-  for (var n = 0; n < 3 && avail.length; n++) offers.push(avail.splice(ri(avail.length), 1)[0]);
+  for (var n = 0; n < S.cards && avail.length; n++) offers.push(avail.splice(ri(avail.length), 1)[0]);
 
   el["up-eyebrow"].textContent = "WAVE " + wave + " CLEARED · " + kills + " DOWN";
   var html = "";
@@ -2058,6 +2375,7 @@ function loadBest(){
   try {
     var raw = localStorage.getItem("scrapline.best");
     if (raw){ var b = JSON.parse(raw); if (b && typeof b.wave === "number") best = b; }
+    trophy = localStorage.getItem("scrapline.trophy") === "1";
   } catch (err) {}
 }
 function saveBest(){
@@ -2067,6 +2385,12 @@ function paintBest(){
   el.menubest.textContent = best.wave
     ? "BEST — WAVE " + best.wave + " · " + best.kills + " KILLS"
     : "NO RUNS LOGGED";
+  el.trophy.hidden = !trophy;
+  if (trophy && !el.trophy.width){
+    var t = SPR.trophy[0];
+    el.trophy.width = t.width; el.trophy.height = t.height;
+    el.trophy.getContext("2d").drawImage(t, 0, 0);
+  }
 }
 function fmtTime(t){
   var m = Math.floor(t / 60), s = Math.floor(t % 60);
@@ -2076,7 +2400,7 @@ function fmtTime(t){
 function gotoWave(n){
   wave = Math.max(0, n - 1);
   enemies.length = 0; bullets.length = 0; ebullets.length = 0;
-  teles.length = 0; pickups.length = 0; spawnQueue.length = 0; mortars.length = 0;
+  teles.length = 0; spawnQueue.length = 0; mortars.length = 0;
   startWave();
 }
 
@@ -2212,6 +2536,7 @@ dPanel.addEventListener("change", function(e){
 document.getElementById("d-lock").addEventListener("submit", function(e){
   e.preventDefault();
   var pw = document.getElementById("d-pw");
+  if (pw.value.toLowerCase() === "verity"){ pw.value = ""; return; }
   dbgOpen = pw.value === "6062";
   pw.value = "";
   pw.placeholder = dbgOpen ? "CODE" : "DENIED";
