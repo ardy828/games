@@ -1,7 +1,8 @@
 # Games
 
 Browser games, each one a **single self-contained HTML file** — no build step, no dependencies,
-no bundler. Open the file in a browser and it runs.
+no bundler. Open the file in a browser and it runs. The one exception is Scrapline's co-op mode,
+which pulls PeerJS from a CDN when you press CO-OP.
 
 **▶ Play them: <https://ardy828.github.io/games/>**
 
@@ -46,6 +47,11 @@ Hold a scrapyard against malfunctioning salvage drones converging from every bea
   VOLATILE, PACK, MIST). Each wave reseeds from `(runSeed, waveNumber)`, so the seed shown on the death
   screen reproduces that run's wave layouts.
 - 26 upgrades, three offered after each wave. Your build and its derived stats are listed on the pause screen.
+- **Online co-op for two.** CO-OP on the menu: one player hosts and gets a six-digit room code, the
+  other types it in to join. Same arena, same waves, each player picks their own upgrades and the next
+  wave waits for both. Anyone who goes down sits out until the next wave; the run ends when both are
+  down. The browsers talk directly over WebRTC (PeerJS, loaded from a CDN only when you press CO-OP),
+  so both need to be online; nothing else is hosted.
 - All audio is synthesised at runtime with the Web Audio API — no audio files.
 
 ## Running locally

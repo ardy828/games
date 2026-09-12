@@ -248,6 +248,8 @@
   [hidden]{display:none!important}
   #b-dbg{position:absolute;right:0;bottom:0;width:2.6em;height:2.6em;padding:0;opacity:0;box-shadow:none}
   #s-dbg{justify-content:flex-start;overflow-y:auto;gap:.8em;color-scheme:dark}
+  .card.picked{opacity:.35}
+  #n-code{font:inherit;font-size:1.1em;width:6.5em;text-align:center;letter-spacing:.25em;background:#241d18;color:var(--bone);border:2px solid var(--edge);padding:.45em .5em}
   #s-dbg input{font:inherit;font-size:.9em;width:5.5em;background:#241d18;color:var(--bone);border:1px solid var(--edge);padding:.2em .35em}
   #s-dbg button{font-size:.72em;padding:.4em .9em}
   .dbg{display:flex;flex-direction:column;gap:.8em;width:100%;max-width:46em}
@@ -283,6 +285,7 @@
       <div class="hud-r">
         <div class="stat"><small>WAVE</small><b id="hwave">1</b></div>
         <div class="stat"><small>KILLS</small><b id="hkills">0</b></div>
+        <div class="stat" id="hp2s" hidden><small>PARTNER</small><b id="hp2">100</b></div>
         <div class="stat"><small>SOUND</small><b id="hsnd">ON</b></div>
       </div>
     </div>
@@ -293,7 +296,7 @@
       <div class="eyebrow">SECTOR 7 &middot; SALVAGE OPS</div>
       <h1 class="title">SCRAPLINE</h1>
       <p class="lede">The yard&rsquo;s drones went bad three shifts ago. They come in from every bearing, they do not stop, and there is no extraction. Hold the line as long as you can.</p>
-      <div class="row"><button id="b-play">PLAY</button><button class="ghost" id="b-mute">SOUND: ON</button></div>
+      <div class="row"><button id="b-play">PLAY</button><button class="ghost" id="b-coop">CO-OP</button><button class="ghost" id="b-mute">SOUND: ON</button></div>
       <div class="keys" id="keys-kb">
         <div><b>WASD</b>move</div>
         <div><b>MOUSE</b>aim</div>
@@ -309,6 +312,16 @@
       </div>
       <div class="best" id="menubest">NO RUNS LOGGED</div>
       <canvas class="trophy" id="trophy" hidden title="Reached wave 1000"></canvas>
+    </div>
+
+    <div class="screen" id="s-net">
+      <div class="eyebrow">CO-OP &middot; 2 PLAYERS</div>
+      <div class="head">LINK UP</div>
+      <p class="lede">One of you hosts and reads out the six-digit code, the other types it in. Same arena, same waves, your own salvage. Anyone who goes down is back on their feet next wave.</p>
+      <div class="row"><button id="n-host">HOST A ROOM</button></div>
+      <form class="row" id="n-join"><input id="n-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="CODE" aria-label="Room code"><button class="ghost">JOIN</button></form>
+      <div class="best" id="n-msg"></div>
+      <div class="row"><button class="ghost" id="n-back">BACK</button></div>
     </div>
 
     <div class="screen" id="s-up">
@@ -1111,6 +1124,7 @@ var state = "menu";
 var player, enemies, bullets, ebullets, parts, casings, floats, teles, decals;
 var drones, rings, arcs, mortars, sentries;
 var wave, kills, runTime, spawnQueue, waveMod, shots, shake, redFlash, mist, waveEndT;
+var PL = [], cur = 0, local = 0, inp;   /* player contexts — see bind() */
 var lvl = {}, S = {}, offers = [];
 var dbg = {}, dbgUsed = false;     // admin stat overrides, laid over S by recalc()
 var best = { wave:0, kills:0 }, trophy = false;
@@ -1155,18 +1169,44 @@ function recalc(){
   for (var k in dbg) S[k] = dbg[k];
 }
 
-function newRun(){
+/* ---------------- player contexts ----------------
+   Every gameplay function reads the globals player/lvl/S/drones/sentries/offers/inp. Co-op keeps
+   that: each player owns one set and bind(i) points the globals at it before that player's slice
+   of the sim runs. Solo is a single context, so bind(0) is the whole story. Anything that
+   reassigns one of those arrays must also store it back on PL[cur]. */
+function noInput(){ return { ax:0, ay:0, mx:W / 2, my:H / 2, ang:0, fire:false, dash:false, touch:false }; }
+function mkCtx(){ return { p:null, lvl:{}, S:{}, drones:[], sentries:[], offers:[], inp:noInput(), down:false, pick:-1 }; }
+function bind(i){
+  cur = i; var c = PL[i];
+  player = c.p; lvl = c.lvl; S = c.S; drones = c.drones; sentries = c.sentries; offers = c.offers; inp = c.inp;
+}
+function nearestP(x, y){
+  var bi = 0, bd = 1e9;
+  for (var i = 0; i < PL.length; i++){
+    if (PL[i].down) continue;
+    var d = Math.hypot(PL[i].p.x - x, PL[i].p.y - y);
+    if (d < bd){ bd = d; bi = i; }
+  }
+  return bi;
+}
+
+function newRun(n){
   setSeed((Math.random() * 0xFFFFFFFF) >>> 0);
   runSeed = seed;
-  for (var i = 0; i < UPGRADES.length; i++) lvl[UPGRADES[i].id] = 0;
   dbg = {}; dbgUsed = false;
-  recalc();
-  player = { x:W/2, y:H/2, ang:0, hp:S.maxhp, cool:0, recoil:0, iframe:0,
+  PL = [];
+  for (var pi = 0; pi < (n || 1); pi++){
+    PL.push(mkCtx()); bind(pi);
+    for (var i = 0; i < UPGRADES.length; i++) lvl[UPGRADES[i].id] = 0;
+    recalc();
+    player = PL[pi].p = { x:W/2 + (n > 1 ? (pi ? 14 : -14) : 0), y:H/2, ang:0, hp:S.maxhp, cool:0, recoil:0, iframe:0,
              dashT:0, dashCd:0, ddx:0, ddy:0, step:0, adrnT:0, kx:0, ky:0, saves:0, hitSet:[], hbT:0,
              streak:0, streakT:0, shield:false, shieldT:0, novaK:0 };
+  }
+  bind(local);
   enemies = []; bullets = []; ebullets = []; parts = []; casings = [];
   floats = []; teles = []; decals = [];
-  drones = []; rings = []; arcs = []; mortars = []; sentries = [];
+  rings = []; arcs = []; mortars = [];
   wave = 0; kills = 0; runTime = 0; shots = 0;
   shake = 0; redFlash = 0; mist = 0; waveEndT = 0;
   spawnQueue = []; waveMod = null;
@@ -1214,13 +1254,16 @@ function startWave(){
   waveEndT = 0; waveT = 0;
   if (mortars){ mortars.length = 0; rings.length = 0; arcs.length = 0; }
   mist = (waveMod && waveMod.nm === "MIST") ? 1 : 0;
-  if (player){
+  for (var pI = 0; pI < PL.length; pI++){
+    bind(pI);
+    PL[pI].down = false;    /* a downed partner gets back up here */
     player.saves = lvl.wind;
     player.hp = S.maxhp;   /* no medkits: health resets between waves */
     player.shield = lvl.shield > 0; player.shieldT = 0;
-    sentries = [];
+    sentries = PL[pI].sentries = [];
     for (var sI = 0; sI < S.sentries; sI++) sentries.push({ x:player.x + rr(-8, 8), y:player.y + rr(-8, 8), cool:rr(0, 0.5), frame:0, ft:0 });
   }
+  bind(local);
   if (boss) SFX.boss(); else SFX.wave();
   if (wave >= 1000 && !dbgUsed && !trophy){
     trophy = true;
@@ -1302,7 +1345,7 @@ function bossFire(e, ux, uy){
     return;
   }
   if (now === "slam"){
-    rings.push({ x:e.x, y:e.y, r:9, max:80 + 5 * tier + 8 * big, dmg:18 + wave * 0.7 + 8 * big, hit:[], foe:true, hitP:false });
+    rings.push({ x:e.x, y:e.y, r:9, max:80 + 5 * tier + 8 * big, dmg:18 + wave * 0.7 + 8 * big, hit:[], foe:true, hitP:{} });
     burst(e.x, e.y, 24, "#5d6b70", 95);
     addShake(6);
     SFX.shock();
@@ -1347,13 +1390,18 @@ function updMortars(dt){
     scorch(mo.x, mo.y, mo.r * 0.55);
     addShake(3.5);
     SFX.boom();
-    if (Math.hypot(player.x - mo.x, player.y - mo.y) < mo.r) hurtPlayer(20 + wave * 0.3, mo.x, mo.y);
+    for (var pi = 0; pi < PL.length; pi++){
+      if (PL[pi].down) continue;
+      bind(pi);
+      if (Math.hypot(player.x - mo.x, player.y - mo.y) < mo.r) hurtPlayer(20 + wave * 0.3, mo.x, mo.y);
+    }
     mortars.splice(i, 1);
   }
 }
 
 /* ---------------- effects ---------------- */
 function burst(x, y, n, col, spd){
+  fx(["b", x, y, n, col, spd]);
   if (REDUCED) n = Math.ceil(n / 2);
   if (parts.length > 300) return;
   for (var i = 0; i < n; i++){
@@ -1362,11 +1410,13 @@ function burst(x, y, n, col, spd){
   }
 }
 function addFloat(x, y, txt, col){
+  fx(["f", x, y, txt, col]);
   if (floats.length > 40) return;
   floats.push({ x:x, y:y, txt:txt, col:col, t:0, life:0.7, vy:-18 });
 }
-function addShake(v){ if (!REDUCED) shake = Math.min(7, shake + v); }
+function addShake(v){ fx(["k", v]); if (!REDUCED) shake = Math.min(7, shake + v); }
 function scorch(x, y, r){
+  fx(["d", x, y, r]);
   if (decals.length > 60) decals.shift();
   decals.push({ x:x, y:y, r:r });
 }
@@ -1386,7 +1436,7 @@ function fire(){
     bullets.push({
       x:mx, y:my, vx:Math.cos(a) * S.bspd * (slug ? 0.8 : 1), vy:Math.sin(a) * S.bspd * (slug ? 0.8 : 1),
       dmg:dmg, pierce:S.pierce + (slug ? 3 : 0), bounce:S.bounce, crit:crit, slug:slug,
-      life:S.range / S.bspd, hit:[], px:mx, py:my, cal:S.cal
+      life:S.range / S.bspd, hit:[], px:mx, py:my, cal:S.cal, own:cur
     });
   }
   player.recoil = slug ? 3.4 : 2;
@@ -1411,7 +1461,7 @@ function hurtPlayer(amount, fromX, fromY){
   player.hp -= amount;
   player.iframe = 0.7;
   player.adrnT = lvl.adrn > 0 ? 3 : 0;
-  redFlash = 1;
+  redFlash = 1; fx(["r"]);
   addShake(4);
   var a = Math.atan2(player.y - fromY, player.x - fromX);
   player.kx += Math.cos(a) * 60; player.ky += Math.sin(a) * 60;
@@ -1435,8 +1485,22 @@ function hurtPlayer(amount, fromX, fromY){
       return;
     }
     player.hp = 0;
-    gameOver();
+    downPlayer();
   }
+}
+
+/* shared death: a downed player sits out until startWave() revives them; the run only ends
+   when nobody is left standing */
+function downPlayer(){
+  PL[cur].down = true;
+  for (var i = 0; i < PL.length; i++) if (!PL[i].down){
+    burst(player.x, player.y, 34, "#e8dfc8", 110);
+    addShake(7);
+    SFX.over();
+    bannerText("PLAYER " + (cur + 1) + " DOWN", "back on their feet next wave");
+    return;
+  }
+  gameOver();
 }
 
 function killEnemy(e, i){
@@ -1486,11 +1550,11 @@ function killEnemy(e, i){
       var fa = (fq / nf) * 6.2832 + rr(0, 1);
       bullets.push({ x:e.x, y:e.y, vx:Math.cos(fa) * 165, vy:Math.sin(fa) * 165,
         dmg:S.dmg * 0.45, pierce:0, bounce:0, crit:false, slug:false,
-        life:0.55, hit:[], px:e.x, py:e.y, cal:S.cal });
+        life:0.55, hit:[], px:e.x, py:e.y, cal:S.cal, own:cur });
     }
   }
   if (e.key === "bomber"){
-    rings.push({ x:e.x, y:e.y, r:4, max:30, dmg:e.dmg, hit:[], foe:true, hitP:false });
+    rings.push({ x:e.x, y:e.y, r:4, max:30, dmg:e.dmg, hit:[], foe:true, hitP:{} });
     burst(e.x, e.y, 16, "#f0a830", 80);
     addShake(2.5);
     SFX.boom();
@@ -1507,25 +1571,34 @@ function killEnemy(e, i){
 /* ---------------- simulation ---------------- */
 var waveT = 0;
 
-function updPlayer(dt){
+/* one input frame from the local keyboard/mouse/sticks; the sim only ever reads `inp`, so a
+   remote player's input is just an object that arrived over the wire */
+function readInput(){
   var ax = ((keys.d || keys.arrowright) ? 1 : 0) - ((keys.a || keys.arrowleft) ? 1 : 0);
   var ay = ((keys.s || keys.arrowdown) ? 1 : 0) - ((keys.w || keys.arrowup) ? 1 : 0);
   var len = Math.hypot(ax, ay);
   if (len > 0){ ax /= len; ay /= len; }
-  if (TOUCH && stickL.mag > 0){ ax = stickL.x; ay = stickL.y; len = stickL.mag; }
+  if (TOUCH && stickL.mag > 0){ ax = stickL.x; ay = stickL.y; }
+  return { ax:ax, ay:ay, mx:mouse.x, my:mouse.y, ang:stickR.ang,
+           fire: TOUCH ? stickR.mag > 0 : mouse.down, dash: !!(keys[" "] || dashHeld), touch:TOUCH };
+}
+
+function updPlayer(dt){
+  var ax = inp.ax, ay = inp.ay;
+  var len = Math.hypot(ax, ay);
 
   player.dashCd -= dt; player.dashT -= dt;
   /* on touch a dash with no move input goes where you are aiming */
   var ddx = ax, ddy = ay;
-  if (TOUCH && !ddx && !ddy){ ddx = Math.cos(player.ang); ddy = Math.sin(player.ang); }
-  if ((keys[" "] || dashHeld) && player.dashCd <= 0 && (ddx || ddy)){
+  if (inp.touch && !ddx && !ddy){ ddx = Math.cos(player.ang); ddy = Math.sin(player.ang); }
+  if (inp.dash && player.dashCd <= 0 && (ddx || ddy)){
     player.dashT = 0.16; player.dashCd = S.dashcd;
     player.ddx = ddx; player.ddy = ddy;
     player.hitSet.length = 0;
     burst(player.x, player.y, 7, "#e8dfc8", 40);
     SFX.dash();
   }
-  if (TOUCH && player.dashT > 0 && !ax && !ay){ ax = player.ddx; ay = player.ddy; len = 1; }
+  if (inp.touch && player.dashT > 0 && !ax && !ay){ ax = player.ddx; ay = player.ddy; len = 1; }
   var spd = S.speed * (player.dashT > 0 ? 3.2 : 1);
   player.lx = player.x; player.ly = player.y;   /* last position, for swept shot collision */
   player.x += ax * spd * dt + player.kx * dt;
@@ -1536,7 +1609,7 @@ function updPlayer(dt){
   if (player.dashT > 0 && rnd() < 0.6) burst(player.x, player.y, 1, "#b3a68d", 12);
   if (len > 0) player.step += dt * 7;
 
-  player.ang = TOUCH ? stickR.ang : Math.atan2(mouse.y - player.y, mouse.x - player.x);
+  player.ang = inp.touch ? inp.ang : Math.atan2(inp.my - player.y, inp.mx - player.x);
   player.recoil = Math.max(0, player.recoil - dt * 22);
   player.iframe -= dt;
   player.adrnT -= dt;
@@ -1548,7 +1621,7 @@ function updPlayer(dt){
       if (player.hitSet.indexOf(se) > -1) continue;
       if (Math.hypot(se.x - player.x, se.y - player.y) < se.r + 8){
         player.hitSet.push(se);
-        se.hp -= sdmg;
+        se.hp -= sdmg; se.by = cur;
         se.flash = 0.1;
         var sa = Math.atan2(se.y - player.y, se.x - player.x);
         se.kx += Math.cos(sa) * 155; se.ky += Math.sin(sa) * 155;
@@ -1572,13 +1645,13 @@ function updPlayer(dt){
 
   var rate = S.rate * (player.adrnT > 0 ? 1 + 0.30 * lvl.adrn : 1) * (1 + S.streak * player.streak);
   player.cool -= dt;
-  if ((TOUCH ? stickR.mag > 0 : mouse.down) && player.cool <= 0){ fire(); player.cool = 1 / rate; }
+  if (inp.fire && player.cool <= 0){ fire(); player.cool = 1 / rate; }
 }
 
 function updEnemies(dt){
   for (var i = enemies.length - 1; i >= 0; i--){
     var e = enemies[i];
-    if (e.hp <= 0){ killEnemy(e, i); continue; }
+    if (e.hp <= 0){ bind(e.by || 0); killEnemy(e, i); continue; }
     e.flash -= dt;
     if (e.burnT > 0){
       e.burnT -= dt;
@@ -1586,6 +1659,7 @@ function updEnemies(dt){
       if (rnd() < 0.22) burst(e.x + rr(-3, 3), e.y + rr(-3, 3), 1, "#ff8a3a", 16);
     }
     e.ft += dt; if (e.ft > 0.18){ e.ft = 0; e.frame ^= 1; }
+    bind(nearestP(e.x, e.y));   /* everything below chases, shoots and bites this player */
     var dx = player.x - e.x, dy = player.y - e.y;
     var d = Math.hypot(dx, dy) || 1;
     var ux = dx / d, uy = dy / d;
@@ -1744,7 +1818,7 @@ function updEnemies(dt){
 function hitEnemy(e, dmg, dirx, diry, crit){
   if (S.exec > 0 && e.hp < e.maxhp * 0.34) dmg *= 1 + S.exec;
   if (S.hunter > 0 && isBoss(e)) dmg *= 1 + S.hunter;
-  e.hp -= dmg;
+  e.hp -= dmg; e.by = cur;
   if (S.burn > 0){ e.burn = S.burn; e.burnT = 3; }
   if (S.cryo > 0) e.chillT = 1.5;
   if (S.blast > 0){
@@ -1765,6 +1839,7 @@ function hitEnemy(e, dmg, dirx, diry, crit){
 function updBullets(dt){
   for (var i = bullets.length - 1; i >= 0; i--){
     var b = bullets[i];
+    bind(b.own || 0);   /* the shooter's stats decide homing, exec, burn, knock… */
     b.px = b.x; b.py = b.y;
     if (S.home > 0 && !b.slug){
       var ht = null, hd = 70;
@@ -1825,10 +1900,14 @@ function updBullets(dt){
     eb.x += eb.vx * dt; eb.y += eb.vy * dt; eb.life -= dt;
     var gone = eb.life <= 0 || eb.x < 2 || eb.x > W - 2 || eb.y < 2 || eb.y > H - 2;
     /* shots only break when they actually land; an invulnerable player lets them pass through */
-    if (!gone && player.iframe <= 0 && segDist(eb.x, eb.y, player.lx === undefined ? player.x : player.lx, player.ly === undefined ? player.y : player.ly, player.x, player.y) < 6){
-      hurtPlayer(eb.dmg, eb.x, eb.y);
-      burst(eb.x, eb.y, 6, eb.col, 50);
-      gone = true;
+    for (var pi = 0; pi < PL.length && !gone; pi++){
+      if (PL[pi].down) continue;
+      bind(pi);
+      if (player.iframe <= 0 && segDist(eb.x, eb.y, player.lx === undefined ? player.x : player.lx, player.ly === undefined ? player.y : player.ly, player.x, player.y) < 6){
+        hurtPlayer(eb.dmg, eb.x, eb.y);
+        burst(eb.x, eb.y, 6, eb.col, 50);
+        gone = true;
+      }
     }
     if (gone) ebullets.splice(k, 1);
   }
@@ -1910,7 +1989,7 @@ function updDrones(dt){
     var a = Math.atan2(tgt.y - dr.y, tgt.x - dr.x), dc = rnd() < S.crit;
     bullets.push({ x:dr.x, y:dr.y, vx:Math.cos(a) * 200, vy:Math.sin(a) * 200,
       dmg:S.dmg * 0.5 * (dc ? S.critMul : 1), pierce:0, bounce:0, crit:dc, slug:false,
-      life:1, hit:[], px:dr.x, py:dr.y, cal:S.cal });
+      life:1, hit:[], px:dr.x, py:dr.y, cal:S.cal, own:cur });
     burst(dr.x, dr.y, 2, "#f0a830", 34);
     SFX.drone();
   }
@@ -1929,7 +2008,7 @@ function updDrones(dt){
     var sa = Math.atan2(stg.y - st.y, stg.x - st.x);
     bullets.push({ x:st.x, y:st.y, vx:Math.cos(sa) * 200, vy:Math.sin(sa) * 200,
       dmg:S.dmg * 0.6, pierce:0, bounce:0, crit:false, slug:false,
-      life:0.7, hit:[], px:st.x, py:st.y, cal:S.cal });
+      life:0.7, hit:[], px:st.x, py:st.y, cal:S.cal, own:cur });
     burst(st.x, st.y, 2, "#ff8a3a", 34);
     SFX.drone();
   }
@@ -1939,9 +2018,13 @@ function updRings(dt){
     var rg = rings[i];
     rg.r += dt * (rg.foe ? 240 : 155);
     if (rg.foe){
-      if (!rg.hitP && Math.hypot(player.x - rg.x, player.y - rg.y) < rg.r + 5){
-        rg.hitP = true;
-        hurtPlayer(rg.dmg, rg.x, rg.y);
+      for (var pi = 0; pi < PL.length; pi++){
+        if (PL[pi].down || rg.hitP[pi]) continue;
+        bind(pi);
+        if (Math.hypot(player.x - rg.x, player.y - rg.y) < rg.r + 5){
+          rg.hitP[pi] = true;
+          hurtPlayer(rg.dmg, rg.x, rg.y);
+        }
       }
       if (rg.r >= rg.max) rings.splice(i, 1);
       continue;
@@ -2105,40 +2188,52 @@ function render(){
     g.strokeStyle = "rgba(191,230,255,.12)"; g.lineWidth = 1;
     g.beginPath(); g.arc(Math.round(player.x), Math.round(player.y), S.stasisR, 0, 6.2832); g.stroke();
   }
-  for (i = 0; i < sentries.length; i++) blit(SPR.sentry[sentries[i].frame], sentries[i].x, sentries[i].y, 0, 5, 5);
+  var pi, pl, sen;
+  for (pi = 0; pi < PL.length; pi++){
+    sen = PL[pi].sentries;
+    for (i = 0; i < sen.length; i++) blit(SPR.sentry[sen[i].frame], sen[i].x, sen[i].y, 0, 5, 5);
+  }
 
-  /* player */
-  var blink = player.iframe > 0 && Math.floor(player.iframe * 16) % 2 === 0;
-  if (!blink){
-    var rec = player.recoil;
-    var bx = player.x - Math.cos(player.ang) * rec * 0.3;
-    var by2 = player.y - Math.sin(player.ang) * rec * 0.3;
-    if (smiley) blit(SPR.smile[0], bx, by2, 0, 5, 5);
-    else blit(SPR.body[Math.floor(player.step) % 2], bx, by2, player.ang, 5, 5);
-    var gx = bx + Math.cos(player.ang) * (4 - rec * 0.5);
-    var gy = by2 + Math.sin(player.ang) * (4 - rec * 0.5);
-    blit(SPR.gun[0], gx, gy, player.ang, 0, 1);
-    if (rec > 0.9){
-      var mx = player.x + Math.cos(player.ang) * 11, my = player.y + Math.sin(player.ang) * 11;
-      g.fillStyle = "#ffd27a";
-      g.fillRect(Math.round(mx) - 1, Math.round(my) - 1, 3, 3);
-      g.fillStyle = "rgba(240,168,48,.6)";
-      g.fillRect(Math.round(mx) - 3, Math.round(my), 7, 1);
-      g.fillRect(Math.round(mx), Math.round(my) - 3, 1, 7);
+  /* players */
+  for (pi = 0; pi < PL.length; pi++){
+    pl = PL[pi].p;
+    if (PL[pi].down) continue;
+    var blink = pl.iframe > 0 && Math.floor(pl.iframe * 16) % 2 === 0;
+    if (!blink){
+      var rec = pl.recoil;
+      var bx = pl.x - Math.cos(pl.ang) * rec * 0.3;
+      var by2 = pl.y - Math.sin(pl.ang) * rec * 0.3;
+      if (smiley) blit(SPR.smile[0], bx, by2, 0, 5, 5);
+      else blit(SPR.body[Math.floor(pl.step) % 2], bx, by2, pl.ang, 5, 5);
+      var gx = bx + Math.cos(pl.ang) * (4 - rec * 0.5);
+      var gy = by2 + Math.sin(pl.ang) * (4 - rec * 0.5);
+      blit(SPR.gun[0], gx, gy, pl.ang, 0, 1);
+      if (rec > 0.9){
+        var mx = pl.x + Math.cos(pl.ang) * 11, my = pl.y + Math.sin(pl.ang) * 11;
+        g.fillStyle = "#ffd27a";
+        g.fillRect(Math.round(mx) - 1, Math.round(my) - 1, 3, 3);
+        g.fillStyle = "rgba(240,168,48,.6)";
+        g.fillRect(Math.round(mx) - 3, Math.round(my), 7, 1);
+        g.fillRect(Math.round(mx), Math.round(my) - 3, 1, 7);
+      }
+    }
+    if (pi !== local){   /* partner marker */
+      g.strokeStyle = "rgba(127,232,255,.5)"; g.lineWidth = 1;
+      g.beginPath(); g.arc(Math.round(pl.x), Math.round(pl.y), 7, 0, 6.2832); g.stroke();
+    }
+    if (pl.dashCd > 0.95 && pl.dashT <= 0){
+      g.strokeStyle = "rgba(232,223,200,.25)"; g.lineWidth = 1;
+      g.beginPath(); g.arc(Math.round(pl.x), Math.round(pl.y), 8, 0, 6.2832); g.stroke();
+    }
+    if (pl.shield){
+      g.strokeStyle = "rgba(191,230,255,.55)"; g.lineWidth = 1;
+      g.beginPath(); g.arc(Math.round(pl.x), Math.round(pl.y), 9, 0, 6.2832); g.stroke();
     }
   }
-  if (player.dashCd > 0.95 && player.dashT <= 0){
-    g.strokeStyle = "rgba(232,223,200,.25)"; g.lineWidth = 1;
-    g.beginPath(); g.arc(Math.round(player.x), Math.round(player.y), 8, 0, 6.2832); g.stroke();
-  }
-  if (player.shield){
-    g.strokeStyle = "rgba(191,230,255,.55)"; g.lineWidth = 1;
-    g.beginPath(); g.arc(Math.round(player.x), Math.round(player.y), 9, 0, 6.2832); g.stroke();
-  }
 
-  for (i = 0; i < drones.length; i++){
-    var dr = drones[i];
-    blit(SPR.drone[dr.frame], dr.x, dr.y, dr.ang, 2, 2);
+  for (pi = 0; pi < PL.length; pi++){
+    var drs = PL[pi].drones;
+    for (i = 0; i < drs.length; i++) blit(SPR.drone[drs[i].frame], drs[i].x, drs[i].y, drs[i].ang, 2, 2);
   }
   for (i = 0; i < bullets.length; i++){
     var b = bullets[i];
@@ -2227,21 +2322,26 @@ function renderMenu(dt){
 
 /* ---------------- screens + hud ---------------- */
 var runSeed = 0;
-var SCREENS = { menu:"s-menu", upgrade:"s-up", over:"s-over", paused:"s-pause", debug:"s-dbg" };
+var SCREENS = { menu:"s-menu", net:"s-net", upgrade:"s-up", over:"s-over", paused:"s-pause", debug:"s-dbg" };
 var el = {};
 ["hud","hpbar","hpfill","hpnum","hpmax","dashpips","dlabel","hwave","hkills",
  "banner","bn","bm","up-eyebrow","up-cards","over-wave","o-kills","o-time",
- "o-best","o-seed","menubest","trophy"].forEach(function(id){ el[id] = document.getElementById(id); });
+ "o-best","o-seed","menubest","trophy","hp2s","hp2","n-msg","n-code"].forEach(function(id){ el[id] = document.getElementById(id); });
 
 function show(which){
   adminOn = which === "debug"; egBuf = "";
   for (var k in SCREENS) document.getElementById(SCREENS[k]).classList.toggle("on", k === which);
   el.hud.classList.toggle("on", which === null || which === "paused" || which === "upgrade");
   syncPad(which);
+  if (net && net.host) netSend({ t:"st", w:which });
 }
 
-var lastHp = -1, lastWave = -1, lastKills = -1, lastDash = -1, lastDashF = -1;
+var lastHp = -1, lastWave = -1, lastKills = -1, lastDash = -1, lastDashF = -1, lastHp2 = null;
 function syncHud(){
+  if (PL.length > 1){
+    var o = PL[1 - local], hp2 = o.down ? "DOWN" : Math.max(0, Math.round(o.p.hp));
+    if (hp2 !== lastHp2){ lastHp2 = hp2; el.hp2.textContent = hp2; }
+  }
   var hp = Math.max(0, Math.round(player.hp));
   if (hp !== lastHp){
     lastHp = hp;
@@ -2272,6 +2372,7 @@ function syncHud(){
 
 var bannerTimer = null;
 function bannerText(main, sub){
+  fx(["n", main, sub]);
   el.bn.textContent = main;
   el.bm.innerHTML = sub || "";
   el.banner.classList.add("on");
@@ -2328,12 +2429,24 @@ function paintMute(){
 
 /* ---------------- upgrade offers ---------------- */
 function openUpgrades(){
-  var avail = [];
-  for (var i = 0; i < UPGRADES.length; i++) if (lvl[UPGRADES[i].id] < UPGRADES[i].max) avail.push(UPGRADES[i]);
-  if (!avail.length){ startWave(); return; }
-  offers = [];
-  for (var n = 0; n < S.cards && avail.length; n++) offers.push(avail.splice(ri(avail.length), 1)[0]);
-
+  var any = false;
+  for (var pi = 0; pi < PL.length; pi++){
+    bind(pi);
+    var avail = [];
+    for (var i = 0; i < UPGRADES.length; i++) if (lvl[UPGRADES[i].id] < UPGRADES[i].max) avail.push(UPGRADES[i]);
+    offers = PL[pi].offers = [];
+    for (var n = 0; n < S.cards && avail.length; n++) offers.push(avail.splice(ri(avail.length), 1)[0]);
+    PL[pi].pick = offers.length ? -1 : 0;   /* nothing left to fit counts as picked */
+    if (offers.length) any = true;
+  }
+  bind(local);
+  if (!any){ startWave(); return; }
+  if (net && net.host) netSend({ t:"up", w:wave, k:kills, o:PL[1].offers.map(function(u){ return u.id; }) });
+  paintUpgrades();
+  state = "upgrade";
+  show("upgrade");
+}
+function paintUpgrades(){
   el["up-eyebrow"].textContent = "WAVE " + wave + " CLEARED · " + kills + " DOWN";
   var html = "";
   for (var j = 0; j < offers.length; j++){
@@ -2347,20 +2460,40 @@ function openUpgrades(){
               '<span class="key">' + (TOUCH ? "TAP" : "PRESS " + (j + 1)) + '</span>' +
             '</button>';
   }
+  if (!offers.length) html = '<p class="none">Nothing left to fit. Waiting for your partner.</p>';
   el["up-cards"].innerHTML = html;
-  state = "upgrade";
-  show("upgrade");
 }
+/* each player picks their own card; the wave starts once every context has a pick */
 function chooseUpgrade(i){
-  if (state !== "upgrade" || !offers[i]) return;
-  var u = offers[i];
-  lvl[u.id]++;
-  recalc();
+  if (state !== "upgrade" || !offers[i] || PL[local].pick >= 0) return;
+  PL[local].pick = i;
   SFX.upgrade();
-  if (u.id === "plate") player.hp = S.maxhp;
-  player.hp = Math.min(player.hp, S.maxhp);
+  var cards = el["up-cards"].children;
+  for (var c = 0; c < cards.length; c++) cards[c].classList.toggle("picked", c !== i);
+  if (net && !net.host){
+    lvl[offers[i].id]++; recalc();   /* mirror, so the pause panel reads right */
+    netSend({ t:"pick", i:i });
+    el["up-eyebrow"].textContent = "WAITING FOR PARTNER";
+    return;
+  }
+  tryApply();
+}
+function tryApply(){
+  var pi;
+  for (pi = 0; pi < PL.length; pi++) if (PL[pi].pick < 0){ el["up-eyebrow"].textContent = "WAITING FOR PARTNER"; return; }
+  for (pi = 0; pi < PL.length; pi++){
+    bind(pi);
+    var u = offers[PL[pi].pick];
+    if (u){
+      lvl[u.id]++;
+      recalc();
+      if (u.id === "plate") player.hp = S.maxhp;
+      player.hp = Math.min(player.hp, S.maxhp);
+    }
+    offers = PL[pi].offers = [];
+  }
+  bind(local);
   lastHp = -1;
-  offers = [];
   state = "play";
   show(null);
   startWave();
@@ -2404,8 +2537,9 @@ function gotoWave(n){
   startWave();
 }
 
-function startRun(resume){
-  newRun();
+function startRun(resume, n){
+  newRun(n);
+  el.hp2s.hidden = PL.length < 2; lastHp2 = null;
   if (resume){
     runSeed = resume.seed >>> 0;
     for (var k in resume.lvl) if (k in lvl) lvl[k] = resume.lvl[k];
@@ -2439,18 +2573,25 @@ function gameOver(){
 }
 
 function togglePause(){
+  if (net && !net.host){ if (state === "play" || state === "paused") netSend({ t:"pause" }); return; }
   if (state === "play"){ state = "paused"; mouse.down = false; releaseTouch(); paintPause(); show("paused"); }
   else if (state === "paused"){ state = "play"; show(null); }
 }
 function toMenu(){
+  netClose();
   state = "menu";
   initMenu();
   paintBest();
   show("menu");
 }
 
-document.getElementById("b-play").addEventListener("click", function(){ audioInit(); SFX.click(); startRun(null); });
-document.getElementById("b-again").addEventListener("click", function(){ audioInit(); SFX.click(); startRun(null); });
+document.getElementById("b-play").addEventListener("click", function(){ audioInit(); SFX.click(); netClose(); local = 0; startRun(null, 1); });
+document.getElementById("b-again").addEventListener("click", function(){
+  audioInit(); SFX.click();
+  if (net && !net.host){ netSend({ t:"again" }); return; }
+  startRun(null, net ? 2 : 1);
+  if (net) netSend({ t:"go", seed:runSeed });
+});
 document.getElementById("b-mute").addEventListener("click", function(){ audioInit(); setMuted(!muted); SFX.click(); });
 document.getElementById("b-mute2").addEventListener("click", function(){ audioInit(); setMuted(!muted); SFX.click(); });
 window.addEventListener("pointerdown", function(){ audioInit(); }, true);
@@ -2546,6 +2687,228 @@ document.getElementById("b-dbg").addEventListener("click", function(){ show("deb
 document.getElementById("d-back").addEventListener("click", function(){ paintPause(); show("paused"); });
 document.getElementById("d-resume").addEventListener("click", togglePause);
 
+/* ---------------- co-op netcode ----------------
+   PeerJS (loaded only when CO-OP is pressed) opens a WebRTC data channel between two browsers;
+   the six-digit room code is the host's peer id. The host runs the whole sim exactly as in solo
+   with two contexts and streams a snapshot every other frame; the joiner sends its input and
+   draws what it is told. Side effects the sim produces (bursts, floats, shake, banners, sound)
+   are queued in fxq on the host and replayed on the joiner, so the particle array never ships.
+   ponytail: one reliable ordered channel; move snapshots to an unreliable one if head-of-line
+   blocking is felt on lossy links. */
+var net = null, peer = null, fxq = null, netFrame = 0;
+var PEER_URL = "https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js";
+var F = {   /* snapshot field lists — everything render() reads, nothing more */
+  p:  ["x","y","ang","hp","recoil","iframe","dashT","dashCd","step","shield"],
+  e:  ["spr","x","y","ang","frame","flash","hp","maxhp","r","wind","windMax","next"],
+  b:  ["x","y","vx","vy","slug","crit"],
+  eb: ["x","y","vx","vy","col","hard"],
+  rg: ["x","y","r","max","foe"],
+  mo: ["x","y","t","life","r"],
+  dr: ["x","y","ang","frame"],
+  se: ["x","y","frame"],
+  te: ["x","y","ang","t","life"],
+  ar: ["x1","y1","x2","y2","t"],
+  ca: ["x","y","vx","vy","t","life","rot","vr"]
+};
+function fx(a){ if (fxq) fxq.push(a); }
+function pack(arr, f){
+  var out = [];
+  for (var i = 0; i < arr.length; i++){
+    var row = [];
+    for (var j = 0; j < f.length; j++){
+      var v = arr[i][f[j]];
+      row.push(typeof v === "number" ? Math.round(v * 10) / 10 : v);
+    }
+    out.push(row);
+  }
+  return out;
+}
+function unpack(rows, f){
+  var out = [];
+  for (var i = 0; i < rows.length; i++){
+    var o = {};
+    for (var j = 0; j < f.length; j++) o[f[j]] = rows[i][j];
+    out.push(o);
+  }
+  return out;
+}
+function netSnapshot(){
+  netFrame ^= 1;
+  if (netFrame) return;
+  var m = { t:"s", w:wave, k:kills, rt:runTime, mist:mist, p:[], dr:[], se:[],
+            e:pack(enemies, F.e), b:pack(bullets, F.b), eb:pack(ebullets, F.eb), rg:pack(rings, F.rg),
+            mo:pack(mortars, F.mo), te:pack(teles, F.te), ar:pack(arcs, F.ar), ca:pack(casings, F.ca), fx:fxq };
+  for (var i = 0; i < PL.length; i++){
+    var c = PL[i];
+    m.p.push({ v:pack([c.p], F.p)[0], mhp:c.S.maxhp, dcd:c.S.dashcd, down:c.down });
+    m.dr.push(pack(c.drones, F.dr));
+    m.se.push(pack(c.sentries, F.se));
+  }
+  fxq = [];
+  netSend(m);
+}
+function applySnapshot(m){
+  wave = m.w; kills = m.k; runTime = m.rt; mist = m.mist;
+  for (var i = 0; i < PL.length && i < m.p.length; i++){
+    var c = PL[i], r = m.p[i];
+    c.p = unpack([r.v], F.p)[0]; c.S.maxhp = r.mhp; c.S.dashcd = r.dcd; c.down = r.down;
+    c.drones = unpack(m.dr[i], F.dr); c.sentries = unpack(m.se[i], F.se);
+  }
+  enemies = unpack(m.e, F.e); bullets = unpack(m.b, F.b); ebullets = unpack(m.eb, F.eb);
+  rings = unpack(m.rg, F.rg); mortars = unpack(m.mo, F.mo); teles = unpack(m.te, F.te);
+  arcs = unpack(m.ar, F.ar); casings = unpack(m.ca, F.ca);
+  bind(local);
+  for (i = 0; i < m.fx.length; i++) playFx(m.fx[i]);
+}
+function playFx(a){
+  var k = a[0];
+  if (k === "b") burst(a[1], a[2], a[3], a[4], a[5]);
+  else if (k === "f") addFloat(a[1], a[2], a[3], a[4]);
+  else if (k === "k") addShake(a[1]);
+  else if (k === "d") scorch(a[1], a[2], a[3]);
+  else if (k === "n") bannerText(a[1], a[2]);
+  else if (k === "r") redFlash = 1;
+  else if (k === "s" && typeof SFX[a[1]] === "function") SFX[a[1]]();
+}
+function wrapSfx(){
+  if (SFX.wrapped) return;
+  SFX.wrapped = true;
+  Object.keys(SFX).forEach(function(k){
+    var f = SFX[k];
+    if (typeof f !== "function") return;
+    SFX[k] = function(){ fx(["s", k]); f(); };
+  });
+}
+/* joiner frame: report input, coast projectiles between snapshots, age local effects */
+function clientTick(dt){
+  netFrame ^= 1;
+  if (netFrame){ var m = readInput(); m.t = "i"; netSend(m); }
+  var i;
+  for (i = 0; i < bullets.length; i++){ bullets[i].x += bullets[i].vx * dt; bullets[i].y += bullets[i].vy * dt; }
+  for (i = 0; i < ebullets.length; i++){ ebullets[i].x += ebullets[i].vx * dt; ebullets[i].y += ebullets[i].vy * dt; }
+  updStuff(dt);
+}
+
+function netMsg(t){ el["n-msg"].textContent = t; }
+function netSend(m){ if (net && net.conn && net.conn.open) net.conn.send(m); }
+function netClose(){
+  net = null; fxq = null;
+  if (peer){ try { peer.destroy(); } catch (err) {} peer = null; }
+}
+function netLost(){
+  if (!net) return;
+  netClose();
+  if (state === "play" || state === "upgrade" || state === "paused"){ bind(local); gameOver(); }
+  else if (state === "menu") netMsg("PARTNER LEFT");
+}
+var peerCbs = null;   /* callbacks waiting on the script while it loads */
+function loadPeer(cb){
+  if (window.Peer){ cb(); return; }
+  if (peerCbs){ peerCbs.push(cb); return; }
+  peerCbs = [cb];
+  var s = document.createElement("script");
+  s.src = PEER_URL;
+  s.onload = function(){ var q = peerCbs; peerCbs = null; for (var i = 0; i < q.length; i++) q[i](); };
+  s.onerror = function(){ peerCbs = null; netMsg("COULD NOT LOAD THE NETWORK LIBRARY"); };
+  document.head.appendChild(s);
+}
+function wire(conn, host){
+  net = { host:host, conn:conn };
+  conn.on("data", onNet);
+  conn.on("close", netLost);
+  conn.on("error", netLost);
+}
+function fmtCode(c){ return c.slice(0, 3) + " " + c.slice(3); }
+function hostGame(){
+  netClose();
+  var code = String(100000 + Math.floor(Math.random() * 900000));
+  netMsg("OPENING ROOM…");
+  peer = new Peer("scrapline-" + code);
+  peer.on("open", function(){ netMsg("YOUR CODE  " + fmtCode(code) + "  · WAITING FOR PARTNER…"); });
+  peer.on("error", function(e){
+    if (e.type === "unavailable-id"){ hostGame(); return; }
+    netMsg("NETWORK ERROR · " + e.type);
+  });
+  peer.on("connection", function(conn){
+    if (net){ conn.close(); return; }
+    conn.on("open", function(){
+      wire(conn, true);
+      wrapSfx(); fxq = [];
+      local = 0;
+      audioInit(); SFX.click();
+      startRun(null, 2);
+      netSend({ t:"go", seed:runSeed });
+    });
+  });
+}
+function joinGame(code){
+  netClose();
+  netMsg("CONNECTING…");
+  peer = new Peer();
+  peer.on("open", function(){
+    var conn = peer.connect("scrapline-" + code, { reliable:true, serialization:"json" });
+    conn.on("open", function(){ wire(conn, false); netMsg("LINKED · WAITING FOR HOST…"); });
+  });
+  peer.on("error", function(e){
+    netMsg(e.type === "peer-unavailable" ? "NO ROOM WITH THAT CODE" : "NETWORK ERROR · " + e.type);
+  });
+}
+function onNet(m){
+  if (!m || !net) return;
+  var i;
+  if (net.host){
+    if (m.t === "i") PL[1].inp = m;
+    else if (m.t === "pick"){ if (state === "upgrade" && PL[1].pick < 0 && PL[1].offers[m.i]){ PL[1].pick = m.i; tryApply(); } }
+    else if (m.t === "pause"){ if (state === "play" || state === "paused") togglePause(); }
+    else if (m.t === "again" && state === "over"){ startRun(null, 2); netSend({ t:"go", seed:runSeed }); }
+    return;
+  }
+  if (m.t === "go"){
+    local = 1;
+    PL = [mkCtx(), mkCtx()];
+    for (i = 0; i < 2; i++){
+      bind(i);
+      for (var u = 0; u < UPGRADES.length; u++) lvl[UPGRADES[u].id] = 0;
+      recalc();
+      player = PL[i].p = { x:W / 2, y:H / 2, ang:0, hp:S.maxhp, recoil:0, iframe:0, dashT:0, dashCd:0, step:0, shield:false };
+    }
+    bind(local);
+    runSeed = m.seed >>> 0; wave = 1; kills = 0; runTime = 0; dbg = {}; dbgUsed = false;
+    enemies = []; bullets = []; ebullets = []; parts = []; casings = []; floats = []; teles = []; decals = [];
+    rings = []; arcs = []; mortars = [];
+    shake = 0; redFlash = 0; mist = 0;
+    lastHp = lastWave = lastKills = lastDash = -1; lastHp2 = null;
+    el.hp2s.hidden = false;
+    state = "play";
+    show(null);
+  } else if (m.t === "s"){
+    if (state === "play") applySnapshot(m);
+  } else if (m.t === "up"){
+    wave = m.w; kills = m.k;
+    bind(local);
+    offers = PL[local].offers = [];
+    for (i = 0; i < m.o.length; i++) for (var q = 0; q < UPGRADES.length; q++) if (UPGRADES[q].id === m.o[i]) offers.push(UPGRADES[q]);
+    PL[local].pick = -1;
+    paintUpgrades();
+    state = "upgrade";
+    show("upgrade");
+  } else if (m.t === "st"){
+    if (m.w === null){ state = "play"; show(null); }
+    else if (m.w === "paused"){ state = "paused"; releaseTouch(); paintPause(); show("paused"); }
+    else if (m.w === "over"){ bind(local); gameOver(); }
+  }
+}
+document.getElementById("b-coop").addEventListener("click", function(){ audioInit(); SFX.click(); netMsg(""); show("net"); loadPeer(function(){}); });
+document.getElementById("n-host").addEventListener("click", function(){ SFX.click(); loadPeer(hostGame); });
+document.getElementById("n-join").addEventListener("submit", function(e){
+  e.preventDefault();
+  var c = el["n-code"].value.replace(/\D/g, "");
+  if (c.length !== 6){ netMsg("ENTER THE SIX-DIGIT CODE"); return; }
+  SFX.click();
+  loadPeer(function(){ joinGame(c); });
+});
+document.getElementById("n-back").addEventListener("click", function(){ SFX.click(); netClose(); show("menu"); });
+
 /* ---------------- main loop ---------------- */
 var last = 0;
 function loop(ts){
@@ -2555,15 +2918,23 @@ function loop(ts){
 
   if (state === "play"){
     runTime += dt;
-    updPlayer(dt);
-    updEnemies(dt);
-    updDrones(dt);
-    updBullets(dt);
-    updRings(dt);
-    updArcs(dt);
-    updMortars(dt);
-    updStuff(dt);
-    updWave(dt);
+    if (net && !net.host){
+      clientTick(dt);
+    } else {
+      var pi;
+      PL[local].inp = readInput();
+      for (pi = 0; pi < PL.length; pi++){ bind(pi); if (!PL[pi].down) updPlayer(dt); }
+      updEnemies(dt);
+      for (pi = 0; pi < PL.length; pi++){ bind(pi); updDrones(dt); }
+      updBullets(dt);
+      updRings(dt);
+      updArcs(dt);
+      updMortars(dt);
+      updStuff(dt);
+      updWave(dt);
+      bind(local);
+      if (net) netSnapshot();
+    }
     syncHud();
     render();
   } else if (state === "menu"){

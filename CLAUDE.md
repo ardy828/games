@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 Browser games, each a **single self-contained HTML file** — no build step, no dependencies, no
-bundler, no package.json. `scrapline/index.html` (~2150 lines) and `blockblast/index.html`
+bundler, no package.json. The one external script is PeerJS, which Scrapline injects from cdnjs only
+when the player presses CO-OP; solo play never loads it. `scrapline/index.html` (~3000 lines) and `blockblast/index.html`
 (~970 lines) each hold their own markup, CSS and JS. The repo root `index.html` is a landing page
 linking to them; `README.md` documents controls.
 
@@ -147,6 +148,37 @@ Fully synthesised via Web Audio — no files, nothing fetched. `audioInit()` mus
 gesture (browsers block audio otherwise); it is wired to the PLAY button and a capture-phase
 `pointerdown`. **Gate anything that can fire many times per frame** with `gate(key, ms)` or a swarm
 dying at once stacks dozens of voices into clipping.
+
+### Co-op: player contexts and netcode
+
+Two-player online co-op is host-authoritative. The design rests on one trick: **the sim still reads
+the globals `player`, `lvl`, `S`, `drones`, `sentries`, `offers`, `inp`**, and `bind(i)` points those
+names at player `i`'s context in `PL[]` before that player's slice runs. Solo is `PL.length === 1`, so
+`bind(0)` is a no-op and no gameplay function had to change shape. Rules that follow from it:
+
+- Any function that reads `player` or `S` must be called with the right context bound. The loop binds
+  per player around `updPlayer`/`updDrones`; `updEnemies` binds `nearestP()` per enemy (that player is
+  chased, shot and bitten); `updBullets` binds `b.own` (the shooter's stats); enemy projectiles loop
+  over every non-down context. `bind(local)` runs before `syncHud()`/`render()`.
+- Reassigning one of those arrays must also store it back (`sentries = PL[i].sentries = []`), or the
+  context keeps the old one.
+- Kill credit (`streak`, `refund`, `nova`) goes to `e.by`, set in `hitEnemy` and dash strike. Ring kills
+  fall to player 0.
+- Input is one `inp` object per context from `readInput()`; the joiner's is whatever last arrived.
+- Death is shared: `hurtPlayer` calls `downPlayer()`, which only calls `gameOver()` once every context
+  is down. `startWave()` revives everyone.
+- Upgrades: `openUpgrades()` rolls offers per context, `chooseUpgrade()` records a pick,
+  `tryApply()` applies all and starts the wave once nobody has `pick < 0`.
+
+Netcode lives in one section above the main loop. The host sends a snapshot every other frame
+(`netSnapshot`, field lists in `F`, numbers rounded to 0.1); the joiner writes it straight into the
+globals `render()` reads (`applySnapshot`) and runs no sim, only `clientTick` (input, projectile
+coasting, `updStuff`). Side effects the sim produces go through `fx()` — `burst`, `addFloat`,
+`addShake`, `scorch`, `bannerText`, the red flash and every `SFX.*` (wrapped on host start) — and
+are replayed on the joiner, so the particle array never ships. Screen changes ride on `show()`
+(`{t:"st"}`). Joiner → host messages: `i` input, `pick`, `pause`, `again`. A closed connection
+ends the run on both sides via `gameOver()` (its eyebrow already says SIGNAL LOST). The room code
+is the host's PeerJS id (`"scrapline-" + code`); an `unavailable-id` error rerolls it.
 
 ## Conventions
 
