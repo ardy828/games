@@ -416,6 +416,10 @@ var P = {
 };
 var HULK_PAL = { "@":"#5d6b70", "o":"#3c464a", "s":"#2b3336", "t":"#20272a", "e":"#f0a830" };
 var COLOSSUS_PAL = { "@":"#5a1a2a", "o":"#3a0f1c", "s":"#26202a", "t":"#171319", "e":"#7fe8ff" };
+/* co-op shells: the host reads blue, the joiner red. Only the bone plating is
+   recoloured; the steel core stays shared so both still read as the same rig. */
+var COOP_PAL = [{ "b":"#79b8f0", "d":"#4a82bc" }, { "b":"#f2796d", "d":"#b8453a" }];
+var COOP_FACE = ["#79b8f0", "#f2796d"];
 
 var MAPS = {
   body: [[
@@ -664,6 +668,34 @@ var MAPS = {
     ".#yyyyyyy#.",
     "..#yyyyy#..",
     "...#####..."
+  ]],
+  /* the smile with the mouth rows swapped — flat middle, corners dropped */
+  sad: [[
+    "...#####...",
+    "..#yyyyy#..",
+    ".#yyyyyyy#.",
+    "#yy#yyy#yy#",
+    "#yy#yyy#yy#",
+    "#yyyyyyyyy#",
+    "#yy#####yy#",
+    "#y#yyyyy#y#",
+    ".#yyyyyyy#.",
+    "..#yyyyy#..",
+    "...#####..."
+  ]],
+  /* sad plus eyes slanted down toward the nose */
+  angry: [[
+    "...#####...",
+    "..#yyyyy#..",
+    ".#yyyyyyy#.",
+    "#y#yyyyy#y#",
+    "#yy#yyy#yy#",
+    "#yyyyyyyyy#",
+    "#yy#####yy#",
+    "#y#yyyyy#y#",
+    ".#yyyyyyy#.",
+    "..#yyyyy#..",
+    "...#####..."
   ]]
 };
 
@@ -721,6 +753,8 @@ function buildSprites(){
   SPR.hulk = bakeSet("brute", HULK_PAL, 2);
   SPR.colossus = bakeSet("brute", COLOSSUS_PAL, 3);
   SPR.smile = bakeSet("smile");
+  SPR.coop = [bakeSet("body", COOP_PAL[0]), bakeSet("body", COOP_PAL[1])];
+  SPR.coopFace = [bake(MAPS.sad[0], { "y":COOP_FACE[0] }), bake(MAPS.angry[0], { "y":COOP_FACE[1] })];
   SPR.sentry = bakeSet("drone", { "a":"#ff8a3a" }, 2);
   SPR.flash = {};
   var keys = ["crawler","darter","brute","spitter","splitter","lurker","bomber","lancer","hulk","colossus"];
@@ -2194,17 +2228,20 @@ function render(){
     for (i = 0; i < sen.length; i++) blit(SPR.sentry[sen[i].frame], sen[i].x, sen[i].y, 0, 5, 5);
   }
 
-  /* players */
+  /* players — in co-op the shell is tinted per seat, host blue and joiner red */
+  var coop = PL.length > 1;
   for (pi = 0; pi < PL.length; pi++){
     pl = PL[pi].p;
     if (PL[pi].down) continue;
+    var body = coop ? SPR.coop[pi & 1] : SPR.body;
+    var face = coop ? SPR.coopFace[pi & 1] : SPR.smile[0];
     var blink = pl.iframe > 0 && Math.floor(pl.iframe * 16) % 2 === 0;
     if (!blink){
       var rec = pl.recoil;
       var bx = pl.x - Math.cos(pl.ang) * rec * 0.3;
       var by2 = pl.y - Math.sin(pl.ang) * rec * 0.3;
-      if (smiley) blit(SPR.smile[0], bx, by2, 0, 5, 5);
-      else blit(SPR.body[Math.floor(pl.step) % 2], bx, by2, pl.ang, 5, 5);
+      if (smiley) blit(face, bx, by2, 0, 5, 5);
+      else blit(body[Math.floor(pl.step) % 2], bx, by2, pl.ang, 5, 5);
       var gx = bx + Math.cos(pl.ang) * (4 - rec * 0.5);
       var gy = by2 + Math.sin(pl.ang) * (4 - rec * 0.5);
       blit(SPR.gun[0], gx, gy, pl.ang, 0, 1);
@@ -2216,10 +2253,6 @@ function render(){
         g.fillRect(Math.round(mx) - 3, Math.round(my), 7, 1);
         g.fillRect(Math.round(mx), Math.round(my) - 3, 1, 7);
       }
-    }
-    if (pi !== local){   /* partner marker */
-      g.strokeStyle = "rgba(127,232,255,.5)"; g.lineWidth = 1;
-      g.beginPath(); g.arc(Math.round(pl.x), Math.round(pl.y), 7, 0, 6.2832); g.stroke();
     }
     if (pl.dashCd > 0.95 && pl.dashT <= 0){
       g.strokeStyle = "rgba(232,223,200,.25)"; g.lineWidth = 1;
