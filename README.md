@@ -10,6 +10,7 @@ which pulls PeerJS from a CDN when you press CO-OP.
 |---|---|---|---|
 | **Block Blast** | 8×8 block puzzle | [Play](https://ardy828.github.io/games/blockblast/) | [`blockblast/`](blockblast/) |
 | **Scrapline** | Top-down arena shooter | [Play](https://ardy828.github.io/games/scrapline/) | [`scrapline/`](scrapline/) |
+| **Flappy Finch** | One-button arcade | [Play](https://ardy828.github.io/games/flappy/) | [`flappy/`](flappy/) |
 
 ## Block Blast
 
@@ -53,6 +54,20 @@ Hold a scrapyard against malfunctioning salvage drones converging from every bea
   down. The browsers talk directly over WebRTC (PeerJS, loaded from a CDN only when you press CO-OP),
   so both need to be online; nothing else is hosted.
 - All audio is synthesised at runtime with the Web Audio API — no audio files.
+
+## Flappy Finch
+
+A goldfinch flies itself over a dusk skyline until you tap. One button does everything.
+
+- **Controls** — click/tap anywhere, or Space/↑, to flap; the same input starts a run from the
+  title screen and restarts one from "get ready". `P`/Esc pauses, `M` mutes; both also have buttons.
+- Flying speed and the gap between pipes both tighten gradually as your score climbs.
+- Four medals — Bronze, Silver, Gold, Platinum — awarded on the game-over screen at 10/20/30/40
+  pipes; falling short shows how many more pipes reach the next one.
+- The bird sprite, medals, skyline silhouettes and ground texture are all baked at boot from small
+  pixel-rect descriptions onto offscreen canvases, then drawn scaled with smoothing off — no image
+  files. All audio is synthesised at runtime with the Web Audio API. The high score is kept in
+  `localStorage`.
 
 ## Running locally
 
