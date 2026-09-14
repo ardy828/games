@@ -192,13 +192,26 @@ A Three.js voxel sandbox: 500×500 world, 256 build height, value-noise terrain.
   name fills all six. Flags: `transparent` (faces against it are drawn), `liquid` (water: not solid,
   meshed separately), `unbreakable`. Each tile is a painter in `painters`, rendered into a one-row
   atlas at boot; adding a block is one `def()` and one `DEFS` row, and the picker builds itself.
-- **Terrain** is pure functions of (x, z): `terrainHeight()` (hills + bumps − basins for lakes, water
-  fills to `WATER_LEVEL`), `treeAt()` (one candidate tree per 9×9 cell, thinned by a forest-noise
-  field), and `hash3()` for ore. Everything is deterministic from `SEED`, which is set per world by
-  `enterWorld()` (so it is a `let`, as is `RENDER_DIST`, which the options drive).
+- **Terrain** is pure functions of position. `terrainHeight(x, z)` is rolling hills + bumps, plus
+  `mountainMask()` (a smoothed large-scale noise, 0 on the plains and 1 in a range) times ridged
+  noise for peaks up to ~170, minus basins for lakes (suppressed inside ranges; water fills to
+  `WATER_LEVEL`). Surface material comes from the height: grass, then bare stone above `STONE_LINE`
+  (96), then snow above `SNOW_LINE` (118), each jittered by a few blocks so the lines are not rings.
+  `caveAt(x, y, z)` carves in 3D: two crossing `vnoise3` sheets make tunnels and a third noise below
+  y 44 opens caverns; bedrock and the two blocks under a lake bed are never carved, so water never
+  hangs over air. `treeAt()` gives one candidate tree per 9×9 cell, thinned by a forest field and
+  absent above the stone line; `hash3()` places ore. Everything is deterministic from `SEED`, which
+  is set per world by `enterWorld()` (so it is a `let`, as is `RENDER_DIST`, which the options drive).
+- **Features** (`FEATURES`) are stamped after the columns: each row owns a grid of `cell`×`cell`
+  columns, `at(gx, gz)` decides whether that cell spawns one and where, `place(feature, put)` writes
+  blocks through a `put` that drops anything outside the chunk, and `reach` is how far it extends
+  from its anchor so neighbouring chunks regenerate it and it crosses borders seamlessly. Trees are
+  the only row; a structure (hut, ruin, dungeon) is one more row, and it should read ground with
+  `terrainHeight()`, not the chunk data, so every chunk it touches agrees on where it sits.
 - **Chunks** are 16 columns × 16 × 256 `Uint8Array`s in `chunkData`, generated on demand by
-  `generateChunk()` (columns, then trees — including those rooted up to 2 blocks outside the chunk —
-  then the chunk's saved edits), and evicted a few rings beyond render distance. `getBlock()` reads
+  `generateChunk()` (columns with caves, then features, then the chunk's saved edits), and evicted
+  a few rings beyond render distance. `groundY()` scans down from `terrainHeight()` through any cave
+  opening to find the real spawn surface. `getBlock()` reads
   through it, so terrain outside loaded chunks is generated transparently (and cached) when a chunk
   edge or raycast needs it. `maxY` per chunk bounds the meshing loop.
 - **Edits** live in `edits` (chunk key → Map of cell index → id) and are written into the chunk data

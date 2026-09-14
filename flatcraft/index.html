@@ -433,171 +433,242 @@
   const isSolid = (id) => id !== AIR && !BLOCKS[id].liquid;
 
   // ───────────────────────── Procedural textures ─────────────────────────
+  // Every 16×16 tile is painted from three ingredients: tileable smooth noise (soft blotches, `sn`/`fbm`,
+  // each tile with its own `seed`), tileable jittered cells (`cells`: stones, pebbles, ore blobs), and a
+  // little per-pixel grain on top. Pure per-pixel noise reads as static, so nothing uses it alone.
   let rseed = 1337;
   function rnd() { rseed = (rseed * 1664525 + 1013904223) >>> 0; return rseed / 4294967296; }
   const T = 16;
   const tileIndex = {};
   const tileCanvases = {};
   const tileList = [];
-  const v = (base, amt) => base + (rnd() - 0.5) * amt;
-  const noise = (r, g, b, amt) => () => [v(r, amt), v(g, amt), v(b, amt)];
-
   const painters = {};
   function def(name, fn) { painters[name] = fn; }
 
-  // Smooth stone: tileable value noise (soft blotches) with only a hint of grain.
   const texHash = (x, y) => { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
-  const smoothNoise = (x, y, scale) => {
+  const sn = (x, y, scale, seed) => {           // tileable value noise 0..1, lattice every `scale` px
     const n = T / scale, fx = x / scale, fy = y / scale;
     const x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
     const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
-    const g = (i, j) => texHash(((i % n) + n) % n, ((j % n) + n) % n);
+    const g = (i, j) => texHash(((i % n) + n) % n + seed * 977, ((j % n) + n) % n + seed * 331);
     return (g(x0, y0) * (1 - sx) + g(x0 + 1, y0) * sx) * (1 - sy) + (g(x0, y0 + 1) * (1 - sx) + g(x0 + 1, y0 + 1) * sx) * sy;
   };
-  const stoneFn = (x, y) => {
-    const n = smoothNoise(x, y, 8) * 0.5 + smoothNoise(x, y, 4) * 0.5;
-    const k = 102 + n * 46 + (rnd() - 0.5) * 8;
-    return [k, k, k * 1.03];
+  const fbm = (x, y, seed) => sn(x, y, 8, seed) * 0.5 + sn(x, y, 4, seed + 1) * 0.3 + sn(x, y, 2, seed + 2) * 0.2;
+  const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const mul = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
+  const grain = (c, amt) => mul(c, 1 + (rnd() - 0.5) * amt);
+  const clamp01 = (t) => t < 0 ? 0 : t > 1 ? 1 : t;
+  const cells = (x, y, n, seed) => {           // nearest of an n×n grid of jittered points, wrapping at the tile edge
+    const s = T / n; let d0 = 99, d1 = 99, id = 0;
+    const cx = Math.floor(x / s), cy = Math.floor(y / s);
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      const gx = cx + i, gy = cy + j, wx = ((gx % n) + n) % n, wy = ((gy % n) + n) % n;
+      const px = (gx + 0.2 + texHash(wx + seed * 53, wy + seed * 19) * 0.6) * s;
+      const py = (gy + 0.2 + texHash(wx + seed * 53 + 7, wy + seed * 19 + 3) * 0.6) * s;
+      const d = Math.hypot(x + 0.5 - px, y + 0.5 - py);
+      if (d < d0) { d1 = d0; d0 = d; id = wx * n + wy; } else if (d < d1) d1 = d;
+    }
+    return { d: d0, edge: d1 - d0, id, r: texHash(id + seed * 101, seed) };
   };
-  const dirtFn = noise(134, 96, 67, 40);
-  const planksFn = (x, y) => {
-    const row = y >> 2;
-    const seam = (y % 4 === 3) || ((x + row * 6) % 16 === 0);
-    const k = seam ? 0.6 : 1;
-    return [v(174, 22) * k, v(140, 22) * k, v(86, 22) * k];
-  };
-  const cobbleFn = (x, y) => {
-    const cell = ((x >> 2) + (y >> 2)) % 2;
-    const mortar = (x % 4 === 0) || (y % 4 === 0);
-    const k = mortar ? 70 : (cell ? 120 : 140);
-    return [v(k, 24), v(k, 24), v(k, 24)];
-  };
-  const ORE_SPOTS = new Set([[2,2],[3,2],[2,3],[9,1],[10,1],[10,2],[5,8],[6,8],[5,9],[12,10],[13,10],[13,11],[1,12],[2,12],[2,13],[8,13],[9,13],[9,14]].map(p => p[0] * 16 + p[1]));
-  const ore = (r, g, b) => (x, y) => ORE_SPOTS.has(x * 16 + y) ? [v(r, 20), v(g, 20), v(b, 20)] : stoneFn(x, y);
-  const metal = (r, g, b) => (x, y) => {
-    const edge = x === 0 || y === 0 || x === T - 1 || y === T - 1;
-    const k = edge ? 0.72 : ((x >> 2) + (y >> 2)) % 2 ? 0.94 : 1;
-    return [v(r, 10) * k, v(g, 10) * k, v(b, 10) * k];
-  };
+  const speck = (x, y, seed, p) => texHash(x + seed * 17, y + seed * 29) < p;   // fixed sparse pixels
 
-  def('grass_top', noise(94, 158, 62, 44));
+  // ── ground ──
+  const grassFn = (x, y) => grain(mix([70, 130, 42], [116, 178, 66], fbm(x, y, 1)), speck(x, y, 1, 0.08) ? 0.35 : 0.1);
+  const dirtFn = (x, y) => speck(x, y, 2, 0.02) ? grain([132, 120, 104], 0.1) : grain(mix([108, 74, 48], [152, 110, 74], fbm(x, y, 2)), 0.14);
+  def('grass_top', grassFn);
   def('dirt', dirtFn);
-  def('stone', stoneFn);
-  def('sand', noise(219, 207, 163, 26));
-  def('gravel', () => { const k = v(120, 70); return [k, k * 0.96, k * 0.9]; });
-  def('leaves', () => { const k = v(0, 60); return [42 + k * 0.4, 110 + k, 30 + k * 0.4]; });
-  def('bedrock', () => { const k = rnd() < 0.5 ? 40 : 80; return [v(k, 30), v(k, 30), v(k, 30)]; });
   def('grass_side', (x, y) => {
-    const edge = 3 + (Math.sin(x * 2.1) > 0.3 ? 1 : 0);
-    return y < edge ? [v(94, 44), v(158, 44), v(62, 44)] : dirtFn();
+    const edge = 3 + Math.floor(sn(x, 0, 4, 3) * 3.5);            // ragged fringe
+    const tuft = y === edge && speck(x, 0, 3, 0.3);
+    if (y < edge || tuft) return mul(grassFn(x, y), y === edge - 1 || tuft ? 0.82 : 1);
+    return dirtFn(x, y);
   });
+  const stoneFn = (x, y) => {
+    const c = cells(x, y, 3, 4);
+    return grain(mul(mix([104, 104, 108], [142, 142, 146], fbm(x, y, 4)), c.edge < 0.3 ? 0.9 : 1), 0.06);
+  };
+  def('stone', stoneFn);
+  const cobbleFn = (x, y) => {
+    const c = cells(x, y, 4, 5);
+    if (c.edge < 0.9) return grain([68, 68, 70], 0.1);
+    const k = 0.7 + c.r * 0.45;
+    return grain(mul([132, 132, 134], k * (c.d < 1 ? 1.06 : 1)), 0.1);
+  };
   def('cobble', cobbleFn);
-  def('mossy', (x, y) => rnd() < 0.3 ? [v(86, 24), v(128, 24), v(60, 24)] : cobbleFn(x, y));
-  def('planks', planksFn);
-  def('log_side', (x) => { const k = (x % 3 === 0) ? 0.72 : 1; return [v(104, 18) * k, v(82, 18) * k, v(50, 18) * k]; });
-  def('log_top', (x, y) => {
-    const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
-    const ring = Math.floor(d) % 2 === 0 ? 1 : 0.8;
-    if (d > 6.5) return [v(104, 18), v(82, 18), v(50, 18)];
-    return [v(186, 16) * ring, v(150, 16) * ring, v(96, 16) * ring];
+  def('mossy', (x, y) => {
+    const m = clamp01((fbm(x, y, 6) - 0.5) * 5);
+    return mix(cobbleFn(x, y), grain([92, 136, 60], 0.12), m);
   });
-  def('birch_side', (x, y) => {
-    const dash = (x % 5 === 0 && (y + x) % 7 < 2) || (x % 5 === 3 && (y + x * 3) % 9 < 1);
-    return dash ? [v(40, 20), v(38, 20), v(34, 20)] : [v(216, 14), v(213, 14), v(200, 14)];
+  def('gravel', (x, y) => {
+    const c = cells(x, y, 5, 7);
+    if (c.edge < 0.5) return grain([62, 58, 56], 0.1);
+    return grain(mix([92, 88, 84], [164, 156, 148], c.r), 0.1);
   });
-  def('birch_top', (x, y) => {
-    const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
-    const ring = Math.floor(d) % 2 === 0 ? 1 : 0.86;
-    if (d > 6.5) return [v(216, 14), v(213, 14), v(200, 14)];
-    return [v(214, 14) * ring, v(196, 14) * ring, v(150, 14) * ring];
+  def('sand', (x, y) => {
+    const ripple = Math.sin((x + y * 0.4) * 1.2 + fbm(x, y, 8) * 3) * 5;
+    const c = mix([208, 194, 148], [232, 220, 176], fbm(x, y, 9));
+    return grain([c[0] + ripple, c[1] + ripple, c[2] + ripple], 0.05);
   });
-  def('birch_planks', (x, y) => { const c = planksFn(x, y); return [c[0] * 1.15, c[1] * 1.3, c[2] * 1.7]; });
-  def('glass', (x, y) => {
-    const edge = x === 0 || y === 0 || x === T - 1 || y === T - 1;
-    const streak = (x + y === 5) || (x + y === 6) || (x + y === 20);
-    if (edge) return [220, 232, 240, 255];
-    if (streak) return [240, 248, 255, 150];
-    return [200, 225, 240, 36];
+  def('bedrock', (x, y) => {
+    const t = clamp01((fbm(x, y, 10) - 0.42) / 0.18);
+    return grain(mix([44, 44, 48], [120, 120, 122], t), 0.12);
   });
-  def('ice', (x, y) => {
-    const edge = x === 0 || y === 0 || x === T - 1 || y === T - 1;
-    const crack = (x * 3 + y) % 11 === 0;
-    return [v(edge ? 200 : 160, 16), v(edge ? 225 : 205, 16), v(240, 12), crack ? 235 : 200];
+  def('clay', (x, y) => grain(mul(mix([148, 154, 164], [174, 180, 190], fbm(x, y, 11)), cells(x, y, 3, 11).edge < 0.3 ? 0.92 : 1), 0.05));
+  def('snow', (x, y) => speck(x, y, 12, 0.05) ? [255, 255, 255] : grain(mix([230, 234, 240], [250, 252, 255], fbm(x, y, 12)), 0.04));
+  def('obsidian', (x, y) => speck(x, y, 13, 0.04) ? [96, 72, 134] : grain(mix([14, 10, 26], [46, 34, 66], fbm(x, y, 13)), 0.1));
+  def('netherrack', (x, y) => {
+    const c = cells(x, y, 5, 14);
+    if (c.d < 0.9 && c.r < 0.4) return grain([58, 18, 20], 0.1);
+    return grain(mix([96, 34, 34], [142, 60, 54], fbm(x, y, 14)), 0.12);
   });
-  def('water', () => [v(48, 20), v(96, 26), v(200, 30), 165]);
-  def('bricks', (x, y) => {
+
+  // ── wood ──
+  const planks = (base) => (x, y) => {
     const row = y >> 2;
-    const off = (row % 2) * 4;
-    const mortar = (y % 4 === 3) || ((x + off) % 8 === 7);
-    if (mortar) return [v(150, 14), v(140, 14), v(130, 14)];
-    return [v(150, 26), v(70, 20), v(58, 18)];
+    if (y % 4 === 3 || (x + row * 5) % 16 === 0) return grain(mul(base, 0.55), 0.1);
+    const k = (0.9 + texHash(row, 15) * 0.16) * (1 + Math.sin(x * 1.1 + row * 3 + sn(x, y, 4, 15) * 6) * 0.06);
+    return grain(mul(base, k * (y % 4 === 0 ? 1.06 : 1)), 0.06);
+  };
+  const planksFn = planks([170, 134, 82]);
+  def('planks', planksFn);
+  def('birch_planks', planks([200, 184, 134]));
+  const bark = (base) => (x, y) => {
+    const ridge = 0.5 + 0.5 * Math.sin(x * 2.3 + sn(x, y, 8, 16) * 5);
+    return grain(mul(base, 0.72 + ridge * 0.34), 0.08);
+  };
+  const rings = (outer, inner) => (x, y) => {
+    const r = Math.hypot(x - 7.5, y - 7.5);
+    if (r > 6.8) return outer(x, y);
+    const ring = 0.86 + 0.14 * Math.sin(r * 2.4 + 1);
+    return grain(mul(inner, r < 1.2 ? 0.8 : ring), 0.05);
+  };
+  const logSide = bark([100, 78, 46]);
+  def('log_side', logSide);
+  def('log_top', rings(logSide, [184, 148, 92]));
+  const birchSide = (x, y) => {
+    const band = x >> 2, h = texHash(band * 3 + 17, y);
+    if (h < 0.16 && (x & 3) < 3) return grain([46, 42, 38], 0.15);
+    return grain(mix([206, 204, 190], [226, 224, 212], fbm(x, y, 17)), 0.04);
+  };
+  def('birch_side', birchSide);
+  def('birch_top', rings(birchSide, [212, 196, 150]));
+  def('leaves', (x, y) => {
+    if (speck(x, y, 18, 0.06)) return [0, 0, 0, 0];               // holes: alpha-tested, sky shows through
+    return grain(mix([34, 88, 26], [80, 148, 46], fbm(x, y, 18)), 0.14);
+  });
+
+  // ── masonry ──
+  def('bricks', (x, y) => {
+    const row = y >> 2, off = (row % 2) * 4;
+    if (y % 4 === 3 || (x + off) % 8 === 7) return grain([158, 148, 140], 0.06);
+    const id = texHash(((x + off) >> 3) + row * 7, 19);
+    const k = y % 4 === 0 ? 1.08 : y % 4 === 2 ? 0.92 : 1;
+    return grain(mul(mix([150, 70, 56], [180, 98, 74], id), k), 0.08);
   });
   def('stonebrick', (x, y) => {
-    const row = y >> 3;
-    const off = (row % 2) * 4;
-    const mortar = (y % 8 === 7) || ((x + off) % 8 === 7);
-    const k = mortar ? 0.62 : 1;
-    return [v(124, 18) * k, v(124, 18) * k, v(126, 18) * k];
+    const row = y >> 3, off = (row % 2) * 4, bx = (x + off) % 8, by = y % 8;
+    if (by === 7 || bx === 7) return grain([76, 76, 80], 0.08);
+    const k = by === 0 || bx === 0 ? 1.12 : by === 6 || bx === 6 ? 0.86 : 1;
+    return grain(mul(mix([108, 108, 112], [136, 136, 140], fbm(x, y, 20)), k), 0.05);
   });
-  def('sandstone_side', (x, y) => { const k = (y % 5 === 4) ? 0.85 : 1; return [v(214, 16) * k, v(200, 16) * k, v(150, 16) * k]; });
-  def('sandstone_top', noise(220, 206, 156, 14));
-  def('obsidian', () => [v(20, 14), v(12, 10), v(34, 18)]);
-  def('coal_ore', ore(30, 30, 30));
-  def('iron_ore', ore(216, 176, 140));
-  def('gold_ore', ore(250, 220, 80));
-  def('diamond_ore', ore(110, 230, 220));
-  def('iron_block', metal(226, 226, 226));
-  def('gold_block', metal(250, 214, 70));
-  def('diamond_block', metal(112, 232, 222));
-  const SPINES = [[160,40,40],[40,70,160],[60,140,60],[180,140,40],[120,60,140],[200,200,200]];
+  def('sandstone_side', (x, y) => {
+    const layer = texHash(y >> 2, 21) * 0.12 + 0.94;
+    const k = (y % 4 === 3 ? 0.86 : 1) * layer;
+    return grain(mul(mix([204, 190, 140], [222, 208, 160], sn(x, y, 8, 21)), k), 0.05);
+  });
+  def('sandstone_top', (x, y) => grain(mul(mix([212, 198, 150], [230, 216, 168], fbm(x, y, 22)), cells(x, y, 2, 22).edge < 0.4 ? 0.9 : 1), 0.05));
+
+  // ── ore & metal ──
+  const ore = (col, seed) => (x, y) => {
+    const c = cells(x, y, 4, seed);
+    if (c.d < 1.7 && c.r < 0.5) return grain(mul(col, c.d < 0.8 ? 1.2 : 0.92), 0.1);
+    return stoneFn(x, y);
+  };
+  def('coal_ore', ore([34, 34, 36], 30));
+  def('iron_ore', ore([214, 172, 132], 31));
+  def('gold_ore', ore([250, 216, 70], 32));
+  def('diamond_ore', ore([104, 230, 222], 33));
+  const metal = (col) => (x, y) => {
+    let k = x === 0 || y === 0 || x === T - 1 || y === T - 1 ? 0.6 : x === 1 || y === 1 ? 1.14 : x === T - 2 || y === T - 2 ? 0.82 : 1;
+    if (k === 1) k = 0.93 + 0.1 * (0.5 + 0.5 * Math.sin((x + y) * 0.45));
+    return grain(mul(col, k), 0.03);
+  };
+  def('iron_block', metal([228, 228, 230]));
+  def('gold_block', metal([250, 212, 66]));
+  def('diamond_block', metal([112, 234, 224]));
+
+  // ── glassy ──
+  def('glass', (x, y) => {
+    if (x === 0 || y === 0 || x === T - 1 || y === T - 1) return [214, 230, 240, 255];
+    const dg = x - y;
+    if (dg === -8 || dg === -9 || dg === 5) return [250, 252, 255, 120];
+    return [190, 220, 236, 28];
+  });
+  def('ice', (x, y) => {
+    const c = cells(x, y, 3, 40);
+    if (c.edge < 0.4) return [226, 240, 250, 236];
+    const col = mix([148, 196, 236], [198, 226, 248], fbm(x, y, 40));
+    return [col[0], col[1], col[2], 212];
+  });
+  def('water', (x, y) => {
+    const col = mix([34, 82, 190], [66, 122, 216], fbm(x, y, 41));
+    const hi = sn(x, y, 4, 42) > 0.7 ? 28 : 0;
+    return [col[0] + hi, col[1] + hi, col[2] + hi, 160];
+  });
+
+  // ── decor ──
+  const SPINES = [[160, 40, 40], [40, 70, 160], [60, 140, 60], [180, 140, 40], [120, 60, 140], [200, 200, 200]];
   def('bookshelf', (x, y) => {
-    const shelf = y === 0 || y === 7 || y === 8 || y === 15;
-    if (shelf) return planksFn(x, y);
-    const gap = (y === 1 || y === 9) && (x % 4 === 3);
-    if (gap) return [v(30, 10), v(22, 10), v(16, 10)];
+    if (y === 0 || y === 7 || y === 8 || y === 15) return planksFn(x, y);
+    if ((y === 1 || y === 9) && x % 4 === 3) return grain([30, 22, 16], 0.1);
     const c = SPINES[((x + (y > 7 ? 2 : 0)) >> 1) % SPINES.length];
-    const k = (x % 2 === 0) ? 1 : 0.8;
-    return [v(c[0], 20) * k, v(c[1], 20) * k, v(c[2], 20) * k];
+    const k = (x % 2 === 0 ? 1 : 0.76) * (y === 3 || y === 11 ? 1.25 : 1);
+    return grain(mul(c, k), 0.1);
   });
-  def('snow', noise(246, 248, 250, 12));
-  def('clay', noise(160, 166, 176, 14));
-  def('glowstone', (x, y) => (((x >> 2) + (y >> 2)) % 3 === 0) ? [v(250, 10), v(232, 16), v(150, 20)] : [v(210, 24), v(170, 24), v(80, 24)]);
-  def('netherrack', noise(112, 42, 42, 44));
-  def('pumpkin_side', (x) => { const k = (x % 4 === 0) ? 0.75 : 1; return [v(222, 20) * k, v(122, 20) * k, v(30, 16) * k]; });
+  def('glowstone', (x, y) => {
+    const c = cells(x, y, 4, 50);
+    if (c.edge < 0.6) return grain([150, 108, 50], 0.1);
+    if (c.r > 0.5) return grain(mul([252, 238, 168], 1 - c.d * 0.05), 0.04);
+    return grain(mix([200, 154, 70], [226, 184, 96], fbm(x, y, 50)), 0.08);
+  });
+  const pumpkinSkin = (base, seed) => (x, y) => grain(mul(mix(base, mul(base, 1.1), fbm(x, y, seed)), 0.78 + 0.22 * Math.abs(Math.sin(x * Math.PI / 4))), 0.05);
+  const pumpkinSide = pumpkinSkin([226, 124, 32], 51);
+  def('pumpkin_side', pumpkinSide);
   def('pumpkin_top', (x, y) => {
-    const stem = Math.abs(x - 7.5) < 1.5 && Math.abs(y - 7.5) < 1.5;
-    if (stem) return [v(80, 16), v(110, 16), v(40, 16)];
-    const k = ((x % 4 === 0) || (y % 4 === 0)) ? 0.8 : 1;
-    return [v(212, 20) * k, v(116, 20) * k, v(30, 16) * k];
+    if (Math.abs(x - 7.5) < 1.5 && Math.abs(y - 7.5) < 1.5) return grain([84, 112, 42], 0.1);
+    const k = 0.8 + 0.2 * Math.abs(Math.sin(x * Math.PI / 4)) * Math.abs(Math.sin(y * Math.PI / 4));
+    return grain(mul([212, 116, 30], k), 0.05);
   });
   def('pumpkin_face', (x, y) => {
     const eye = (y === 5 || y === 6) && ((x >= 3 && x <= 5) || (x >= 10 && x <= 12));
     const mouth = (y === 10 && x >= 4 && x <= 11) || (y === 11 && (x === 3 || x === 12 || x === 7 || x === 8)) || (y === 9 && (x === 5 || x === 10));
-    if (eye || mouth) return [v(40, 10), v(24, 10), v(10, 8)];
-    const k = (x % 4 === 0) ? 0.75 : 1;
-    return [v(222, 20) * k, v(122, 20) * k, v(30, 16) * k];
+    return eye || mouth ? grain([44, 24, 10], 0.1) : pumpkinSide(x, y);
   });
-  def('melon_side', (x) => (x % 3 === 0) ? [v(150, 20), v(190, 20), v(60, 20)] : [v(70, 20), v(140, 20), v(50, 20)]);
-  def('melon_top', (x, y) => ((x + y) % 3 === 0) ? [v(150, 20), v(190, 20), v(60, 20)] : [v(70, 20), v(140, 20), v(50, 20)]);
+  const melonDark = (x, y) => grain(mix([58, 124, 44], [86, 152, 58], fbm(x, y, 52)), 0.08);
+  const melonLight = () => grain([158, 198, 66], 0.08);
+  def('melon_side', (x, y) => (x + Math.round(sn(x, y, 8, 53) * 2)) % 4 === 0 ? melonLight() : melonDark(x, y));
+  def('melon_top', (x, y) => (x + y + Math.round(sn(x, y, 8, 54) * 2)) % 4 === 0 ? melonLight() : melonDark(x, y));
+  const tntRed = (x, y) => grain(mix([200, 48, 40], [226, 66, 52], fbm(x, y, 55)), 0.08);
   def('tnt_side', (x, y) => {
     if (y >= 5 && y <= 10) {
       const letter = y >= 6 && y <= 9 && ((x >= 2 && x <= 4 && (y === 6 || x === 3)) || (x >= 6 && x <= 9 && (x === 6 || x === 9 || x - 6 === y - 6)) || (x >= 11 && x <= 13 && (y === 6 || x === 12)));
-      return letter ? [v(30, 10), v(30, 10), v(30, 10)] : [v(235, 12), v(232, 12), v(224, 12)];
+      return letter ? grain([30, 30, 30], 0.1) : grain([236, 232, 222], 0.04);
     }
-    return [v(206, 22), v(50, 16), v(40, 16)];
+    return tntRed(x, y);
   });
-  def('tnt_top', (x, y) => {
-    const fuse = Math.abs(x - 7.5) < 2.5 && Math.abs(y - 7.5) < 2.5;
-    return fuse ? [v(90, 16), v(84, 16), v(80, 16)] : [v(190, 22), v(60, 16), v(44, 16)];
-  });
-  def('wool_white', noise(232, 232, 232, 16));
-  def('wool_red', noise(170, 44, 40, 20));
-  def('wool_orange', noise(226, 120, 36, 20));
-  def('wool_yellow', noise(210, 190, 40, 20));
-  def('wool_green', noise(60, 130, 40, 20));
-  def('wool_blue', noise(50, 70, 170, 20));
-  def('wool_purple', noise(130, 50, 170, 20));
-  def('wool_black', noise(28, 28, 32, 12));
+  def('tnt_top', (x, y) => Math.abs(x - 7.5) < 2.5 && Math.abs(y - 7.5) < 2.5 ? grain([90, 84, 80], 0.1) : mul(tntRed(x, y), 0.92));
+  const wool = (col) => (x, y) => {
+    const k = ((x + (y >> 1)) % 2 ? 1 : 0.9) * (y % 2 ? 0.96 : 1) * (0.96 + sn(x, y, 8, 60) * 0.08);
+    return grain(mul(col, k), 0.05);
+  };
+  def('wool_white', wool([234, 234, 234]));
+  def('wool_red', wool([176, 44, 40]));
+  def('wool_orange', wool([228, 122, 36]));
+  def('wool_yellow', wool([214, 192, 42]));
+  def('wool_green', wool([62, 134, 42]));
+  def('wool_blue', wool([50, 72, 174]));
+  def('wool_purple', wool([132, 52, 172]));
+  def('wool_black', wool([30, 30, 34]));
 
   for (const name in painters) { tileIndex[name] = tileList.length; tileList.push(name); }
   const atlas = document.createElement('canvas');
@@ -640,13 +711,42 @@
     const a = hash2(xi, zi), b = hash2(xi + 1, zi), c = hash2(xi, zi + 1), d = hash2(xi + 1, zi + 1);
     return (a + (b - a) * u) * (1 - w) + (c + (d - c) * u) * w;
   }
+  function vnoise3(x, y, z) {                   // 3D value noise, 0..1 (y folded into hash2 like hash3)
+    const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+    const xf = x - xi, yf = y - yi, zf = z - zi;
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), w = zf * zf * (3 - 2 * zf);
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const slab = (yy) => lerp(
+      lerp(hash3(xi, yy, zi), hash3(xi + 1, yy, zi), u),
+      lerp(hash3(xi, yy, zi + 1), hash3(xi + 1, yy, zi + 1), u), w);
+    return lerp(slab(yi), slab(yi + 1), v);
+  }
+  const smooth = (t) => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+  const STONE_LINE = 96, SNOW_LINE = 118;     // surface turns to bare rock, then snow
+  // Mountain mask: 0 on the plains, 1 inside a range. Same field drives height, lakes and biome.
+  function mountainMask(x, z) { return smooth((vnoise(x / 170 + 900, z / 170 + 900) * 0.6 + vnoise(x / 60 + 950, z / 60 + 950) * 0.4 - 0.6) / 0.25); }
   function terrainHeight(x, z) {
-    const hills = vnoise(x / 48, z / 48);
+    const hills = vnoise(x / 48, z / 48) * 0.7 + vnoise(x / 120 + 77, z / 120 + 77) * 0.3;
     const bumps = vnoise(x / 14 + 37, z / 14 + 37);
     const basin = vnoise(x / 90 + 200, z / 90 + 200);
-    let h = 64 + (hills - 0.5) * 14 + (bumps - 0.5) * 3;
-    if (basin > 0.62) h -= (basin - 0.62) * 40;   // lakes
-    return Math.max(5, Math.min(HEIGHT - 40, Math.round(h)));
+    const mtn = mountainMask(x, z);
+    let h = 62 + (hills - 0.5) * 22 + (bumps - 0.5) * 3;
+    if (mtn > 0) {                                // ridged noise gives sharp crests instead of round domes
+      const r = vnoise(x / 64 + 300, z / 64 + 300) * 0.7 + vnoise(x / 22 + 300, z / 22 + 300) * 0.3;
+      const ridge = 1 - Math.abs(2 * r - 1);
+      h += mtn * (24 + ridge * ridge * 78);
+    }
+    if (basin > 0.62) h -= (basin - 0.62) * 40 * (1 - mtn);   // lakes, but not up in the ranges
+    return Math.max(5, Math.min(HEIGHT - 20, Math.round(h)));
+  }
+  // Caves: two crossing 3D noise sheets make winding tunnels; a third, low down, opens caverns.
+  function caveAt(x, y, z) {
+    const a = vnoise3(x / 26, y / 13, z / 26);
+    if (Math.abs(a - 0.5) < 0.055) {
+      const b = vnoise3(x / 26 + 400, y / 13 + 400, z / 26 + 400);
+      if (Math.abs(b - 0.5) < 0.055) return true;
+    }
+    return y < 44 && vnoise3(x / 34 + 800, y / 18 + 800, z / 34 + 800) > 0.76;
   }
   const TREE_CELL = 9;
   function treeAt(gx, gz) {
@@ -656,10 +756,31 @@
     const z = gz * TREE_CELL + 1 + Math.floor(hash2(gx, gz + 7) * 7);
     if (x < -HALF + 1 || x >= HALF - 1 || z < -HALF + 1 || z >= HALF - 1) return null;
     const h = terrainHeight(x, z);
-    if (h < WATER_LEVEL + 2) return null;
+    if (h < WATER_LEVEL + 2 || h >= STONE_LINE - 3) return null;
     const birch = hash2(gx + 11, gz + 11) < 0.2;
     return { x, z, h, trunk: 4 + Math.floor(hash2(gx + 3, gz + 3) * 3), birch };
   }
+  function placeTree(t, put) {
+    const top = t.h + t.trunk;
+    for (let dy = -1; dy <= 2; dy++) {
+      const r = dy <= 0 ? 2 : 1;
+      for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
+        if (dy === 2 && dx !== 0 && dz !== 0) continue;
+        if (Math.abs(dx) === 2 && Math.abs(dz) === 2 && hash3(t.x + dx, top + dy, t.z + dz) < 0.6) continue;
+        put(t.x + dx, top + dy, t.z + dz, B.leaves, true);
+      }
+    }
+    for (let y = t.h + 1; y <= top; y++) put(t.x, y, t.z, t.birch ? B.birch_log : B.log, false);
+  }
+  // Features stamped onto the terrain after columns are filled. Each entry owns a grid of `cell`×`cell`
+  // columns, `at(gx, gz)` decides (deterministically) whether that cell spawns one and where, and
+  // `place(feature, put)` writes blocks through `put`, which drops anything outside the chunk being
+  // built. `reach` is the farthest a feature extends from its anchor in x/z, so neighbouring chunks
+  // regenerate the same feature and it crosses chunk borders seamlessly. Structures (huts, ruins,
+  // dungeons) go here as another row.
+  const FEATURES = [
+    { cell: TREE_CELL, reach: 2, at: treeAt, place: placeTree },
+  ];
 
   // ───────────────────────── Chunk storage ─────────────────────────
   const MIN_CHUNK = Math.floor(-HALF / CHUNK), MAX_CHUNK = Math.floor((HALF - 1) / CHUNK);
@@ -683,8 +804,15 @@
         const h = terrainHeight(x, z);
         const base = cidx(lx, lz, 0);
         const beach = h <= WATER_LEVEL + 1;
+        const alt = h + hash2(x, z) * 6;            // jitter so the rock/snow lines are not flat rings
+        const topId = alt >= SNOW_LINE ? B.snow : alt >= STONE_LINE ? B.stone
+          : beach ? B.sand : B.grass;
+        const underId = alt >= STONE_LINE ? B.stone : beach ? B.sand : B.dirt;
         data[base] = B.bedrock;
         for (let y = 1; y <= h; y++) {
+          // Caves stay out of the bedrock floor, and out of the last two blocks under a lake bed
+          // so water never hangs over a hole.
+          if (y > 4 && (!beach || y < h - 2) && caveAt(x, y, z)) continue;
           let id;
           if (y <= h - 4) {
             id = B.stone;
@@ -694,9 +822,9 @@
             else if (r < 0.006 && y < 48) id = B.iron_ore;
             else if (r < 0.014) id = B.coal_ore;
           } else if (y < h) {
-            id = beach ? B.sand : B.dirt;
+            id = underId;
           } else {
-            id = beach ? (h < WATER_LEVEL && hash2(x * 3, z * 3) < 0.25 ? B.gravel : B.sand) : B.grass;
+            id = topId;
           }
           data[base + y] = id;
         }
@@ -704,7 +832,7 @@
         maxY = Math.max(maxY, h, WATER_LEVEL);
       }
     }
-    // Trees, including ones rooted just outside this chunk whose canopy reaches in
+    // Features (trees, later structures), including ones anchored outside this chunk that reach in
     const put = (x, y, z, id, onlyAir) => {
       const lx = x - x0, lz = z - z0;
       if (lx < 0 || lx >= CHUNK || lz < 0 || lz >= CHUNK || y < 0 || y >= HEIGHT) return;
@@ -713,20 +841,12 @@
       data[i] = id;
       if (y > maxY) maxY = y;
     };
-    for (let gx = Math.floor((x0 - TREE_CELL) / TREE_CELL); gx <= Math.floor((x0 + CHUNK + 1) / TREE_CELL); gx++) {
-      for (let gz = Math.floor((z0 - TREE_CELL) / TREE_CELL); gz <= Math.floor((z0 + CHUNK + 1) / TREE_CELL); gz++) {
-        const t = treeAt(gx, gz);
-        if (!t) continue;
-        const top = t.h + t.trunk;
-        for (let dy = -1; dy <= 2; dy++) {
-          const r = dy <= 0 ? 2 : 1;
-          for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
-            if (dy === 2 && dx !== 0 && dz !== 0) continue;
-            if (Math.abs(dx) === 2 && Math.abs(dz) === 2 && hash3(t.x + dx, top + dy, t.z + dz) < 0.6) continue;
-            put(t.x + dx, top + dy, t.z + dz, B.leaves, true);
-          }
+    for (const f of FEATURES) {
+      for (let gx = Math.floor((x0 - f.reach) / f.cell); gx <= Math.floor((x0 + CHUNK - 1 + f.reach) / f.cell); gx++) {
+        for (let gz = Math.floor((z0 - f.reach) / f.cell); gz <= Math.floor((z0 + CHUNK - 1 + f.reach) / f.cell); gz++) {
+          const t = f.at(gx, gz);
+          if (t) f.place(t, put);
         }
-        for (let y = t.h + 1; y <= top; y++) put(t.x, y, t.z, t.birch ? B.birch_log : B.log, false);
       }
     }
     const e = edits.get(chunkKey(cx, cz));
@@ -1015,8 +1135,13 @@
     onGround: false, flying: false, inWater: false, eyeInWater: false,
   };
   const GRAVITY = 32, JUMP = 9.2, WALK = 4.3, FLY = 11;
+  function groundY(x, z) {                      // top solid block, seen through cave openings
+    let y = Math.max(terrainHeight(x, z), WATER_LEVEL);
+    while (y > 1 && getBlock(x, y, z) === AIR) y--;
+    return y;
+  }
   function resetPlayer(saved) {
-    const h = Math.max(terrainHeight(0, 0), WATER_LEVEL);
+    const h = groundY(0, 0);
     Object.assign(P, { x: 0.5, y: h + 1, z: 0.5, vx: 0, vy: 0, vz: 0, yaw: 0, pitch: 0, onGround: false, flying: false, inWater: false, eyeInWater: false });
     if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y) && Number.isFinite(saved.z)) {
       P.x = saved.x; P.y = saved.y; P.z = saved.z;
@@ -1025,6 +1150,7 @@
   }
   const keys = {};
   let lastSpaceTap = 0;
+  let jumpArmed = false;   // set per Space press, spent by one jump, so holding Space doesn't bunny-hop
   let selected = 0;
   const hotbar = [B.grass, B.dirt, B.stone, B.cobble, B.planks, B.log, B.leaves, B.sand, B.glass];
 
@@ -1074,7 +1200,7 @@
     } else {
       P.vy -= GRAVITY * dt;
       if (P.vy < -60) P.vy = -60;
-      if (keys['Space'] && P.onGround) { P.vy = JUMP; P.onGround = false; }
+      if (jumpArmed && P.onGround) { P.vy = JUMP; P.onGround = false; jumpArmed = false; }
     }
     P.vx = dx; P.vz = dz;
 
@@ -1297,6 +1423,7 @@
     if (locked) { screen = 'play'; overlay.hidden = true; }
     else {
       for (const k in keys) keys[k] = false;
+      jumpArmed = false;
       if (source && !pickerOpen) showPause();
     }
   });
@@ -1331,10 +1458,13 @@
     if (!locked) return;
     keys[e.code] = true;
     if (e.code === 'Space') {
-      const now = performance.now();
-      if (now - lastSpaceTap < 300) { P.flying = !P.flying; P.vy = 0; lastSpaceTap = 0; }
-      else lastSpaceTap = now;
       e.preventDefault();
+      if (!e.repeat) {
+        jumpArmed = true;
+        const now = performance.now();
+        if (now - lastSpaceTap < 300) { P.flying = !P.flying; P.vy = 0; lastSpaceTap = 0; }
+        else lastSpaceTap = now;
+      }
     }
     if (e.code.startsWith('Digit')) {
       const d = parseInt(e.code.slice(5), 10);
@@ -1343,7 +1473,10 @@
     if (e.code === 'KeyE') openPicker();
     if (e.code === 'Tab') e.preventDefault();
   });
-  document.addEventListener('keyup', (e) => { keys[e.code] = false; });
+  document.addEventListener('keyup', (e) => {
+    keys[e.code] = false;
+    if (e.code === 'Space') jumpArmed = false;
+  });
   document.addEventListener('wheel', (e) => {
     if (!locked) return;
     selectSlot((selected + (e.deltaY > 0 ? 1 : -1) + hotbar.length) % hotbar.length);
