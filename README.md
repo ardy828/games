@@ -11,6 +11,7 @@ which pulls PeerJS from a CDN when you press CO-OP.
 | **Block Blast** | 8×8 block puzzle | [Play](https://ardy828.github.io/games/blockblast/) | [`blockblast/`](blockblast/) |
 | **Scrapline** | Top-down arena shooter | [Play](https://ardy828.github.io/games/scrapline/) | [`scrapline/`](scrapline/) |
 | **Flappy Finch** | One-button arcade | [Play](https://ardy828.github.io/games/flappy/) | [`flappy/`](flappy/) |
+| **Flatcraft** | 3D block sandbox with terrain | [Play](https://ardy828.github.io/games/flatcraft/) | [`flatcraft/`](flatcraft/) |
 
 ## Block Blast
 
@@ -68,6 +69,30 @@ A goldfinch flies itself over a dusk skyline until you tap. One button does ever
   pixel-rect descriptions onto offscreen canvases, then drawn scaled with smoothing off — no image
   files. All audio is synthesised at runtime with the Web Audio API. The high score is kept in
   `localStorage`.
+
+## Flatcraft
+
+A Minecraft-style block sandbox. The world is 500×500 with gentle hills, lakes and ponds, groves of
+oak and birch, coal, iron, gold and diamond ore in the stone, bedrock at the bottom and a build
+limit of 256. Terrain is generated from value noise, so it is the same every visit.
+
+- **Controls** — pick or create a world from the menu, then WASD to move, mouse to look, Space to
+  jump or swim (double-tap to toggle flying, Shift descends while flying). Left click breaks a
+  block, right click places the one in the selected hotbar slot; `1`–`9` or the scroll wheel pick the
+  slot. `E` opens the block picker: click a block to put it in the current slot. Esc pauses.
+- 43 blocks in the picker: the natural ones plus cobblestone, stone bricks, planks, logs, glass, ice,
+  sandstone, obsidian, ore and metal blocks, bookshelves, glowstone, pumpkins, melons, TNT (inert)
+  and eight colours of wool. Bedrock cannot be broken.
+- **Worlds** — up to five, each with its own name and seed (type a number or any text, or leave it
+  blank for a random one). Every block you place or break and where you were standing are saved in
+  `localStorage` per world. Worlds can be renamed or deleted from the menu; delete one to make room.
+- **Options** — render distance, mouse sensitivity, field of view and the stats HUD, shared by all
+  worlds. Esc opens a pause card with Resume, Options and Save & Quit to menu.
+- **Multiplayer** has a tab in the menu but is not available yet.
+- Rendering uses Three.js (loaded from cdnjs) — the only game in the repo that needs a library at
+  boot. Chunks are 16×16 columns generated on demand and meshed with only their exposed faces; water
+  is a second translucent mesh. Textures are 16×16 pixel tiles painted at boot — no image files.
+- Desktop only for now: it needs a mouse and keyboard (pointer lock).
 
 ## Running locally
 

@@ -10,6 +10,9 @@ when the player presses CO-OP; solo play never loads it. `scrapline/index.html` 
 (~970 lines) each hold their own markup, CSS and JS. The repo root `index.html` is a landing page
 linking to them; `README.md` documents controls.
 
+`flatcraft/index.html` is the other exception: it loads Three.js r128 (the last UMD build) from cdnjs at
+boot, since a voxel renderer without WebGL helpers is not worth hand-rolling.
+
 Nothing is compiled or transpiled. Editing a file *is* deploying it.
 
 ## Commands
@@ -179,6 +182,49 @@ are replayed on the joiner, so the particle array never ships. Screen changes ri
 (`{t:"st"}`). Joiner → host messages: `i` input, `pick`, `pause`, `again`. A closed connection
 ends the run on both sides via `gameOver()` (its eyebrow already says SIGNAL LOST). The room code
 is the host's PeerJS id (`"scrapline-" + code`); an `unavailable-id` error rerolls it.
+
+## Flatcraft architecture
+
+A Three.js voxel sandbox: 500×500 world, 256 build height, value-noise terrain.
+
+- **Blocks** are rows in `DEFS` (`key`, name, tiles, flags); `B.key` gives the id and `BLOCKS[id]` the
+  definition. Tiles are listed per face in the order +X −X +Y −Y +Z −Z (matching `FACES`); a single
+  name fills all six. Flags: `transparent` (faces against it are drawn), `liquid` (water: not solid,
+  meshed separately), `unbreakable`. Each tile is a painter in `painters`, rendered into a one-row
+  atlas at boot; adding a block is one `def()` and one `DEFS` row, and the picker builds itself.
+- **Terrain** is pure functions of (x, z): `terrainHeight()` (hills + bumps − basins for lakes, water
+  fills to `WATER_LEVEL`), `treeAt()` (one candidate tree per 9×9 cell, thinned by a forest-noise
+  field), and `hash3()` for ore. Everything is deterministic from `SEED`, which is set per world by
+  `enterWorld()` (so it is a `let`, as is `RENDER_DIST`, which the options drive).
+- **Chunks** are 16 columns × 16 × 256 `Uint8Array`s in `chunkData`, generated on demand by
+  `generateChunk()` (columns, then trees — including those rooted up to 2 blocks outside the chunk —
+  then the chunk's saved edits), and evicted a few rings beyond render distance. `getBlock()` reads
+  through it, so terrain outside loaded chunks is generated transparently (and cached) when a chunk
+  edge or raycast needs it. `maxY` per chunk bounds the meshing loop.
+- **Edits** live in `edits` (chunk key → Map of cell index → id) and are written into the chunk data
+  as well; `saveWorld()` serialises them plus the player's position on a short debounce, and
+  `enterWorld()` restores them via `applyEdits()` before any chunk is generated.
+- **Worlds & storage**: `flatcraft.worlds.v1` is the index (`{id, name, seed, created, played}`, capped
+  at `MAX_WORLDS` = 5), each world's state is `flatcraft.world.<id>`, options are `flatcraft.options.v1`.
+  The old single save `flatcraft.edits.v2` is migrated into "World 1" once at boot and removed. The
+  game reads and writes a world only through a *world source* (`load()`, `save(state)`, `flush()`);
+  `LocalWorldSource` is the only one, and a remote source for multiplayer is meant to slot in there.
+  `source` is `null` while in the menu, and `frame()` skips the world update until one is set.
+- **Screens**: `#overlay` holds `#menu` (Worlds / Options / Multiplayer tabs) and `#pause`. Losing pointer
+  lock inside a world shows the pause card; `leaveWorld()` saves and `clearWorldState()` drops every
+  chunk, so switching worlds needs no reload. `body.in-menu` hides the HUD.
+- **Meshing**: `buildChunk()` emits only faces whose neighbour is air or a *different* transparent
+  block, into a solid buffer (alpha-tested, for glass/leaves/ice) and a water buffer (translucent,
+  double-sided, top face lowered to 0.875). Per-face brightness is baked into vertex colours; no lights.
+  `setBlock()` marks the chunk dirty (and the neighbour when on a chunk edge); `rebuildDirty()`
+  rebuilds the same frame.
+- **Player**: swept AABB moved one axis at a time in ≤0.25 steps (`moveAxis`), water is non-solid and
+  applies its own gravity/buoyancy, the player is clamped to the world edge. `raycast()` is a voxel
+  DDA from the camera that skips water and returns the hit block plus the face normal.
+- **Picker**: `E` releases pointer lock and shows `#picker`; clicking a cell writes into `hotbar[selected]`
+  and re-requests the lock. `pickerOpen` keeps the pause card from appearing during that unlock.
+- Flatcraft uses modern syntax (`const`, arrows, template literals); the ES5 rule below applies to
+  Scrapline only.
 
 ## Conventions
 
