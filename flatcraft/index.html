@@ -414,7 +414,7 @@
     ['grass',        'Grass Block',       ['grass_side','grass_side','grass_top','dirt','grass_side','grass_side'], { icon: 'grass_side' }],
     ['dirt',         'Dirt',              'dirt'],
     ['stone',        'Stone',             'stone'],
-    ['bedrock',      'Bedrock',           'bedrock', { unbreakable: true }],
+    ['bedrock',      'Bedrock',           'bedrock'],
     ['cobble',       'Cobblestone',       'cobble'],
     ['planks',       'Oak Planks',        'planks'],
     ['log',          'Oak Log',           ['log_side','log_side','log_top','log_top','log_side','log_side']],
@@ -454,6 +454,7 @@
     ['wool_blue',    'Blue Wool',         'wool_blue'],
     ['wool_purple',  'Purple Wool',       'wool_purple'],
     ['wool_black',   'Black Wool',        'wool_black'],
+    ['wool_pink',    'Pink Wool',         'wool_pink', { after: 'wool_purple' }],
   ];
   const BLOCKS = [];
   const B = {};
@@ -702,6 +703,7 @@
   def('wool_blue', wool([50, 72, 174]));
   def('wool_purple', wool([132, 52, 172]));
   def('wool_black', wool([30, 30, 34]));
+  def('wool_pink', wool([232, 138, 170]));
 
   for (const name in painters) { tileIndex[name] = tileList.length; tileList.push(name); }
   const atlas = document.createElement('canvas');
@@ -1285,8 +1287,6 @@
   function breakBlock() {
     const h = raycast();
     if (!h) return;
-    const id = getBlock(h.x, h.y, h.z);
-    if (BLOCKS[id].unbreakable) return;
     editBlock(h.x, h.y, h.z, AIR);
   }
   function placeBlock() {
@@ -1557,7 +1557,11 @@
   selectSlot(0);
 
   const pkGrid = document.getElementById('pkGrid');
-  for (let id = 1; id < BLOCKS.length; id++) {
+  // Picker order is DEFS order, except rows flagged `after: key` slot in behind that block (ids stay put).
+  const pickOrder = [];
+  for (let id = 1; id < BLOCKS.length; id++) if (!BLOCKS[id].after) pickOrder.push(id);
+  for (let id = 1; id < BLOCKS.length; id++) if (BLOCKS[id].after) pickOrder.splice(pickOrder.indexOf(B[BLOCKS[id].after]) + 1, 0, id);
+  for (const id of pickOrder) {
     const cell = document.createElement('button');
     cell.type = 'button';
     cell.className = 'pk-cell';
@@ -1795,9 +1799,7 @@
       if (m.t === 'p') {
         if (Array.isArray(m.v) && m.v.length === 5 && m.v.every(Number.isFinite)) { p.v = m.v; setRemote(id, m.v); }
       } else if (m.t === 'b' && okEdit(m)) {
-        const cur = getBlock(m.x, m.y, m.z);
-        if (BLOCKS[cur].unbreakable) conn.send({ t: 'b', x: m.x, y: m.y, z: m.z, id: cur });   // undo their guess
-        else editBlock(m.x, m.y, m.z, m.id);
+        editBlock(m.x, m.y, m.z, m.id);
       } else if (m.t === 'c') {
         const s = clean(m.s, 120);
         if (s) { addChat(s, id); broadcast({ t: 'c', id, s }); }

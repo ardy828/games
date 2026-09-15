@@ -80,9 +80,10 @@ limit of 256. Terrain is generated from value noise, so it is the same every vis
   jump or swim (double-tap to toggle flying, Shift descends while flying). Left click breaks a
   block, right click places the one in the selected hotbar slot; `1`–`9` or the scroll wheel pick the
   slot. `E` opens the block picker: click a block to put it in the current slot. Esc pauses.
-- 43 blocks in the picker: the natural ones plus cobblestone, stone bricks, planks, logs, glass, ice,
+- 44 blocks in the picker: the natural ones plus cobblestone, stone bricks, planks, logs, glass, ice,
   sandstone, obsidian, ore and metal blocks, bookshelves, glowstone, pumpkins, melons, TNT (inert)
-  and eight colours of wool. Bedrock cannot be broken.
+  and nine colours of wool. Everything can be broken, bedrock too; fall through the floor of the
+  world and you drop back in from the sky.
 - **Worlds** — up to five, each with its own name and seed (type a number or any text, or leave it
   blank for a random one). Every block you place or break and where you were standing are saved in
   `localStorage` per world. Worlds can be renamed or deleted from the menu; delete one to make room.

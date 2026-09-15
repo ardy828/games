@@ -191,8 +191,11 @@ A Three.js voxel sandbox: 500×500 world, 256 build height, value-noise terrain.
 - **Blocks** are rows in `DEFS` (`key`, name, tiles, flags); `B.key` gives the id and `BLOCKS[id]` the
   definition. Tiles are listed per face in the order +X −X +Y −Y +Z −Z (matching `FACES`); a single
   name fills all six. Flags: `transparent` (faces against it are drawn), `liquid` (water: not solid,
-  meshed separately), `unbreakable`. Each tile is a painter in `painters`, rendered into a one-row
+  meshed separately). Every block breaks, bedrock included (creative is the only mode). Each tile is a painter in `painters`, rendered into a one-row
   atlas at boot; adding a block is one `def()` and one `DEFS` row, and the picker builds itself.
+  **Append new rows at the end of `DEFS`**: a block's id is its row index, and saved edits and
+  multiplayer messages store ids, so inserting a row mid-table changes blocks in existing worlds.
+  To show a block elsewhere in the picker, flag its row `after: 'key'` (Pink Wool sits after Purple).
 - **Terrain** is pure functions of position. `terrainHeight(x, z)` is rolling hills + bumps, plus
   `mountainMask()` (a smoothed large-scale noise, 0 on the plains and 1 in a range) times ridged
   noise for peaks up to ~170, minus basins for lakes (suppressed inside ranges; water fills to
