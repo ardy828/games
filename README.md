@@ -88,7 +88,11 @@ limit of 256. Terrain is generated from value noise, so it is the same every vis
   `localStorage` per world. Worlds can be renamed or deleted from the menu; delete one to make room.
 - **Options** — render distance, mouse sensitivity, field of view and the stats HUD, shared by all
   worlds. Esc opens a pause card with Resume, Options and Save & Quit to menu.
-- **Multiplayer** has a tab in the menu but is not available yet.
+- **Multiplayer** — peer to peer, up to 8 players. The host opens one of their worlds, presses Esc
+  and chooses Open to Friends, which shows a six-digit room code; friends type it into the
+  Multiplayer tab. Everyone builds in the host's world and the host's browser saves it. Set your name
+  in the Multiplayer tab; it floats over your head. Press `T` to chat (Enter sends, Esc cancels).
+  Uses PeerJS over WebRTC, fetched from cdnjs only when you host or join.
 - Rendering uses Three.js (loaded from cdnjs) — the only game in the repo that needs a library at
   boot. Chunks are 16×16 columns generated on demand and meshed with only their exposed faces; water
   is a second translucent mesh. Textures are 16×16 pixel tiles painted at boot — no image files.

@@ -11,7 +11,8 @@ when the player presses CO-OP; solo play never loads it. `scrapline/index.html` 
 linking to them; `README.md` documents controls.
 
 `flatcraft/index.html` is the other exception: it loads Three.js r128 (the last UMD build) from cdnjs at
-boot, since a voxel renderer without WebGL helpers is not worth hand-rolling.
+boot, since a voxel renderer without WebGL helpers is not worth hand-rolling. It also injects the same
+PeerJS build as Scrapline, only when the player hosts or joins a multiplayer room.
 
 Nothing is compiled or transpiled. Editing a file *is* deploying it.
 
@@ -221,9 +222,31 @@ A Three.js voxel sandbox: 500×500 world, 256 build height, value-noise terrain.
   at `MAX_WORLDS` = 5), each world's state is `flatcraft.world.<id>`, options are `flatcraft.options.v1`.
   The old single save `flatcraft.edits.v2` is migrated into "World 1" once at boot and removed. The
   game reads and writes a world only through a *world source* (`load()`, `save(state)`, `flush()`);
-  `LocalWorldSource` is the only one, and a remote source for multiplayer is meant to slot in there.
-  `source` is `null` while in the menu, and `frame()` skips the world update until one is set.
-- **Screens**: `#overlay` holds `#menu` (Worlds / Options / Multiplayer tabs) and `#pause`. Losing pointer
+  `LocalWorldSource` backs your own worlds, and a joiner gets an inline source whose `load()` returns
+  what the host sent and whose `save()` does nothing. `enterWorld(w, src)` takes it as the optional
+  second argument. `source` is `null` while in the menu, and `frame()` skips the world update until
+  one is set.
+- **Multiplayer** is host-authoritative over PeerJS (one section above the main loop). The host
+  presses Open to Friends on the pause card (`openRoom()`); the room code is the peer id
+  `"flatcraft-" + code`. `welcome()` sends a joiner every edit as `{t:'e'}` messages (sliced to
+  `EDIT_SLICE` numbers, because PeerJS rejects JSON messages over ~16 KB) followed by `{t:'w'}` with the
+  seed and the host's pose, and the joiner enters the world from that. **Every local change goes
+  through `editBlock()`**, which calls `setBlock()` and sends `{t:'b'}`; the host applies a joiner's edit
+  and echoes it to everyone, the sender too, so simultaneous edits converge. Only the receive paths
+  call `setBlock()` directly. Poses travel at 20 Hz on a `setInterval` (not the frame loop, so hidden
+  tabs keep the link alive) and double as the heartbeat: `NET_TIMEOUT` of silence drops a link.
+  Other players are `remotes` (a box body, a pitching head and a `nameTag()` sprite drawn without
+  depth test), eased toward their last pose in `updateRemotes()`. `leaveWorld()` calls `closeNet()`,
+  so quitting or switching worlds closes the room.
+- **Names & chat**: the name lives in `#mpName` (saved under `flatcraft.name.v1`). A joiner sends it
+  as PeerJS connection `metadata`; the host keeps `names` (id → name, 0 is the host) and broadcasts
+  the whole list as `{t:'n'}` on every join, before the newcomer's first pose, so a tag is always
+  built with its name. Chat is `{t:'c', s}` to the host, echoed to everyone as `{t:'c', id, s}`; no
+  `id` means a system line (joined / left). All text goes through `clean()` and into the DOM via
+  `textContent`, never `innerHTML`. The chat box (`T`) releases pointer lock like the picker does,
+  and `chatOpen` keeps the pause card from appearing meanwhile.
+- **Screens**: `#overlay` holds `#menu` (Worlds / Options / Multiplayer tabs) and `#pause`, whose room
+  button and status line `roomUi()` keeps in sync with the network state. Losing pointer
   lock inside a world shows the pause card; `leaveWorld()` saves and `clearWorldState()` drops every
   chunk, so switching worlds needs no reload. `body.in-menu` hides the HUD.
 - **Meshing**: `buildChunk()` emits only faces whose neighbour is air or a *different* transparent
