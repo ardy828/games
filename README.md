@@ -85,8 +85,9 @@ limit of 256. Terrain is generated from value noise, so it is the same every vis
   and nine colours of wool. Everything can be broken, bedrock too; fall through the floor of the
   world and you drop back in from the sky.
 - **Worlds** — up to five, each with its own name and seed (type a number or any text, or leave it
-  blank for a random one). Every block you place or break and where you were standing are saved in
-  `localStorage` per world. Worlds can be renamed or deleted from the menu; delete one to make room.
+  blank for a random one). Tick Flat for a superflat world: bedrock, two dirt and grass, nothing
+  else, so you have a blank canvas to build on. Every block you place or break and where you were
+  standing are saved in `localStorage` per world. Worlds can be renamed or deleted from the menu; delete one to make room.
 - **Options** — render distance, mouse sensitivity, field of view and the stats HUD, shared by all
   worlds. Esc opens a pause card with Resume, Options and Save & Quit to menu.
 - **Multiplayer** — peer to peer, up to 8 players. The host opens one of their worlds, presses Esc

@@ -138,6 +138,8 @@
   }
   .form input[type="text"]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .form input::placeholder { color: var(--ink-dim); }
+  .form label { display: flex; gap: 6px; align-items: center; color: var(--ink); cursor: pointer; }
+  .form input[type="checkbox"] { accent-color: var(--accent); width: 20px; height: 20px; margin: 0; }
   .opt { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; margin: 0 0 12px; }
   .opt label { color: var(--ink); }
   .opt output { color: var(--accent); font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
@@ -309,6 +311,7 @@
       <form class="form" id="newWorldForm">
         <input type="text" id="newName" placeholder="World name" maxlength="24" autocomplete="off">
         <input type="text" id="newSeed" placeholder="Seed (optional)" maxlength="24" autocomplete="off">
+        <label><input type="checkbox" id="newFlat">Flat</label>
         <button class="btn small" type="submit" id="createBtn">NEW WORLD</button>
       </form>
       <p class="note" id="worldNote">Worlds are saved in this browser.</p>
@@ -400,6 +403,8 @@
   let RENDER_DIST = 7;           // chunks in each direction (options)
   const CHUNKS_PER_FRAME = 2;
   let SEED = 20260913;           // set per world in enterWorld()
+  let FLAT = false;              // superflat world, set per world in enterWorld()
+  const FLAT_H = 3;              // flat surface: bedrock, dirt, dirt, grass
   const MAX_WORLDS = 5;
   const WORLDS_KEY = 'flatcraft.worlds.v1';
   const OPTS_KEY = 'flatcraft.options.v1';
@@ -761,6 +766,7 @@
   // Mountain mask: 0 on the plains, 1 inside a range. Same field drives height, lakes and biome.
   function mountainMask(x, z) { return smooth((vnoise(x / 170 + 900, z / 170 + 900) * 0.6 + vnoise(x / 60 + 950, z / 60 + 950) * 0.4 - 0.6) / 0.25); }
   function terrainHeight(x, z) {
+    if (FLAT) return FLAT_H;
     const hills = vnoise(x / 48, z / 48) * 0.7 + vnoise(x / 120 + 77, z / 120 + 77) * 0.3;
     const bumps = vnoise(x / 14 + 37, z / 14 + 37);
     const basin = vnoise(x / 90 + 200, z / 90 + 200);
@@ -836,8 +842,15 @@
       for (let lz = 0; lz < CHUNK; lz++) {
         const z = z0 + lz;
         if (z < -HALF || z >= HALF) continue;
-        const h = terrainHeight(x, z);
         const base = cidx(lx, lz, 0);
+        if (FLAT) {                                 // no caves, ore, water or trees
+          data[base] = B.bedrock;
+          for (let y = 1; y < FLAT_H; y++) data[base + y] = B.dirt;
+          data[base + FLAT_H] = B.grass;
+          maxY = FLAT_H;
+          continue;
+        }
+        const h = terrainHeight(x, z);
         const beach = h <= WATER_LEVEL + 1;
         const alt = h + hash2(x, z) * 6;            // jitter so the rock/snow lines are not flat rings
         const topId = alt >= SNOW_LINE ? B.snow : alt >= STONE_LINE ? B.stone
@@ -876,7 +889,7 @@
       data[i] = id;
       if (y > maxY) maxY = y;
     };
-    for (const f of FEATURES) {
+    for (const f of FLAT ? [] : FEATURES) {
       for (let gx = Math.floor((x0 - f.reach) / f.cell); gx <= Math.floor((x0 + CHUNK - 1 + f.reach) / f.cell); gx++) {
         for (let gz = Math.floor((z0 - f.reach) / f.cell); gz <= Math.floor((z0 + CHUNK - 1 + f.reach) / f.cell); gz++) {
           const t = f.at(gx, gz);
@@ -948,9 +961,9 @@
     for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
     return h | 0;
   }
-  function createWorld(name, seedText) {
+  function createWorld(name, seedText, flat) {
     if (worlds.length >= MAX_WORLDS) return null;
-    const w = { id: newId(), name: name.trim() || `World ${worlds.length + 1}`, seed: seedFromText(seedText), created: Date.now(), played: 0 };
+    const w = { id: newId(), name: name.trim() || `World ${worlds.length + 1}`, seed: seedFromText(seedText), flat, created: Date.now(), played: 0 };
     worlds.push(w);
     saveIndex();
     return w;
@@ -1362,7 +1375,7 @@
       const row = document.createElement('div'); row.className = 'world';
       const info = document.createElement('div'); info.className = 'w-info';
       const nm = document.createElement('div'); nm.className = 'w-name'; nm.textContent = w.name;
-      const meta = document.createElement('div'); meta.className = 'w-meta'; meta.textContent = `seed ${w.seed} · ${fmtWhen(w.played)}`;
+      const meta = document.createElement('div'); meta.className = 'w-meta'; meta.textContent = `${w.flat ? 'flat' : 'seed ' + w.seed} · ${fmtWhen(w.played)}`;
       info.append(nm, meta);
       const actions = document.createElement('div'); actions.className = 'w-actions';
       const mk = (label, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small ' + cls; b.textContent = label; b.addEventListener('click', fn); return b; };
@@ -1382,16 +1395,16 @@
       list.appendChild(row);
     }
     const full = worlds.length >= MAX_WORLDS;
-    $('createBtn').disabled = full; $('newName').disabled = full; $('newSeed').disabled = full;
+    $('createBtn').disabled = full; $('newName').disabled = full; $('newSeed').disabled = full; $('newFlat').disabled = full;
     $('worldNote').textContent = full
       ? `World limit reached (${MAX_WORLDS}). Delete a world to make room.`
       : `${worlds.length} of ${MAX_WORLDS} worlds · saved in this browser.`;
   }
   $('newWorldForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    const w = createWorld($('newName').value, $('newSeed').value);
+    const w = createWorld($('newName').value, $('newSeed').value, $('newFlat').checked);
     if (!w) { renderWorlds(); return; }
-    $('newName').value = ''; $('newSeed').value = '';
+    $('newName').value = ''; $('newSeed').value = ''; $('newFlat').checked = false;
     enterWorld(w);
   });
   $('mpForm').addEventListener('submit', (e) => {
@@ -1440,6 +1453,7 @@
     document.body.classList.remove('in-menu');
     const saved = source.load();
     SEED = (saved && Number.isFinite(saved.seed)) ? saved.seed : w.seed;
+    FLAT = !!w.flat;
     clearWorldState();
     applyEdits(saved && saved.edits);
     resetPlayer(saved && saved.player);
@@ -1779,7 +1793,7 @@
     for (const [k, arr] of serializeEdits()) {
       for (let i = 0; i < arr.length; i += EDIT_SLICE) conn.send({ t: 'e', k, a: arr.slice(i, i + EDIT_SLICE) });
     }
-    conn.send({ t: 'w', me: id, seed: SEED, name: currentWorld.name,
+    conn.send({ t: 'w', me: id, seed: SEED, flat: FLAT, name: currentWorld.name,
       player: { x: P.x, y: P.y, z: P.z, yaw: P.yaw, pitch: P.pitch, flying: P.flying } });
     const name = clean(conn.metadata && conn.metadata.name, 16) || 'Player';
     const p = { conn, heard: performance.now(), v: null };
@@ -1840,7 +1854,7 @@
         if (m.t === 'w') {
           net = { host: false, conn, me: m.me, heard: performance.now(), lost };
           mpSay('');
-          enterWorld({ name: m.name, seed: m.seed }, {
+          enterWorld({ name: m.name, seed: m.seed, flat: !!m.flat }, {
             load: () => ({ seed: m.seed, edits: Array.from(got), player: m.player }),
             save: () => {}, flush: () => {},       // the host keeps the world
           });

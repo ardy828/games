@@ -206,6 +206,9 @@ A Three.js voxel sandbox: 500×500 world, 256 build height, value-noise terrain.
   hangs over air. `treeAt()` gives one candidate tree per 9×9 cell, thinned by a forest field and
   absent above the stone line; `hash3()` places ore. Everything is deterministic from `SEED`, which
   is set per world by `enterWorld()` (so it is a `let`, as is `RENDER_DIST`, which the options drive).
+  A world whose index entry has `flat: true` sets `FLAT`: `terrainHeight()` returns `FLAT_H` (3),
+  and `generateChunk()` fills each column with bedrock, dirt and grass, with no caves, ore, water or
+  features. The host sends `flat` in `{t:'w'}` so joiners generate the same ground.
 - **Features** (`FEATURES`) are stamped after the columns: each row owns a grid of `cell`×`cell`
   columns, `at(gx, gz)` decides whether that cell spawns one and where, `place(feature, put)` writes
   blocks through a `put` that drops anything outside the chunk, and `reach` is how far it extends
