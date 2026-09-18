@@ -80,8 +80,8 @@ limit of 256. Terrain is generated from value noise, so it is the same every vis
   jump or swim (double-tap to toggle flying, Shift descends while flying). Left click breaks a
   block, right click places the one in the selected hotbar slot; `1`–`9` or the scroll wheel pick the
   slot. `E` opens the block picker: click a block to put it in the current slot. Esc pauses.
-- 48 blocks in the picker: the natural ones plus cobblestone, stone bricks, planks, logs, glass, ice,
-  sandstone, obsidian, ore and metal blocks, bookshelves, glowstone, pumpkins, melons, TNT (inert)
+- 46 blocks in the picker: the natural ones plus cobblestone, stone bricks, planks, logs, glass, ice,
+  sandstone, obsidian, ore and metal blocks, bookshelves, pumpkins, melons, TNT (inert)
   nine colours of wool, and four smiley balls (Verity, Falsity, Cruelity, Lovity) that turn to face
   you when placed. Everything can be broken, bedrock too; fall through the floor of the
   world and you drop back in from the sky.

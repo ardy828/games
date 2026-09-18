@@ -321,7 +321,7 @@
           <dt>Mouse</dt><dd>look around</dd>
           <dt>W A S D</dt><dd>move</dd>
           <dt>Space</dt><dd>jump / swim · double-tap to fly</dd>
-          <dt>Shift</dt><dd>descend while flying</dd>
+          <dt>Shift</dt><dd>descend while flying; hold while placing a ball to face it away</dd>
           <dt>Left / Right click</dt><dd>break / place block</dd>
           <dt>1–9 / wheel</dt><dd>choose hotbar slot</dd>
           <dt>E</dt><dd>open the block picker</dd>
@@ -450,8 +450,8 @@
     ['clay',         'Clay',              'clay'],
     ['birch_log',    'Birch Log',         ['birch_side','birch_side','birch_top','birch_top','birch_side','birch_side']],
     ['birch_planks', 'Birch Planks',      'birch_planks'],
-    ['glowstone',    'Glowstone',         'glowstone'],
-    ['netherrack',   'Netherrack',        'netherrack'],
+    ['glowstone',    'Glowstone',         'glowstone', { hidden: true }],     // retired: rows stay so saved ids keep meaning
+    ['netherrack',   'Netherrack',        'netherrack', { hidden: true }],
     ['pumpkin',      'Pumpkin',           ['pumpkin_side','pumpkin_side','pumpkin_top','pumpkin_top','pumpkin_face','pumpkin_side']],
     ['melon',        'Melon',             ['melon_side','melon_side','melon_top','melon_top','melon_side','melon_side']],
     ['tnt',          'TNT',               ['tnt_side','tnt_side','tnt_top','tnt_top','tnt_side','tnt_side']],
@@ -562,7 +562,13 @@
   });
   def('clay', (x, y) => grain(mul(mix([148, 154, 164], [174, 180, 190], fbm(x, y, 11)), cells(x, y, 3, 11).edge < 0.3 ? 0.92 : 1), 0.05));
   def('snow', (x, y) => speck(x, y, 12, 0.05) ? [255, 255, 255] : grain(mix([230, 234, 240], [250, 252, 255], fbm(x, y, 12)), 0.04));
-  def('obsidian', (x, y) => speck(x, y, 13, 0.04) ? [96, 72, 134] : grain(mix([14, 10, 26], [46, 34, 66], fbm(x, y, 13)), 0.1));
+  def('obsidian', (x, y) => {                 // cobble's layout in glass: black seams, violet facets, lit centres
+    const c = cells(x, y, 4, 13);
+    if (c.edge < 0.9) return grain([14, 9, 24], 0.1);
+    if (speck(x, y, 13, 0.02)) return [176, 132, 230];
+    const k = 0.7 + c.r * 0.45;
+    return grain(mul([60, 40, 100], k * (c.d < 1 ? 1.15 : 1)), 0.1);
+  });
   def('netherrack', (x, y) => {
     const c = cells(x, y, 5, 14);
     if (c.d < 0.9 && c.r < 0.4) return grain([58, 18, 20], 0.1);
@@ -651,11 +657,13 @@
     if (dg === -8 || dg === -9 || dg === 5) return [250, 252, 255, 120];
     return [190, 220, 236, 28];
   });
-  def('ice', (x, y) => {
-    const c = cells(x, y, 3, 40);
-    if (c.edge < 0.4) return [226, 240, 250, 236];
-    const col = mix([148, 196, 236], [198, 226, 248], fbm(x, y, 40));
-    return [col[0], col[1], col[2], 212];
+  def('ice', (x, y) => {                      // clear blue with diagonal frost streaks, fine cracks and bubbles
+    const c = cells(x, y, 2, 40);
+    if (c.edge < 0.2) return [214, 234, 252];
+    if (speck(x, y, 40, 0.012)) return [246, 252, 255];
+    const streak = ((x - y) % 16 + 16) % 16;
+    const base = mix([112, 162, 226], [150, 192, 240], fbm(x, y, 40));
+    return grain(streak === 3 || streak === 11 ? mix(base, [230, 244, 255], 0.55) : streak === 4 ? mix(base, [230, 244, 255], 0.25) : base, 0.02);
   });
   def('water', (x, y) => {
     const col = mix([34, 82, 190], [66, 122, 216], fbm(x, y, 41));
@@ -1362,7 +1370,7 @@
     if (!h) return;
     editBlock(h.x, h.y, h.z, AIR);
   }
-  function placeBlock() {
+  function placeBlock(away) {
     const h = raycast();
     if (!h) return;
     const x = h.x + h.nx, y = h.y + h.ny, z = h.z + h.nz;
@@ -1371,7 +1379,7 @@
     const overlap = x + 1 > P.x - r && x < P.x + r && y + 1 > P.y && y < P.y + P.h && z + 1 > P.z - r && z < P.z + r;
     if (overlap && isSolid(hotbar[selected])) return;
     let id = hotbar[selected];
-    if (BLOCKS[id].ball) id += ((Math.round(P.yaw / (Math.PI / 2)) % 4) + 4) % 4;   // face the placer
+    if (BLOCKS[id].ball) id += ((Math.round(P.yaw / (Math.PI / 2)) + (away ? 2 : 0)) % 4 + 4) % 4;   // face the placer, or away with Shift
     editBlock(x, y, z, id);
   }
 
@@ -1560,7 +1568,7 @@
   canvas.addEventListener('mousedown', (e) => {
     if (!locked) return;
     if (e.button === 0) breakBlock();
-    else if (e.button === 2) placeBlock();
+    else if (e.button === 2) placeBlock(e.shiftKey);
   });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('keydown', (e) => {

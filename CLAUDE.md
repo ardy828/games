@@ -196,9 +196,10 @@ A Three.js voxel sandbox: 500×500 world, 256 build height, value-noise terrain.
   **Append new rows at the end of `DEFS`**: a block's id is its row index, and saved edits and
   multiplayer messages store ids, so inserting a row mid-table changes blocks in existing worlds.
   To show a block elsewhere in the picker, flag its row `after: 'key'` (Pink Wool sits after Purple).
+  To retire a block, flag its row `hidden: true` instead of deleting it (Glowstone and Netherrack).
 - **Balls** (Verity, Falsity, Cruelity, Lovity) are a full-cube hitbox drawn as a sphere: `ball()`
   expands to four consecutive `DEFS` rows, one per facing (`dir` 0..3 = +Z, +X, −Z, −X), and only the
-  first is in the picker (`hidden`). `placeBlock()` adds the snapped yaw to the id, so facing is saved
+  first is in the picker (`hidden`). `placeBlock()` adds the snapped yaw to the id (turned 180° with Shift held), so facing is saved
   and synced as a plain block id. `buildChunk()` hands them to `addBall()`, which emits a UV sphere
   with the face tile projected on the front half and `<key>_body` on the back.
 - **Terrain** is pure functions of position. `terrainHeight(x, z)` is rolling hills + bumps, plus
