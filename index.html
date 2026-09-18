@@ -8,76 +8,187 @@
 <meta name="color-scheme" content="dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Chivo+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap">
 <style>
   :root{
-    --ground:#0f0f11;
-    --panel:#17171a;
-    --edge:#2a2a30;
-    --ink:#e6e3dd;
-    --muted:#8d8a84;
-    --rust:#c8552e;
-    --amber:#f0a830;
+    --sky:#062a4a;
+    --ink:#eafaff;
+    --shadow:#02121f;
     --pixel:"Silkscreen","Courier New",monospace;
-    --mono:"Chivo Mono",ui-monospace,Menlo,monospace;
+    --px:6px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
+  html{background:linear-gradient(#1a6b8f 0,#0a3d63 40%,#041d36 100%) fixed var(--sky)}
   body{
-    background:var(--ground);color:var(--ink);font-family:var(--mono);
-    min-height:100vh;padding-inline:20px;padding-block:56px 64px;
-    -webkit-font-smoothing:antialiased;
+    color:var(--ink);font-family:var(--pixel);
+    min-height:100vh;padding:48px 16px 64px;
+    display:flex;flex-direction:column;align-items:center;gap:40px;
+    -webkit-font-smoothing:none;
   }
-  .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
-  h1{font-family:var(--pixel);font-weight:700;font-size:clamp(1.9rem,6vw,2.6rem);letter-spacing:.04em;line-height:1}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}
-  a.card{
-    display:flex;flex-direction:column;gap:11px;
-    cursor:pointer;-webkit-user-select:none;user-select:none;
-    background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--accent);
-    padding:22px 22px 24px;text-decoration:none;color:inherit;
-    transition:background 140ms,border-color 140ms,transform 140ms;
+  h1{
+    font-weight:700;font-size:clamp(2rem,8vw,4rem);line-height:1;
+    letter-spacing:.02em;text-align:center;
+    text-shadow:var(--px) var(--px) 0 var(--shadow);
   }
-  a.card:hover{background:#1d1d21;border-color:var(--accent);transform:translateY(-2px)}
-  a.card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-  .card .nm{font-family:var(--pixel);font-weight:700;font-size:1.05rem;letter-spacing:.05em;color:var(--accent)}
-  .card .kind{font-family:var(--pixel);font-size:.6rem;letter-spacing:.2em;color:var(--muted)}
-  .card .go{font-family:var(--pixel);font-size:.66rem;letter-spacing:.14em;color:var(--ink);margin-top:auto}
-  .scrapline{--accent:var(--amber)}
-  .blockblast{--accent:#5aa9f7}
-  .flappy{--accent:#ffd23f}
-  .flatcraft{--accent:#6cc04a}
+  h1 small{display:block;font-weight:400;font-size:.28em;letter-spacing:.1em;margin-top:14px;text-shadow:none;color:#8fd3e8}
+  .grid{
+    width:100%;max-width:880px;
+    display:grid;grid-template-columns:repeat(2,1fr);gap:22px;
+  }
+  @media (max-width:560px){.grid{grid-template-columns:1fr}}
+  a.tile{
+    --ink-on:#04223a;
+    position:relative;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;
+    aspect-ratio:4/3;padding:22px;
+    background:var(--fill);color:var(--ink-on);text-decoration:none;
+    box-shadow:var(--px) var(--px) 0 var(--shadow);
+    transition:transform 90ms steps(3),box-shadow 90ms steps(3);
+  }
+  a.tile:hover,a.tile:focus-visible{
+    transform:translate(-3px,-3px);
+    box-shadow:calc(var(--px) + 3px) calc(var(--px) + 3px) 0 var(--shadow);
+    outline:none;
+  }
+  a.tile:focus-visible{outline:4px solid var(--ink);outline-offset:4px}
+  a.tile:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--shadow)}
+  .nm{font-weight:700;font-size:clamp(1.05rem,3vw,1.5rem);line-height:1.1}
+  .nm::before{content:"▶ ";visibility:hidden}
+  a.tile:hover .nm::before,a.tile:focus-visible .nm::before{visibility:visible;animation:blink 1s steps(2) infinite}
+  .kind{font-size:.7rem;opacity:.8}
+  .px{position:absolute;top:22px;left:22px;--cell:10px;line-height:0}
+  .px canvas{image-rendering:pixelated}
+  .bubbles{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+  .bubbles i{
+    position:absolute;bottom:-12px;
+    border:3px solid rgba(234,250,255,.7);
+    animation:rise 12s linear infinite;
+  }
+  @keyframes rise{to{transform:translateY(-110vh)}}
+  @media (min-width:561px){.px{--cell:14px}}
+  .scrapline{--fill:#ff7a5c}
+  .blockblast{--fill:#3fc4d9}
+  .flappy{--fill:#f6d98a}
+  .flatcraft{--fill:#5ec99a}
+  .wave{
+    width:100%;max-width:880px;height:24px;margin-top:-24px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%238fd3e8' d='M0 2h1v1H0zM1 1h1v1H1zM2 0h1v1H2zM3 0h1v1H3zM4 1h1v1H4zM5 2h1v1H5zM6 3h1v1H6zM7 3h1v1H7z'/%3E%3C/svg%3E") repeat-x;
+    background-size:32px 16px;image-rendering:pixelated;
+  }
+  @keyframes blink{50%{visibility:hidden}}
+  @media (prefers-reduced-motion:reduce){
+    a.tile{transition:none}
+    .bubbles{display:none}
+    a.tile:hover .nm::before,a.tile:focus-visible .nm::before{animation:none}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>ADDICT GAMES</h1>
+<div class="bubbles" aria-hidden="true"></div>
+<h1>ADDICT GAMES<small>Four games. Dive in.</small></h1>
 
-  <div class="grid">
-    <a class="card scrapline" href="scrapline/">
-      <span class="kind">TOP-DOWN SHOOTER</span>
-      <span class="nm">SCRAPLINE</span>
-      <span class="go">PLAY →</span>
-    </a>
+<div class="wave" aria-hidden="true"></div>
 
-    <a class="card blockblast" href="blockblast/">
-      <span class="kind">GRID PUZZLE</span>
-      <span class="nm">BLOCK BLAST</span>
-      <span class="go">PLAY →</span>
-    </a>
+<div class="grid">
+  <a class="tile scrapline" href="scrapline/">
+    <i class="px" data-map="
+.....11.....
+.....11.....
+...111111...
+..11....11..
+.11..22..11.
+11..2332..11
+11..2332..11
+.11..22..11.
+..11....11..
+...111111...
+.....11.....
+.....11....."></i>
+    <span class="nm">SCRAPLINE</span>
+    <span class="kind">Top-down shooter, solo or co-op</span>
+  </a>
 
-    <a class="card flappy" href="flappy/">
-      <span class="kind">ONE-BUTTON ARCADE</span>
-      <span class="nm">FLAPPY FINCH</span>
-      <span class="go">PLAY →</span>
-    </a>
+  <a class="tile blockblast" href="blockblast/">
+    <i class="px" data-map="
+............
+.11...222...
+.11...222...
+.11....22...
+.1111..22...
+.1111.......
+............
+..33....44..
+.333....44..
+.33.....44..
+........44..
+............"></i>
+    <span class="nm">BLOCK BLAST</span>
+    <span class="kind">Grid puzzle, clear lines</span>
+  </a>
 
-    <a class="card flatcraft" href="flatcraft/">
-      <span class="kind">3D BLOCK SANDBOX</span>
-      <span class="nm">FLATCRAFT</span>
-      <span class="go">PLAY →</span>
-    </a>
-  </div>
+  <a class="tile flappy" href="flappy/">
+    <i class="px" data-map="
+............
+....111111..
+...13333331.
+..133333221.
+.1333333211.
+133111333355
+13311133335.
+.1333222231.
+..13322221..
+...1111111..
+.....1..1...
+............"></i>
+    <span class="nm">FLAPPY FINCH</span>
+    <span class="kind">One-button arcade</span>
+  </a>
 
+  <a class="tile flatcraft" href="flatcraft/">
+    <i class="px" data-map="
+...111111111
+..1444444441
+.14444444451
+144444444551
+111111111551
+133333331551
+133333331551
+133333331551
+133333331551
+13333333151.
+1333333311..
+111111111..."></i>
+    <span class="nm">FLATCRAFT</span>
+    <span class="kind">3D block sandbox, up to 8 players</span>
+  </a>
 </div>
+
+<script>
+  // Pixel icons: each digit in data-map is a colour; drawn once into a canvas, scaled by CSS.
+  var PAL = {1:"#04223a", 2:"#eafaff", 3:"#ff7a5c", 4:"#2fbf6b", 5:"#c4523a"};
+  document.querySelectorAll(".px").forEach(function (el) {
+    var rows = el.dataset.map.trim().split("\n").map(function (r) { return r.trim(); });
+    var c = document.createElement("canvas"), g = c.getContext("2d");
+    c.width = rows[0].length; c.height = rows.length;
+    rows.forEach(function (r, y) {
+      r.split("").forEach(function (ch, x) {
+        if (PAL[ch]) { g.fillStyle = PAL[ch]; g.fillRect(x, y, 1, 1); }
+      });
+    });
+    c.style.width = "calc(" + c.width + " * var(--cell))";
+    c.style.height = "calc(" + c.height + " * var(--cell))";
+    el.appendChild(c);
+  });
+
+  // Bubbles: a handful of pixel squares rising behind the tiles.
+  var bub = document.querySelector(".bubbles");
+  for (var i = 0; i < 18; i++) {
+    var b = document.createElement("i"), sz = [6, 8, 10, 14][i % 4];
+    b.style.left = Math.random() * 100 + "vw";
+    b.style.width = b.style.height = sz + "px";
+    b.style.animationDuration = 9 + Math.random() * 9 + "s";
+    b.style.animationDelay = -Math.random() * 18 + "s";
+    bub.appendChild(b);
+  }
+</script>
 </body>
 </html>
