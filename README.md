@@ -11,7 +11,7 @@ which pulls PeerJS from a CDN when you press CO-OP.
 | **Block Blast** | 8×8 block puzzle | [Play](https://ardy828.github.io/games/blockblast/) | [`blockblast/`](blockblast/) |
 | **Scrapline** | Top-down arena shooter | [Play](https://ardy828.github.io/games/scrapline/) | [`scrapline/`](scrapline/) |
 | **Flappy Finch** | One-button arcade | [Play](https://ardy828.github.io/games/flappy/) | [`flappy/`](flappy/) |
-| **Flatcraft** | 3D block sandbox with terrain | [Play](https://ardy828.github.io/games/flatcraft/) | [`flatcraft/`](flatcraft/) |
+| **Flatcraft** | 3D survival sandbox with biomes, mobs and crafting | [Play](https://ardy828.github.io/games/flatcraft/) | [`flatcraft/`](flatcraft/) |
 
 ## Block Blast
 
@@ -72,33 +72,41 @@ A goldfinch flies itself over a dusk skyline until you tap. One button does ever
 
 ## Flatcraft
 
-A Minecraft-style block sandbox. The world is 500×500 with gentle hills, lakes and ponds, groves of
-oak and birch, coal, iron, gold and diamond ore in the stone, bedrock at the bottom and a build
-limit of 256. Terrain is generated from value noise, so it is the same every visit.
+A Minecraft-style survival sandbox. A 4096×4096 world of biomes (plains, forest, desert, jungle,
+snowy taiga, ocean and mountain ranges) with caves, ore, a day and night cycle, hostile and
+friendly mobs, crafting, tools and furnaces. Terrain is generated from value noise, so a seed
+always makes the same world.
 
-- **Controls** — pick or create a world from the menu, then WASD to move, mouse to look, Space to
-  jump or swim (double-tap to toggle flying, Shift descends while flying). Left click breaks a
-  block, right click places the one in the selected hotbar slot; `1`–`9` or the scroll wheel pick the
-  slot. `E` opens the block picker: click a block to put it in the current slot. Esc pauses.
-- 46 blocks in the picker: the natural ones plus cobblestone, stone bricks, planks, logs, glass, ice,
-  sandstone, obsidian, ore and metal blocks, bookshelves, pumpkins, melons, TNT (inert)
-  nine colours of wool, and four smiley balls (Verity, Falsity, Cruelity, Lovity) that turn to face
-  you when placed. Everything can be broken, bedrock too; fall through the floor of the
-  world and you drop back in from the sky.
-- **Worlds** — up to five, each with its own name and seed (type a number or any text, or leave it
-  blank for a random one). Tick Flat for a superflat world: bedrock, two dirt and grass, nothing
-  else, so you have a blank canvas to build on. Every block you place or break and where you were
-  standing are saved in `localStorage` per world. Worlds can be renamed or deleted from the menu; delete one to make room.
-- **Options** — render distance, mouse sensitivity, field of view and the stats HUD, shared by all
-  worlds. Esc opens a pause card with Resume, Options and Save & Quit to menu.
-- **Multiplayer** — peer to peer, up to 8 players. The host opens one of their worlds, presses Esc
-  and chooses Open to Friends, which shows a six-digit room code; friends type it into the
-  Multiplayer tab. Everyone builds in the host's world and the host's browser saves it. Set your name
-  in the Multiplayer tab; it floats over your head. Press `T` to chat (Enter sends, Esc cancels).
-  Uses PeerJS over WebRTC, fetched from cdnjs only when you host or join.
-- Rendering uses Three.js (loaded from cdnjs) — the only game in the repo that needs a library at
-  boot. Chunks are 16×16 columns generated on demand and meshed with only their exposed faces; water
-  is a second translucent mesh. Textures are 16×16 pixel tiles painted at boot — no image files.
+- **Modes** — each world is Survival or Creative, chosen when you make it. Survival has health,
+  hunger and air; blocks take time to mine depending on the tool, drop as items you pick up, and
+  some need the right pickaxe tier (stone for iron, iron for gold and diamond, diamond for
+  obsidian). Creative breaks instantly, lets you fly and has a picker with every block and item.
+- **Controls** — WASD to move (double-tap W to sprint), mouse to look, Space to jump or swim
+  (double-tap to fly in creative), Shift to sneak (you will not walk off edges). Hold left click to
+  mine or hit a mob; right click places, opens a crafting table or furnace, and held with food eats
+  it. `1`–`9` or the wheel pick a slot, `E` opens the inventory (the picker in creative), `Q` drops
+  the held item, middle click picks the block you look at in creative. Esc pauses.
+- **Crafting** — a 2×2 grid in the inventory, 3×3 at a crafting table: planks, sticks, crafting
+  table, furnace, torches, wood/stone/iron/gold/diamond pickaxes, axes, shovels and swords, storage
+  blocks and more. Shift-click moves stacks, right click splits them. Furnaces smelt ore, sand,
+  cobblestone, clay, logs and raw meat with coal, charcoal or wood.
+- **Day and night** — a day is ten minutes, with a square sun and moon, stars and blocky clouds.
+  Light comes from the sky and from torches. Zombies, skeletons and creepers come out in the dark
+  (the undead burn at sunrise); pigs, cows and sheep graze in daylight and drop food.
+- **Worlds** — up to five, each with its own name, seed and mode; tick Flat for a superflat world.
+  Blocks, your position, health, inventory, furnaces and the time of day are saved in
+  `localStorage` per world.
+- **Options** — render distance, mouse sensitivity, field of view, volume, view bobbing and the
+  stats HUD (position, biome, time).
+- **Multiplayer** — peer to peer, up to 8 players. The host opens a world, presses Esc and chooses
+  Open to Friends for a six-digit code; friends type it into the Multiplayer tab. The host runs the
+  mobs and the clock; each player keeps their own inventory. `T` chats. Uses PeerJS over WebRTC,
+  fetched from cdnjs only when you host or join.
+- **Art** — block and item textures are 16×16 pixel art generated with Higgsfield (Seedream) and
+  embedded in the page as one PNG strip; the tools and stick are drawn geometrically so every tier
+  lines up, and glass, water, plants, torches, cracks, mobs and a few blocks are painted in code.
+  Held and dropped items are extruded into 3D. Sounds are synthesised. Rendering uses Three.js from
+  cdnjs.
 - Desktop only for now: it needs a mouse and keyboard (pointer lock).
 
 ## Running locally

@@ -11,15 +11,15 @@ when the player presses CO-OP; solo play never loads it. `scrapline/index.html` 
 linking to them; `README.md` documents controls.
 
 `flatcraft/index.html` is the other exception: it loads Three.js r128 (the last UMD build) from cdnjs at
-boot, since a voxel renderer without WebGL helpers is not worth hand-rolling. It also injects the same
+boot (and carries its texture art inline as one base64 PNG strip), since a voxel renderer without WebGL helpers is not worth hand-rolling. It also injects the same
 PeerJS build as Scrapline, only when the player hosts or joins a multiplayer room.
 
 Nothing is compiled or transpiled. Editing a file *is* deploying it.
 
 ## Commands
 
-There is no test suite, linter, or build. **This machine has no JS runtime** — no node, npm, deno or
-bun — so `node --check` is unavailable and the only real verification is loading the page in a browser.
+There is no test suite, linter, or build. Node is available through nvm, so `node --check` on the
+extracted script catches syntax errors, but the only real verification is loading the page in a browser.
 
 ```bash
 # run from the repo root to get the landing page and click through to a game
@@ -186,91 +186,120 @@ is the host's PeerJS id (`"scrapline-" + code`); an `unavailable-id` error rerol
 
 ## Flatcraft architecture
 
-A Three.js voxel sandbox: 500×500 world, 256 build height, value-noise terrain.
+A Three.js voxel survival sandbox: 4096×4096 world, 256 build height, value-noise terrain and biomes,
+survival and creative modes. One IIFE, sections in this order: registries, textures, terrain, chunk
+storage, saving, meshing and sky, audio, physics and player, inventory and furnaces, mobs, drops,
+interaction, UI, multiplayer, main loop.
 
 - **Blocks** are rows in `DEFS` (`key`, name, tiles, flags); `B.key` gives the id and `BLOCKS[id]` the
   definition. Tiles are listed per face in the order +X −X +Y −Y +Z −Z (matching `FACES`); a single
-  name fills all six. Flags: `transparent` (faces against it are drawn), `liquid` (water: not solid,
-  meshed separately). Every block breaks, bedrock included (creative is the only mode). Each tile is a painter in `painters`, rendered into a one-row
-  atlas at boot; adding a block is one `def()` and one `DEFS` row, and the picker builds itself.
+  name fills all six. Flags: `transparent` (does not hide faces or block light), `liquid` (water),
+  `solid: false` (walk-through), `shape: 'cross' | 'torch'` (plants, torches), `light` (block light
+  level), `tint: 'top' | 'all'` (multiplied by the biome colour), `replace` (placing into it replaces
+  it). `OPQ`, `SOLID` and `LIGHT_OF` are per-id lookup arrays derived from the flags.
   **Append new rows at the end of `DEFS`**: a block's id is its row index, and saved edits and
   multiplayer messages store ids, so inserting a row mid-table changes blocks in existing worlds.
-  To show a block elsewhere in the picker, flag its row `after: 'key'` (Pink Wool sits after Purple).
-  To retire a block, flag its row `hidden: true` instead of deleting it (Glowstone and Netherrack).
-- **Balls** (Verity, Falsity, Cruelity, Lovity) are a full-cube hitbox drawn as a sphere: `ball()`
-  expands to four consecutive `DEFS` rows, one per facing (`dir` 0..3 = +Z, +X, −Z, −X), and only the
-  first is in the picker (`hidden`). `placeBlock()` adds the snapped yaw to the id (turned 180° with Shift held), so facing is saved
-  and synced as a plain block id. `buildChunk()` hands them to `addBall()`, which emits a UV sphere
-  with the face tile projected on the front half and `<key>_body` on the back.
-- **Terrain** is pure functions of position. `terrainHeight(x, z)` is rolling hills + bumps, plus
-  `mountainMask()` (a smoothed large-scale noise, 0 on the plains and 1 in a range) times ridged
-  noise for peaks up to ~170, minus basins for lakes (suppressed inside ranges; water fills to
-  `WATER_LEVEL`). Surface material comes from the height: grass, then bare stone above `STONE_LINE`
-  (96), then snow above `SNOW_LINE` (118), each jittered by a few blocks so the lines are not rings.
-  `caveAt(x, y, z)` carves in 3D: two crossing `vnoise3` sheets make tunnels and a third noise below
-  y 44 opens caverns; bedrock and the two blocks under a lake bed are never carved, so water never
-  hangs over air. `treeAt()` gives one candidate tree per 9×9 cell, thinned by a forest field and
-  absent above the stone line; `hash3()` places ore. Everything is deterministic from `SEED`, which
-  is set per world by `enterWorld()` (so it is a `let`, as is `RENDER_DIST`, which the options drive).
-  A world whose index entry has `flat: true` sets `FLAT`: `terrainHeight()` returns `FLAT_H` (3),
-  and `generateChunk()` fills each column with bedrock, dirt and grass, with no caves, ore, water or
-  features. The host sends `flat` in `{t:'w'}` so joiners generate the same ground.
-- **Features** (`FEATURES`) are stamped after the columns: each row owns a grid of `cell`×`cell`
-  columns, `at(gx, gz)` decides whether that cell spawns one and where, `place(feature, put)` writes
-  blocks through a `put` that drops anything outside the chunk, and `reach` is how far it extends
-  from its anchor so neighbouring chunks regenerate it and it crosses borders seamlessly. Trees are
-  the only row; a structure (hut, ruin, dungeon) is one more row, and it should read ground with
-  `terrainHeight()`, not the chunk data, so every chunk it touches agrees on where it sits.
-- **Chunks** are 16 columns × 16 × 256 `Uint8Array`s in `chunkData`, generated on demand by
-  `generateChunk()` (columns with caves, then features, then the chunk's saved edits), and evicted
-  a few rings beyond render distance. `groundY()` scans down from `terrainHeight()` through any cave
-  opening to find the real spawn surface. `getBlock()` reads
-  through it, so terrain outside loaded chunks is generated transparently (and cached) when a chunk
-  edge or raycast needs it. `maxY` per chunk bounds the meshing loop.
-- **Edits** live in `edits` (chunk key → Map of cell index → id) and are written into the chunk data
-  as well; `saveWorld()` serialises them plus the player's position on a short debounce, and
-  `enterWorld()` restores them via `applyEdits()` before any chunk is generated.
-- **Worlds & storage**: `flatcraft.worlds.v1` is the index (`{id, name, seed, created, played}`, capped
-  at `MAX_WORLDS` = 5), each world's state is `flatcraft.world.<id>`, options are `flatcraft.options.v1`.
-  The old single save `flatcraft.edits.v2` is migrated into "World 1" once at boot and removed. The
-  game reads and writes a world only through a *world source* (`load()`, `save(state)`, `flush()`);
-  `LocalWorldSource` backs your own worlds, and a joiner gets an inline source whose `load()` returns
-  what the host sent and whose `save()` does nothing. `enterWorld(w, src)` takes it as the optional
-  second argument. `source` is `null` while in the menu, and `frame()` skips the world update until
-  one is set.
-- **Multiplayer** is host-authoritative over PeerJS (one section above the main loop). The host
-  presses Open to Friends on the pause card (`openRoom()`); the room code is the peer id
-  `"flatcraft-" + code`. `welcome()` sends a joiner every edit as `{t:'e'}` messages (sliced to
-  `EDIT_SLICE` numbers, because PeerJS rejects JSON messages over ~16 KB) followed by `{t:'w'}` with the
-  seed and the host's pose, and the joiner enters the world from that. **Every local change goes
-  through `editBlock()`**, which calls `setBlock()` and sends `{t:'b'}`; the host applies a joiner's edit
-  and echoes it to everyone, the sender too, so simultaneous edits converge. Only the receive paths
-  call `setBlock()` directly. Poses travel at 20 Hz on a `setInterval` (not the frame loop, so hidden
-  tabs keep the link alive) and double as the heartbeat: `NET_TIMEOUT` of silence drops a link.
-  Other players are `remotes` (a box body, a pitching head and a `nameTag()` sprite drawn without
-  depth test), eased toward their last pose in `updateRemotes()`. `leaveWorld()` calls `closeNet()`,
-  so quitting or switching worlds closes the room.
-- **Names & chat**: the name lives in `#mpName` (saved under `flatcraft.name.v1`). A joiner sends it
-  as PeerJS connection `metadata`; the host keeps `names` (id → name, 0 is the host) and broadcasts
-  the whole list as `{t:'n'}` on every join, before the newcomer's first pose, so a tag is always
-  built with its name. Chat is `{t:'c', s}` to the host, echoed to everyone as `{t:'c', id, s}`; no
-  `id` means a system line (joined / left). All text goes through `clean()` and into the DOM via
-  `textContent`, never `innerHTML`. The chat box (`T`) releases pointer lock like the picker does,
-  and `chatOpen` keeps the pause card from appearing meanwhile.
-- **Screens**: `#overlay` holds `#menu` (Worlds / Options / Multiplayer tabs) and `#pause`, whose room
-  button and status line `roomUi()` keeps in sync with the network state. Losing pointer
-  lock inside a world shows the pause card; `leaveWorld()` saves and `clearWorldState()` drops every
-  chunk, so switching worlds needs no reload. `body.in-menu` hides the HUD.
-- **Meshing**: `buildChunk()` emits only faces whose neighbour is air or a *different* transparent
-  block, into a solid buffer (alpha-tested, for glass/leaves/ice) and a water buffer (translucent,
-  double-sided, top face lowered to 0.875). Per-face brightness is baked into vertex colours; no lights.
-  `setBlock()` marks the chunk dirty (and the neighbour when on a chunk edge); `rebuildDirty()`
-  rebuilds the same frame.
-- **Player**: swept AABB moved one axis at a time in ≤0.25 steps (`moveAxis`), water is non-solid and
-  applies its own gravity/buoyancy, the player is clamped to the world edge. `raycast()` is a voxel
-  DDA from the camera that skips water and returns the hit block plus the face normal.
-- **Picker**: `E` releases pointer lock and shows `#picker`; clicking a cell writes into `hotbar[selected]`
-  and re-requests the lock. `pickerOpen` keeps the pause card from appearing during that unlock.
+  To show a block elsewhere in the picker, flag its row `after: 'key'`. To retire a block, flag its
+  row `hidden: true` instead of deleting it (Glowstone and Netherrack).
+- **Facing blocks**: `ball()` and `facing()` expand to four consecutive rows (`dir` 0..3 = +Z, +X, −Z,
+  −X), only the first in the picker. `placeBlock()` adds the snapped yaw to the id for any row with
+  `dir` (turned 180° with Shift), and `baseOf(id)` maps any facing row back to the first. Balls are
+  meshed as spheres by `addBall()`; the furnace (and its lit twin) is a cube with one front tile.
+- **Items**: ids 0..255 are blocks (a block is its own item), 256+ are `ITEMS` rows made with `item()`,
+  looked up as `I.key`. Props: `food: [hunger, saturation]`, `fuel` (seconds), `tool: {kind, tier,
+  speed, dur, dmg}`; tools are generated from `TIERS` × `TOOL_KINDS`. Inventory stacks are
+  `{ id, n, d }` (`d` is tool wear). `SMELT` maps input → output, `FUEL` id → seconds.
+- **Mining**: `PROPS` (built by `prop()`) gives each block hardness, preferred tool, harvest tier,
+  sound material and drop (omitted = itself, `null` = nothing, a function = `[[id, n]]`). Hardness
+  −1 is unbreakable in survival. `breakTime()` follows Minecraft's formula; `canHarvest()` decides
+  whether it drops. Creative breaks instantly and spends nothing.
+- **Crafting**: `RECIPES` from `rec(rows, key, out, n)`; each key letter maps to a list of acceptable
+  ids. `matchRecipe(grid, w)` trims the grid to its contents and tries the recipe and its mirror, so
+  one table serves the 2×2 inventory grid and the 3×3 crafting table.
+- **Textures**: most block tiles and every item icon come from `ART`, one base64 PNG strip of 16×16
+  tiles, with `ART.names` giving each tile's name. Blocks and food/material items were generated with
+  Higgsfield (Seedream 5.0 Flash, 4×4 sheets sliced and box-downscaled in Python); the items were then
+  cleaned in Python (stray pixels removed, octree-quantised to 10 colours, edge pixels darkened into a
+  rim). The 20 tools and the stick are drawn geometrically instead: one shape per kind (a handle along
+  x + y = 15, a pickaxe arc, axe blade, shovel spade, sword blade and guard) recoloured from a 5-shade
+  palette per tier, so every tier lines up pixel for pixel. It is drawn over the atlas when it decodes, and
+  `onArt` callbacks refresh anything built from tiles before then (icons, the hand, the hotbar). The
+  `painters` cover everything else (glass, water, plants, torch, the ten `crack_N` stages, balls,
+  pumpkin, melon, TNT); `wool_black` and `wool_pink` are tinted copies of the art's white wool. The
+  atlas holds items too; `itemGeo(id)` extrudes a flat item's tile one texel thick (edge walls per
+  opaque texel) for the held item and drops, and the icons read item canvases from `tileCanvases`.
+  `iconURL(id)` draws full cubes isometric and everything else flat; it is cached per id.
+- **Terrain** is pure functions of position and `SEED`. `continent`, `temperature` and `moisture` are
+  smooth climate fields; `oceanMask`, `desertMask` and `mountainMask` shape `terrainHeight()`, and
+  `biomeAt()` picks one of `BIOMES` (ocean, plains, forest, desert, jungle, taiga, mountains), which
+  sets the surface blocks, ground cover, tree kinds and density (`TREE_DENSITY`) and the grass tint.
+  Surface material also follows altitude (bare stone above `STONE_LINE`, snow above `SNOW_LINE`).
+  `caveAt()` carves tunnels and caverns in 3D. Ground cover (grass, flowers, cactus, dead bushes,
+  rare pumpkins and melons) is placed per column in `generateChunk()`. `FEATURES` rows (`cell`,
+  `reach`, `at`, `place`) hold ore veins and trees, and a structure would be another. Veins follow
+  Minecraft's classic `OreFeature` (`ORES`: size, veins per chunk, height range) and replace stone
+  only, through `put()`'s `only` argument. Lake and ocean beds are sand, never gravel. `FLAT` worlds are bedrock,
+  dirt and grass only. `findSpawn()` walks out from the origin to the first dry land.
+- **Chunks** are 16 columns × 16 × 256 `Uint8Array`s in `chunkData` (plus a per-column `biomes`
+  array), generated on demand by `generateChunk()` and evicted a few rings beyond render distance.
+  `getBlock()` reads through, generating as needed. Chunk loads and rebuilds share a per-frame time
+  budget (`FRAME_BUDGET`); `setBlock()` queues the edited chunk first so an edit shows at once.
+- **Light**: sky light is a heightmap (`columnTop()` = highest opaque block) with a falloff by depth
+  below it (`skyFrom()`), not a flood fill. Block light is flooded per chunk build by
+  `blockLights()` from every light source in the edits of the 3×3 chunks around it (sources only
+  ever come from edits). Both travel as a `light` vertex attribute; the terrain `ShaderMaterial`
+  multiplies sky light by `uDay` (time of day) and takes the brighter of that and warm block light,
+  so day and night never remesh. Placing or removing a light source dirties the 3×3 chunk ring.
+  Faces also get per-vertex ambient occlusion and a face shade in the vertex colour, and each vertex
+  averages sky and block light over the open cells beside it (smooth lighting). The held item and
+  drops are tinted by `tintByLight()`, which uses `lightLevelAt()` (walking distance to sources).
+- **Audio** (`SFX`): block sounds are soft grains of filtered noise per material (`MAT_SND`: filter,
+  grain count and length, a low knock for hard materials, loudness); voices are a sawtooth through
+  formant band-passes (`voice()`), positioned sounds are panned by `out(x, z)`, and every play is
+  pitched a little differently. Grains fade in over 8 ms; an instant start is what makes them click.
+- **UVs**: `UV_EPS` is a fraction of `TILE_W`, not an absolute; an absolute inset crops whole texels
+  off every tile once the atlas is wide.
+- **Meshing**: `buildChunk()` emits into three buffers: solid (alpha-cutout), water (translucent,
+  double-sided, top lowered to 0.875) and plants (cutout, double-sided crossed quads).
+- **Sky**: `updateSky()` runs the clock (`worldTime` 0..1, 0 = sunrise, one day = `DAY_LEN` s), sets
+  sky and fog colours (blue fog under water), and moves the square sun and moon, the stars and the
+  cloud layer (a shader plane that follows the camera with a world-anchored texture offset).
+- **Player**: swept AABB via `moveAxis()` (shared with mobs and drops through `physics()`), sneaking
+  sets `edgeGuard`. Survival state (`hp`, `food`, `sat`, `exh`, `air`) follows Minecraft's rules in
+  `updateVitals()`; everything that hurts goes through `hurtPlayer()` (no-op in creative), and
+  `die()` scatters the inventory as drops and shows the death card. Fall damage uses `fallPeak`.
+- **Mobs**: `MOBS` defines each type (stats, box model in sixteenths of a block, drops); skins are 8×8
+  `SKINS` painters. The host (or a solo player) runs `spawnMobs()` and `updateMob()`; joiners only
+  `syncMobs()` from snapshots and `coastMob()` between them. `targets()` lists everyone a mob can
+  chase (remote players by their last pose); `hitTarget()` hurts the local player or sends `hurt`.
+  Creepers call `explode()`, which edits blocks through `editBlock()` and sends joiners a `boom` so
+  each works out their own damage in `blast()`. Skeleton `arrows` are simulated by the host too.
+- **Drops** are local to each player (never networked): `spawnDrop()`, picked up in `updateDrops()`.
+- **Furnaces** live in `furnaces` (key `"x,y,z"` → slots, burn, cook) and tick in `tickFurnaces()`,
+  swapping the block to `furnace_lit` while fuel burns. They are per player in multiplayer.
+- **Held item**: a separate `handScene` rendered after the world with the depth buffer cleared, so it
+  never clips into walls (`renderer.autoClear` is off; the loop clears).
+- **Pixel-perfect UI**: item icons show at 32px (2× a 16px tile), heart/hunger/air icons are 9×9
+  `ICON_MAPS` shown at 18px (2×); a non-integer scale doubles some pixel rows and not others. Panels
+  (`.gpanel`) centre with `inset` + `margin: auto`, not a −50% transform, and `#invName`/`#pkName`
+  have a fixed height, so text changes never move the panel.
+- **UI**: `#inv` is the survival inventory, crafting table and furnace in one panel; every on-screen
+  slot is `{ el, arr, i, kind }` from `mkSlot()`, and `clickSlot()` implements pick up / place /
+  split / shift-click. Closing it (`closeInv()`) returns the crafting grid and the carried stack to
+  the inventory. Creative uses `#picker` instead. Hearts, hunger and air are painted 9×9 icons.
+- **Edits, worlds & storage**: `edits` (chunk key → Map of cell index → id) is the world diff.
+  `saveWorld()` stores it with the player, inventory, time, spawn and furnaces under
+  `flatcraft.world.<id>`; the index `flatcraft.worlds.v1` holds `{id, name, seed, flat, mode, ...}`
+  (worlds without `mode` are creative, which is how they were built). Worlds are read and written
+  only through a world source (`load()`, `save()`, `flush()`); a joiner's source returns what the
+  host sent and saves nothing.
+- **Multiplayer** is host-authoritative over PeerJS; the section comment lists the messages. The host
+  sends `{t:'w'}` with seed, mode, time and spawn after the edits; its 20 Hz `{t:'ps'}` carries poses,
+  the clock, a mob list and arrows. Joiner → host: `p` pose, `b` edit, `hit` mob, `c` chat. Host →
+  joiner additionally: `hurt`, `loot` (drops for a joiner's kill), `boom`. **Every local block change
+  goes through `editBlock()`**; only the receive paths call `setBlock()` directly.
+- **Screens**: `screen` is `menu`, `pause`, `play` or `dead`. A solo world only simulates in `play`
+  (it pauses under the pause card and death screen); a shared world keeps running.
 - Flatcraft uses modern syntax (`const`, arrows, template literals); the ES5 rule below applies to
   Scrapline only.
 
