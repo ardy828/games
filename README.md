@@ -72,7 +72,7 @@ A goldfinch flies itself over a dusk skyline until you tap. One button does ever
 
 ## Flatcraft
 
-A Minecraft-style survival sandbox. A 4096×4096 world of biomes (plains, forest, desert, jungle,
+A Minecraft-style survival sandbox. An endless world of biomes (plains, forest, desert, jungle,
 snowy taiga, ocean and mountain ranges) with caves, ore, a day and night cycle, hostile and
 friendly mobs, crafting, tools and furnaces. Terrain is generated from value noise, so a seed
 always makes the same world.
@@ -81,23 +81,34 @@ always makes the same world.
   hunger and air; blocks take time to mine depending on the tool, drop as items you pick up, and
   some need the right pickaxe tier (stone for iron, iron for gold and diamond, diamond for
   obsidian). Creative breaks instantly, lets you fly and has a picker with every block and item.
-- **Controls** — WASD to move (double-tap W to sprint), mouse to look, Space to jump or swim
+- **Controls** — WASD to move (Ctrl or double-tap W to sprint), mouse to look, Space to jump or swim
   (double-tap to fly in creative), Shift to sneak (you will not walk off edges). Hold left click to
-  mine or hit a mob; right click places, opens a crafting table or furnace, and held with food eats
-  it. `1`–`9` or the wheel pick a slot, `E` opens the inventory (the picker in creative), `Q` drops
-  the held item, middle click picks the block you look at in creative. Esc pauses.
+  mine or hit a mob; right click places, opens a crafting table or furnace, sleeps in a bed, puts
+  on held armour, and held with food eats it. `1`–`9` or the wheel pick a slot, `E` opens the inventory (the picker in creative), `Q` drops
+  the held item, middle click picks the block you look at in creative, `R` cycles first person,
+  third person from behind and third person from the front, `G` shows the info screen (coordinates,
+  facing, biome, time, light, the block you look at, and compass arrows to spawn and your bed).
+  With the inventory open, clicking outside it throws the held stack out (right click throws one).
+  Esc pauses.
 - **Crafting** — a 2×2 grid in the inventory, 3×3 at a crafting table: planks, sticks, crafting
-  table, furnace, torches, wood/stone/iron/gold/diamond pickaxes, axes, shovels and swords, storage
-  blocks and more. Shift-click moves stacks, right click splits them. Furnaces smelt ore, sand,
+  table, furnace, torches, wood/stone/iron/gold/diamond pickaxes, axes, shovels and swords,
+  iron/gold/diamond armour, chests (8 planks in a ring, 27 slots; two side by side facing the same way make a 54-slot
+  large chest), beds (3 wool over 3 planks), golden apples (4 gold ingots round an
+  apple, which restore full health and hunger and can be eaten on a full stomach), storage blocks and more. Shift-click moves stacks, right click splits them. The RECIPES button opens a recipe book: what
+  you can make comes first, hovering lists the ingredients, and clicking one lays it out in the grid. Furnaces smelt ore, sand,
   cobblestone, clay, logs and raw meat with coal, charcoal or wood.
 - **Day and night** — a day is ten minutes, with a square sun and moon, stars and blocky clouds.
   Light comes from the sky and from torches. Zombies, skeletons and creepers come out in the dark
-  (the undead burn at sunrise); pigs, cows and sheep graze in daylight and drop food.
+  (and burn in daylight), and in dark caves at any time; pigs, cows and sheep graze in daylight and drop food. Beds are two blocks long. Sleeping in a bed
+  at night skips to morning, and the last bed you used is where you respawn.
+- **Armour** — helmet, chestplate, leggings and boots go in the column beside the crafting grid
+  (or right click to put one on). Each point shown above the hearts takes 4% off a hit, up to 80%
+  for full diamond; pieces wear with every hit and break. Falls, drowning and hunger ignore it.
 - **Worlds** — up to five, each with its own name, seed and mode; tick Flat for a superflat world.
-  Blocks, your position, health, inventory, furnaces and the time of day are saved in
+  Blocks, your position, health, inventory, armour, bed, furnaces, chests and the time of day are saved in
   `localStorage` per world.
 - **Options** — render distance, mouse sensitivity, field of view, volume, view bobbing and the
-  stats HUD (position, biome, time).
+  info screen (also `G`).
 - **Multiplayer** — peer to peer, up to 8 players. The host opens a world, presses Esc and chooses
   Open to Friends for a six-digit code; friends type it into the Multiplayer tab. The host runs the
   mobs and the clock; each player keeps their own inventory. `T` chats. Uses PeerJS over WebRTC,

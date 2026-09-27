@@ -186,7 +186,7 @@ is the host's PeerJS id (`"scrapline-" + code`); an `unavailable-id` error rerol
 
 ## Flatcraft architecture
 
-A Three.js voxel survival sandbox: 4096×4096 world, 256 build height, value-noise terrain and biomes,
+A Three.js voxel survival sandbox: an effectively infinite world (border at ±30M, like Minecraft), 256 build height, value-noise terrain and biomes,
 survival and creative modes. One IIFE, sections in this order: registries, textures, terrain, chunk
 storage, saving, meshing and sky, audio, physics and player, inventory and furnaces, mobs, drops,
 interaction, UI, multiplayer, main loop.
@@ -194,7 +194,8 @@ interaction, UI, multiplayer, main loop.
 - **Blocks** are rows in `DEFS` (`key`, name, tiles, flags); `B.key` gives the id and `BLOCKS[id]` the
   definition. Tiles are listed per face in the order +X −X +Y −Y +Z −Z (matching `FACES`); a single
   name fills all six. Flags: `transparent` (does not hide faces or block light), `liquid` (water),
-  `solid: false` (walk-through), `shape: 'cross' | 'torch'` (plants, torches), `light` (block light
+  `solid: false` (walk-through), `shape: 'cross' | 'torch' | 'bed'` (plants, torches, beds),
+  `height` (collision and mesh height below 1, read through `HGT`), `light` (block light
   level), `tint: 'top' | 'all'` (multiplied by the biome colour), `replace` (placing into it replaces
   it). `OPQ`, `SOLID` and `LIGHT_OF` are per-id lookup arrays derived from the flags.
   **Append new rows at the end of `DEFS`**: a block's id is its row index, and saved edits and
@@ -206,8 +207,12 @@ interaction, UI, multiplayer, main loop.
   `dir` (turned 180° with Shift), and `baseOf(id)` maps any facing row back to the first. Balls are
   meshed as spheres by `addBall()`; the furnace (and its lit twin) is a cube with one front tile.
 - **Items**: ids 0..255 are blocks (a block is its own item), 256+ are `ITEMS` rows made with `item()`,
-  looked up as `I.key`. Props: `food: [hunger, saturation]`, `fuel` (seconds), `tool: {kind, tier,
-  speed, dur, dmg}`; tools are generated from `TIERS` × `TOOL_KINDS`. Inventory stacks are
+  looked up as `I.key`. Props: `food: [hunger, saturation]` (plus `heal`, health restored, and
+  `always`, edible when full, on the golden apple), `fuel` (seconds), `tool: {kind,
+  tier, speed, dur, dmg}`, `armor: {slot, pts, dur}`; tools are generated from `TIERS` ×
+  `TOOL_KINDS`, armour from `ARMOR_TIERS` × `ARMOR_SLOTS`. **Append new items after the generated
+  tools and armour**: an item id is its position in `ITEMS`, and saves store ids. `durOf()` covers
+  tools and armour. Inventory stacks are
   `{ id, n, d }` (`d` is tool wear). `SMELT` maps input → output, `FUEL` id → seconds.
 - **Mining**: `PROPS` (built by `prop()`) gives each block hardness, preferred tool, harvest tier,
   sound material and drop (omitted = itself, `null` = nothing, a function = `[[id, n]]`). Hardness
@@ -222,7 +227,11 @@ interaction, UI, multiplayer, main loop.
   cleaned in Python (stray pixels removed, octree-quantised to 10 colours, edge pixels darkened into a
   rim). The 20 tools and the stick are drawn geometrically instead: one shape per kind (a handle along
   x + y = 15, a pickaxe arc, axe blade, shovel spade, sword blade and guard) recoloured from a 5-shade
-  palette per tier, so every tier lines up pixel for pixel. It is drawn over the atlas when it decodes, and
+  palette per tier, so every tier lines up pixel for pixel. Each tool head is mirror-symmetric about
+  the handle line (a pickaxe, shovel and sword across it, the axe blade along it). The 12 armour
+  icons are pixel maps in the same tier palettes, the golden apple is the apple with its red
+  recoloured to the gold palette, and the bed's `bed_top`, `bed_side` and `bed_icon` are pixel
+  maps too, all appended to the strip. It is drawn over the atlas when it decodes, and
   `onArt` callbacks refresh anything built from tiles before then (icons, the hand, the hotbar). The
   `painters` cover everything else (glass, water, plants, torch, the ten `crack_N` stages, balls,
   pumpkin, melon, TNT); `wool_black` and `wool_pink` are tinted copies of the art's white wool. The
@@ -253,10 +262,11 @@ interaction, UI, multiplayer, main loop.
   Faces also get per-vertex ambient occlusion and a face shade in the vertex colour, and each vertex
   averages sky and block light over the open cells beside it (smooth lighting). The held item and
   drops are tinted by `tintByLight()`, which uses `lightLevelAt()` (walking distance to sources).
-- **Audio** (`SFX`): block sounds are soft grains of filtered noise per material (`MAT_SND`: filter,
-  grain count and length, a low knock for hard materials, loudness); voices are a sawtooth through
+- **Audio** (`SFX`): block sounds are one soft swell of filtered noise per material (`MAT_SND`: filter,
+  grain count and length, which `grains()` turns into a single sound's duration, a low knock for hard materials, loudness); voices are a sawtooth through
   formant band-passes (`voice()`), positioned sounds are panned by `out(x, z)`, and every play is
-  pitched a little differently. Grains fade in over 8 ms; an instant start is what makes them click.
+  pitched a little differently. There are no separate bursts: a train of short grains, an instant start or a wide high band-pass is
+  what makes them crunch.
 - **UVs**: `UV_EPS` is a fraction of `TILE_W`, not an absolute; an absolute inset crops whole texels
   off every tile once the atlas is wide.
 - **Meshing**: `buildChunk()` emits into three buffers: solid (alpha-cutout), water (translucent,
@@ -267,26 +277,61 @@ interaction, UI, multiplayer, main loop.
 - **Player**: swept AABB via `moveAxis()` (shared with mobs and drops through `physics()`), sneaking
   sets `edgeGuard`. Survival state (`hp`, `food`, `sat`, `exh`, `air`) follows Minecraft's rules in
   `updateVitals()`; everything that hurts goes through `hurtPlayer()` (no-op in creative), and
-  `die()` scatters the inventory as drops and shows the death card. Fall damage uses `fallPeak`.
+  `die()` scatters the inventory and armour as drops and shows the death card. Fall damage uses
+  `fallPeak`. `hurtPlayer(dmg, kx, kz, cause, bypass, unarmoured)`: armour (`armor[4]`,
+  `armourHit()`) reduces everything except `bypass` (starving, drowning, the void) and `unarmoured`
+  (falls). Jumping costs 0.12 exhaustion (0.35 sprinting), about twice Minecraft's; Ctrl or a
+  double-tapped W sprints, and while Ctrl is held `beforeunload` asks before leaving, since Ctrl+W
+  cannot be caught. `P.bed` is the respawn point, set by using a bed; `sleep()` skips the night (a joiner
+  sends `sleep` and the host, which owns the clock, calls `wakeUp()`). `unstick()` lifts the player
+  out of anything solid at spawn and on load.
 - **Mobs**: `MOBS` defines each type (stats, box model in sixteenths of a block, drops); skins are 8×8
-  `SKINS` painters. The host (or a solo player) runs `spawnMobs()` and `updateMob()`; joiners only
-  `syncMobs()` from snapshots and `coastMob()` between them. `targets()` lists everyone a mob can
+  `SKINS` painters. The host (or a solo player) runs `spawnMobs()` (surface hostiles at night,
+  animals by day, cave hostiles at any time, found by scanning a column for a dark floor) and
+  `updateMob()`; joiners only `syncMobs()` from snapshots and `coastMob()` between them. `targets()` lists everyone a mob can
   chase (remote players by their last pose); `hitTarget()` hurts the local player or sends `hurt`.
+  Every hostile mob burns in daylight under open sky (`m.burning`, snapshot flag 8, drawn as an
+  orange flicker with flame particles on both sides).
   Creepers call `explode()`, which edits blocks through `editBlock()` and sends joiners a `boom` so
   each works out their own damage in `blast()`. Skeleton `arrows` are simulated by the host too.
 - **Drops** are local to each player (never networked): `spawnDrop()`, picked up in `updateDrops()`.
+- **Leaf decay**: `breakAt()` on a log calls `queueDecay()`, which queues every leaf within 6 blocks
+  (`decay`, keyed by cell); `tickDecay()` removes each after a random 0.5–6.5 s unless `logNear()`
+  finds a log within 6 steps through leaves. It runs on the breaker's side and edits go through
+  `editBlock()`.
 - **Furnaces** live in `furnaces` (key `"x,y,z"` → slots, burn, cook) and tick in `tickFurnaces()`,
   swapping the block to `furnace_lit` while fuel burns. They are per player in multiplayer.
+- **Chests** live in `chests` (key `"x,y,z"` → 27 slots, `chestAt()`), open in the `#inv` panel as
+  kind `'chest'` (`curChest` is a list of stores, the `#chestGrid` slots map index `i` to store
+  `i / 27`), spill when broken, and are saved with the world. Per player in multiplayer, like
+  furnaces. Placing a chest beside a single chest with the same facing turns the pair into
+  `chest_l` / `chest_r` rows (half-latch fronts, `pairOf()` finds the partner) and opens as one
+  54-slot chest; breaking a half turns the other back into `chest`.
+- **Beds** are two blocks: `bed` rows (the foot, the item) and `bed_head` rows one block further
+  from the placer, both `shape: 'bed'` with `half`. `placeBlock()` places the head (or refuses),
+  `breakAt()` removes the other half; `addBed()` maps the one-legged `bed_side` so legs sit at the
+  outer corners only.
+- **Recipe book**: `BOOK` groups `RECIPES` by output; `renderBook()` lights what `canMake()` (a
+  greedy count over each key letter's ids, inventory plus grid) and `fits()` the grid allows;
+  `layOut()` returns the grid to the inventory and places one set.
+- **Info screen** (`G`, the `showHud` option): `renderInfo()` fills `#statsText` four times a second;
+  `pointTo()` turns the `#compass` arrows (spawn, bed) every frame. −Z is north.
 - **Held item**: a separate `handScene` rendered after the world with the depth buffer cleared, so it
   never clips into walls (`renderer.autoClear` is off; the loop clears).
+- **Camera modes** (`camMode`, cycled with R): first person, third person behind, third person in
+  front. `placeCamera()` always sets `eye`, an unrendered camera at the first-person view, and
+  `raycast()`, `pickMob()`, eating particles and item drops aim from `eye`, never `camera`, so the
+  camera can back off (stopping short of opaque blocks) without moving the aim. The hand is only
+  drawn in first person; in third person `self`, an avatar built by `makeAvatar()` like the
+  remote ones, stands in for the player.
 - **Pixel-perfect UI**: item icons show at 32px (2× a 16px tile), heart/hunger/air icons are 9×9
   `ICON_MAPS` shown at 18px (2×); a non-integer scale doubles some pixel rows and not others. Panels
   (`.gpanel`) centre with `inset` + `margin: auto`, not a −50% transform, and `#invName`/`#pkName`
   have a fixed height, so text changes never move the panel.
-- **UI**: `#inv` is the survival inventory, crafting table and furnace in one panel; every on-screen
-  slot is `{ el, arr, i, kind }` from `mkSlot()`, and `clickSlot()` implements pick up / place /
-  split / shift-click. Closing it (`closeInv()`) returns the crafting grid and the carried stack to
-  the inventory. Creative uses `#picker` instead. Hearts, hunger and air are painted 9×9 icons.
+- **UI**: `#inv` is the survival inventory, crafting table, furnace and chest in one panel; every
+  on-screen slot is `{ el, arr, i, kind }` from `mkSlot()`, and `clickSlot()` implements pick up /
+  place / split / shift-click. A click outside the panel `toss()`es the cursor stack (right click:
+  one). Closing it (`closeInv()`) returns the crafting grid and the carried stack to the inventory. Creative uses `#picker` instead. Hearts, hunger and air are painted 9×9 icons.
 - **Edits, worlds & storage**: `edits` (chunk key → Map of cell index → id) is the world diff.
   `saveWorld()` stores it with the player, inventory, time, spawn and furnaces under
   `flatcraft.world.<id>`; the index `flatcraft.worlds.v1` holds `{id, name, seed, flat, mode, ...}`
@@ -295,7 +340,9 @@ interaction, UI, multiplayer, main loop.
   host sent and saves nothing.
 - **Multiplayer** is host-authoritative over PeerJS; the section comment lists the messages. The host
   sends `{t:'w'}` with seed, mode, time and spawn after the edits; its 20 Hz `{t:'ps'}` carries poses,
-  the clock, a mob list and arrows. Joiner → host: `p` pose, `b` edit, `hit` mob, `c` chat. Host →
+  the clock, a mob list and arrows. A pose is `[x, y, z, yaw, pitch, armour]`, where armour
+  is each slot's tier (0 none, 1 iron, 2 gold, 3 diamond) in base 4; `dress()` draws it on avatars
+  as tier-coloured boxes. Joiner → host: `p` pose, `b` edit, `hit` mob, `c` chat, `sleep`. Host →
   joiner additionally: `hurt`, `loot` (drops for a joiner's kill), `boom`. **Every local block change
   goes through `editBlock()`**; only the receive paths call `setBlock()` directly.
 - **Screens**: `screen` is `menu`, `pause`, `play` or `dead`. A solo world only simulates in `play`
