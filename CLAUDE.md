@@ -180,9 +180,30 @@ globals `render()` reads (`applySnapshot`) and runs no sim, only `clientTick` (i
 coasting, `updStuff`). Side effects the sim produces go through `fx()` — `burst`, `addFloat`,
 `addShake`, `scorch`, `bannerText`, the red flash and every `SFX.*` (wrapped on host start) — and
 are replayed on the joiner, so the particle array never ships. Screen changes ride on `show()`
-(`{t:"st"}`). Joiner → host messages: `i` input, `pick`, `pause`, `again`. A closed connection
-ends the run on both sides via `gameOver()` (its eyebrow already says SIGNAL LOST). The room code
-is the host's PeerJS id (`"scrapline-" + code`); an `unavailable-id` error rerolls it.
+(`{t:"st"}`). Joiner → host messages: `i` input, `pick`, `pause`, `again`. The room code
+is the host's PeerJS id (`"scrapline-" + code`); an `unavailable-id` error rerolls it, but only
+before the room has opened (a signalling reconnect by `keepSignal()` reuses the id).
+
+The link is built for bad Wi-Fi, and Flatcraft uses the same scheme:
+
+- **Two lanes.** `netSend()` uses PeerJS's reliable ordered channel, for anything that must land.
+  `netStream()` uses `net.fast`, a second channel that `openFast()` creates on the same
+  RTCPeerConnection (negotiated, `id: FAST_ID`, unordered, no retransmits). It carries the snapshot,
+  input and heartbeat (`hb`) streams. Stream messages carry a sequence number `q`, and the receiver
+  drops anything older than `net.rq`. When either lane has more than `NET_BACKLOG` bytes queued,
+  stream messages are skipped, never queued. Until something arrives on the partner's fast channel
+  (`fastOk`), streams are sent on both lanes, so a browser without the second channel still works.
+  Wave banners are taken out of the snapshot's fx and sent reliably as `{t:"fx"}`.
+- **PeerJS `error` events are not fatal.** A JSON message over ~16 KB raises one on an open
+  connection. Only `close`, or an error once `!conn.open`, counts as a drop.
+- **Drops.** A drop is a `close`, or `NET_TIMEOUT` of silence. On a drop during a run, `netLost()`
+  sets `net.away` and does not end the run. The loop freezes and `#netwarn` counts down. The joiner
+  `redial()`s with a fresh peer every 5 s. The host accepts the next connection and `resync()`s it
+  (`go` with `re`, then `st` or the upgrade offers). After `NET_GRACE`, `netGiveUp()` ends the run
+  via `gameOver()`, whose eyebrow says SIGNAL LOST. `#netwarn` also shows WEAK SIGNAL after 1 s of
+  silence.
+- **Quitting** sends `bye` (`netClose()` destroys the peer 300 ms later so it can leave), so the
+  partner ends at once instead of waiting out the grace period.
 
 ## Flatcraft architecture
 
@@ -345,6 +366,17 @@ interaction, UI, multiplayer, main loop.
   as tier-coloured boxes. Joiner → host: `p` pose, `b` edit, `hit` mob, `c` chat, `sleep`. Host →
   joiner additionally: `hurt`, `loot` (drops for a joiner's kill), `boom`. **Every local block change
   goes through `editBlock()`**; only the receive paths call `setBlock()` directly.
+  The link works like Scrapline's (two lanes, sequence numbers, `bye`, non-fatal errors). `stream()`
+  sends `p`/`ps` on the fast lane, and `toHost()`/`broadcast()` send everything else reliably.
+  Reconnecting:
+  - **Joiner.** `linkLost()` releases pointer lock, and `requestLock()` refuses while `net.down`.
+    The joiner then `redial()`s with `back: { id, tok }` in the connection metadata.
+  - **Host.** On a drop (but not a `bye`), the host keeps the joiner's slot in `away` for
+    `NET_GRACE`. When the joiner returns with the same id and token, the host gives it that id
+    back and resends the edits.
+  - **Resync.** The joiner keeps its inventory and runs `resyncEdits()`. That function takes every
+    cell the host has, and puts any cell edited only locally back to its generated block (by
+    generating the chunk without its edits).
 - **Screens**: `screen` is `menu`, `pause`, `play` or `dead`. A solo world only simulates in `play`
   (it pauses under the pause card and death screen); a shared world keeps running.
 - Flatcraft uses modern syntax (`const`, arrows, template literals); the ES5 rule below applies to

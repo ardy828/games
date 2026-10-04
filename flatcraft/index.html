@@ -3239,7 +3239,7 @@
     if (!m) { SFX.swing(); return false; }
     const t = heldTool(), dmg = t ? t.dmg : 1;
     const kx = -Math.sin(P.yaw) * 6, kz = -Math.cos(P.yaw) * 6;
-    if (net && !net.host) { if (net.conn.open) net.conn.send({ t: 'hit', id: m.id, d: dmg, kx, kz }); m.hurtT = 0.3; }
+    if (net && !net.host) { toHost({ t: 'hit', id: m.id, d: dmg, kx, kz }); m.hurtT = 0.3; }
     else damageMob(m, dmg, kx, kz);
     SFX.hit(m.x, m.y, m.z);
     wearHeld();
@@ -3281,7 +3281,7 @@
     const f = $('sleepFade');
     f.classList.add('on');
     setTimeout(() => {
-      if (net && !net.host) { if (net.conn.open) net.conn.send({ t: 'sleep' }); } else wakeUp(myName());
+      if (net && !net.host) toHost({ t: 'sleep' }); else wakeUp(myName());
       f.classList.remove('on');
     }, 1300);
   }
@@ -3379,7 +3379,7 @@
   const menuEl = $('menu');
   const pauseEl = $('pause');
   let locked = false, pickerOpen = false;
-  function requestLock() { if (canvas.requestPointerLock) canvas.requestPointerLock(); }
+  function requestLock() { if (canvas.requestPointerLock && !(net && net.down)) canvas.requestPointerLock(); }   // not while reconnecting
 
   // ───────────────────────── Options ─────────────────────────
   const OPT_DEFAULTS = { renderDist: 7, sensitivity: 1, fov: 75, showHud: false, volume: 0.7, bob: true };
@@ -4088,13 +4088,28 @@
   // clock, and ships them with its pose list; joiners hit mobs by asking ('hit') and are hurt when
   // told ('hurt'). Inventories, drops and furnaces stay with each player and are not synced.
   // The room code is the host's PeerJS id; PeerJS is fetched only when someone hosts or joins.
+  //
+  // Built for bad Wi-Fi. Each link has two lanes on one RTCPeerConnection: PeerJS's reliable ordered
+  // channel for everything that must land (edits, chat, hurt, loot, the world), and a negotiated
+  // 'fast' channel, unordered and never retransmitted, for the 20 Hz pose streams ('p', 'ps'), where
+  // only the newest message matters. A lost pose is replaced 50 ms later instead of stalling every
+  // message behind it while it is resent. Stream messages carry a sequence number (stale ones are
+  // ignored) and are skipped, not queued, while a lane is backed up. When a joiner's link drops it
+  // redials for NET_GRACE with the id and token from its 'w', and the host gives it back its slot
+  // and resends the edits; the joiner keeps its inventory and diffs the world back into agreement.
+  // A deliberate leave sends 'bye', so nobody waits out the grace period for someone who quit.
   const PEER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js';
   const MAX_PLAYERS = 8;
   const EDIT_SLICE = 2000;    // numbers per edits message: PeerJS refuses JSON messages over ~16 KB
-  const NET_TIMEOUT = 15000;  // ms of silence before a link counts as dead (close events can lag)
+  const NET_TIMEOUT = 10000;  // ms of silence before a link counts as dead (close events can lag)
+  const NET_GRACE = 30000;    // ms a dropped joiner keeps redialling, and the host holds its slot
+  const NET_BACKLOG = 32768;  // bytes queued on a lane before stream messages are skipped
+  const FAST_ID = 9;          // negotiated channel id; PeerJS's own channel takes 0 or 1
   let peer = null;            // our PeerJS peer while hosting or joining
-  let net = null;             // host { host: true, code, peers: Map(id -> { conn, heard, v, drop }) }
-                              // joiner { host: false, conn, me, heard, lost }
+  let net = null;             // host { host: true, code, q, peers: Map(id -> link + { v, drop, tok }) }
+                              // joiner link + { host: false, code, me, tok, down, retry }
+                              // a link is { conn, fast, fastOk, heard, q, rq }
+  const away = new Map();     // host: id -> { name, tok, until } for joiners who dropped, not quit
   let nextId = 1;
   const remotes = new Map();  // player id -> { group, head, t: [x, y, z, yaw, pitch] }
   const roomSay = (t) => { $('roomNote').textContent = t; };
@@ -4145,7 +4160,7 @@
     const s = clean(chatInput.value, 120);
     if (s && net) {
       if (net.host) { addChat(s, 0); broadcast({ t: 'c', id: 0, s }); }
-      else if (net.conn.open) net.conn.send({ t: 'c', s });
+      else toHost({ t: 'c', s });
     }
     closeChat();
   });
@@ -4163,8 +4178,18 @@
     document.head.appendChild(s);
   }
   function closeNet() {
-    net = null;
-    if (peer) { try { peer.destroy(); } catch (e) { /* already gone */ } peer = null; }
+    // Say goodbye so nobody waits out NET_GRACE; the peer lives a moment longer so it can leave.
+    const old = peer;
+    let wait = 0;
+    if (net) {
+      clearTimeout(net.retry);
+      for (const l of net.host ? net.peers.values() : [net]) {
+        if (l.conn && l.conn.open) { try { l.conn.send({ t: 'bye' }); wait = 300; } catch (e) { /* closing */ } }
+      }
+    }
+    net = null; peer = null;
+    away.clear();
+    if (old) setTimeout(() => { try { old.destroy(); } catch (e) { /* already gone */ } }, wait);
     for (const id of Array.from(remotes.keys())) dropRemote(id);
     names.clear();
     chatOpen = false; chatInput.hidden = true; chatEl.className = 'hud'; chatEl.textContent = '';
@@ -4172,7 +4197,9 @@
   function roomUi() {
     $('hostBtn').hidden = !!peer;
     $('quitBtn').textContent = net && !net.host ? 'LEAVE GAME' : 'SAVE & QUIT TO MENU';
-    roomSay(!net ? '' : net.host ? `Room code ${fmtCode(net.code)} · ${net.peers.size} joined` : 'Playing in a friend’s world.');
+    roomSay(!net ? '' : net.host ? `Room code ${fmtCode(net.code)} · ${net.peers.size} joined`
+      : net.down ? `Connection lost · reconnecting… ${Math.max(0, Math.ceil((NET_GRACE - (performance.now() - net.down)) / 1000))}`
+      : 'Playing in a friend’s world.');
   }
 
   // Avatars: a body and a head that pitches, shaded like blocks, eased toward the last pose heard.
@@ -4280,11 +4307,47 @@
   // paths below call setBlock() directly, so nothing is sent twice.
   const okEdit = (m) => [m.x, m.y, m.z, m.id].every(Number.isInteger) && inBounds(m.x, m.y, m.z) && m.id >= 0 && m.id < BLOCKS.length;
   function broadcast(m) { for (const p of net.peers.values()) if (p.conn.open) p.conn.send(m); }
+  function toHost(m) { if (net && !net.host && net.conn && net.conn.open) net.conn.send(m); }
+  // Stream lane. Until a link's fast channel has been heard from, each message also goes over the
+  // reliable one (while it is idle), so a browser that cannot open the second channel still plays.
+  function stream(m) {
+    m.q = ++net.q;
+    const s = JSON.stringify(m);
+    for (const l of net.host ? net.peers.values() : [net]) {
+      if (!l.conn || !l.conn.open) continue;
+      const dc = l.fast, rc = l.conn.dataChannel;
+      try {
+        if (dc && dc.readyState === 'open' && dc.bufferedAmount < NET_BACKLOG) dc.send(s);
+        if (!l.fastOk && !l.conn.bufferSize && rc && rc.bufferedAmount < NET_BACKLOG) l.conn.send(m);
+      } catch (e) { /* oversized or closing: skipped, the next one replaces it */ }
+    }
+  }
+  function openFast(conn, link, onData) {    // both ends create it on open; link() is the record it feeds
+    let dc;
+    try { dc = conn.peerConnection.createDataChannel('fast', { negotiated: true, id: FAST_ID, ordered: false, maxRetransmits: 0 }); }
+    catch (e) { return null; }
+    dc.onmessage = (e) => {
+      const l = link();
+      if (!l || l.fast !== dc) return;
+      let m;
+      try { m = JSON.parse(e.data); } catch (err) { return; }
+      l.fastOk = true;
+      onData(m);
+    };
+    return dc;
+  }
+  // The signalling server only matters for new connections, but a host that loses it cannot be
+  // redialled, so keep reconnecting with the same id while the room is open.
+  function keepSignal(me) {
+    me.on('disconnected', () => setTimeout(() => {
+      if (peer === me && me.disconnected && !me.destroyed) { try { me.reconnect(); } catch (e) { /* retried on the next drop */ } }
+    }, 2000));
+  }
   function editBlock(x, y, z, id) {
     setBlock(x, y, z, id);
     if (!net) return;
     const m = { t: 'b', x, y, z, id };
-    if (net.host) broadcast(m); else if (net.conn.open) net.conn.send(m);
+    if (net.host) broadcast(m); else toHost(m);
   }
   const r2 = (n) => Math.round(n * 100) / 100;
   function mobSnapshot() {
@@ -4326,41 +4389,64 @@
     if (peer || !source) return;
     const code = String(100000 + Math.floor(Math.random() * 900000));
     const me = peer = new Peer('flatcraft-' + code);
+    keepSignal(me);
     roomUi(); roomSay('Opening room…');
-    me.on('open', () => { if (peer === me) { net = { host: true, code, peers: new Map() }; names.set(0, myName()); roomUi(); } });
+    me.on('open', () => { if (peer === me && !net) { net = { host: true, code, q: 0, peers: new Map() }; names.set(0, myName()); roomUi(); } });
     me.on('error', (e) => {
       if (peer !== me) return;
-      if (e.type === 'unavailable-id') { closeNet(); openRoom(); return; }
+      if (e.type === 'unavailable-id' && !net) { closeNet(); openRoom(); return; }   // a signalling reconnect keeps its id
       if (!net) { closeNet(); roomUi(); }   // never opened; once open, rooms outlive signalling hiccups
       roomSay('Network error: ' + e.type);
     });
-    me.on('connection', (conn) => conn.on('open', () => welcome(conn)));
+    me.on('connection', (conn) => conn.on('open', () => {
+      if (peer !== me) return;
+      let p = null;
+      const fast = openFast(conn, () => p, (m) => p && p.onData(m));
+      p = welcome(conn, fast);
+    }));
   }
-  function welcome(conn) {
-    if (!net || net.peers.size + 1 >= MAX_PLAYERS) { conn.send({ t: 'full' }); setTimeout(() => conn.close(), 500); return; }
-    const id = nextId++;
+  function welcome(conn, fast) {
+    const now = performance.now();
+    for (const [hid, h] of away) if (h.until < now) { away.delete(hid); names.delete(hid); }
+    // A joiner redialling after a drop names its old id and the token it was given, and gets them back.
+    const back = conn.metadata && conn.metadata.back;
+    const bid = back && back.id, btok = back && back.tok;
+    const old = net && net.peers.get(bid);
+    const hold = away.get(bid);
+    let id, tok, name, again = false;
+    if (net && old && old.tok === btok) {           // its old link has not timed out here yet
+      net.peers.delete(bid); dropRemote(bid); try { old.conn.close(); } catch (e) { /* gone */ }
+      id = bid; tok = btok; name = names.get(bid) || 'Player'; again = true;
+    } else if (net && hold && hold.tok === btok) {
+      away.delete(bid);
+      id = bid; tok = btok; name = hold.name; again = true;
+    }
+    if (!net || (!again && net.peers.size + 1 >= MAX_PLAYERS)) { conn.send({ t: 'full' }); setTimeout(() => conn.close(), 500); return null; }
+    if (!again) { id = nextId++; tok = Math.random().toString(36).slice(2); name = clean(conn.metadata && conn.metadata.name, 16) || 'Player'; }
     // ponytail: one chunk's edits are sliced and re-joined; the whole world is resent to each joiner, fine to a few 100k edits
     for (const [k, arr] of serializeEdits()) {
       for (let i = 0; i < arr.length; i += EDIT_SLICE) conn.send({ t: 'e', k, a: arr.slice(i, i + EDIT_SLICE) });
     }
-    conn.send({ t: 'w', me: id, seed: SEED, flat: FLAT, mode: MODE, time: worldTime, spawn: spawnPoint, name: currentWorld.name,
+    conn.send({ t: 'w', me: id, tok, seed: SEED, flat: FLAT, mode: MODE, time: worldTime, spawn: spawnPoint, name: currentWorld.name,
       player: { x: P.x, y: P.y, z: P.z, yaw: P.yaw, pitch: P.pitch } });
-    const name = clean(conn.metadata && conn.metadata.name, 16) || 'Player';
-    const p = { conn, heard: performance.now(), v: null };
-    p.drop = () => {
+    const p = { conn, fast, fastOk: false, heard: performance.now(), q: 0, rq: 0, v: null, tok };
+    p.drop = (quit) => {
       if (!net || net.peers.get(id) !== p) return;
       net.peers.delete(id); dropRemote(id); roomUi();
-      sysChat(`${name} left the game`);
-      names.delete(id);
+      if (quit) { sysChat(`${name} left the game`); names.delete(id); return; }
+      away.set(id, { name, tok, until: performance.now() + NET_GRACE });   // may come back as itself
+      sysChat(`${name} lost connection`);
     };
     net.peers.set(id, p);
     names.set(id, name);
     broadcast({ t: 'n', l: Array.from(names) });   // everyone, the newcomer too, before any pose of theirs
-    sysChat(`${name} joined the game`);
-    conn.on('data', (m) => {
+    sysChat(again ? `${name} reconnected` : `${name} joined the game`);
+    p.onData = (m) => {
       if (!m || !net || net.peers.get(id) !== p) return;
       p.heard = performance.now();
       if (m.t === 'p') {
+        if (!(m.q > p.rq)) return;      // older than a pose already applied
+        p.rq = m.q;
         if (Array.isArray(m.v) && m.v.length === 6 && m.v.every(Number.isFinite)) { p.v = m.v; setRemote(id, m.v); }
       } else if (m.t === 'b' && okEdit(m)) {
         editBlock(m.x, m.y, m.z, m.id);
@@ -4371,41 +4457,59 @@
         const s = clean(m.s, 120);
         if (s) { addChat(s, id); broadcast({ t: 'c', id, s }); }
       } else if (m.t === 'sleep' && worldTime >= 0.5) wakeUp(name);
-    });
-    conn.on('close', p.drop);
-    conn.on('error', p.drop);
+      else if (m.t === 'bye') { p.drop(true); try { conn.close(); } catch (e) { /* gone */ } }
+    };
+    conn.on('data', p.onData);
+    conn.on('close', () => p.drop());
+    conn.on('error', () => { if (!conn.open) p.drop(); });   // PeerJS also reports non-fatal errors
     roomUi();
+    return p;
   }
 
   // Joiner
   function joinRoom(code) {
     closeNet();
     mpSay('Connecting…');
+    dial(code, null);
+  }
+  // Open a fresh peer and connect: to join, and again after a drop with back = { id, tok }.
+  function dial(code, back) {
+    if (peer) { try { peer.destroy(); } catch (e) { /* already gone */ } }
     const me = peer = new Peer();
     const got = new Map();      // chunk key -> edits, gathered until the world header arrives
-    const lost = () => {
-      if (peer !== me) return;  // closed on purpose, or replaced by a newer attempt
-      const was = !!net;
-      if (source) leaveWorld(); else closeNet();
-      showMenu(); showTab('multiplayer');
-      mpSay(was ? 'Lost connection to the host.' : 'The host closed the connection.');
-    };
     me.on('error', (e) => {
       if (peer !== me || net) return;   // once in, the data channel outlives the signalling server
       closeNet();
       mpSay(e.type === 'peer-unavailable' ? 'No room with that code.' : 'Network error: ' + e.type);
     });
     me.on('open', () => {
-      const conn = me.connect('flatcraft-' + code, { reliable: true, serialization: 'json', metadata: { name: myName() } });
-      conn.on('close', lost);
-      conn.on('error', lost);
-      conn.on('data', (m) => {
+      const conn = me.connect('flatcraft-' + code, { reliable: true, serialization: 'json', metadata: { name: myName(), back } });
+      const mine = () => net && net.conn === conn ? net : null;
+      const gone = () => {
+        if (mine()) linkLost();
+        else if (!net && peer === me) { closeNet(); mpSay('The host closed the connection.'); }
+      };
+      conn.on('close', gone);
+      conn.on('error', () => { if (!conn.open) gone(); });   // PeerJS also reports non-fatal errors
+      let fast = null;
+      conn.on('open', () => { fast = openFast(conn, mine, onData); });
+      const onData = (m) => {
         if (!m || peer !== me) return;
-        if (net) net.heard = performance.now();
         if (m.t === 'e') { got.set(m.k, (got.get(m.k) || []).concat(m.a)); return; }
-        if (m.t === 'full') { closeNet(); mpSay('That room is full.'); return; }
+        if (m.t === 'full') { if (net) giveUp('The room filled up while you were away.'); else { closeNet(); mpSay('That room is full.'); } return; }
         if (m.t === 'w') {
-          net = { host: false, conn, me: m.me, heard: performance.now(), lost };
+          if (net && net.down) {        // back in: keep everything local, take the world as the host has it
+            Object.assign(net, { conn, fast, fastOk: false, heard: performance.now(), rq: 0, me: m.me, tok: m.tok, down: 0 });
+            clearTimeout(net.retry);
+            resyncEdits(got);
+            if (Number.isFinite(m.time)) worldTime = m.time;
+            if (Array.isArray(m.spawn) && m.spawn.every(Number.isFinite)) spawnPoint = m.spawn;
+            addChat('Reconnected.');
+            roomUi();
+            return;
+          }
+          if (net) return;
+          net = { host: false, code, conn, fast, fastOk: false, me: m.me, tok: m.tok, heard: performance.now(), q: 0, rq: 0, down: 0, retry: 0 };
           mpSay('');
           enterWorld({ name: m.name, seed: m.seed, flat: !!m.flat, mode: m.mode }, {
             load: () => ({ seed: m.seed, edits: Array.from(got), player: m.player, time: m.time, spawn: m.spawn }),
@@ -4413,8 +4517,10 @@
           });
           return;
         }
-        if (!net) return;
+        if (!mine()) return;
+        net.heard = performance.now();
         if (m.t === 'b' && okEdit(m)) setBlock(m.x, m.y, m.z, m.id);
+        else if (m.t === 'bye') giveUp('The host closed the world.');
         else if (m.t === 'n') { for (const [id, n] of m.l) names.set(id, clean(n, 16) || 'Player'); }
         else if (m.t === 'c') { const s = clean(m.s, 120); if (s) addChat(s, Number.isInteger(m.id) ? m.id : undefined); }
         else if (m.t === 'hurt' && [m.d, m.kx, m.kz].every(Number.isFinite)) hurtPlayer(m.d, m.kx, m.kz, clean(m.c, 40) || 'died');
@@ -4422,6 +4528,8 @@
         else if (m.t === 'loot' && Array.isArray(m.l)) {
           for (const [id, n] of m.l) if ((id < BLOCKS.length || itemOf(id)) && n > 0 && n <= 64) spawnDrop(id, n, 0, m.x, m.y, m.z);
         } else if (m.t === 'ps') {
+          if (!(m.q > net.rq)) return;  // older than a list already applied
+          net.rq = m.q;
           const seen = new Set();
           for (const v of m.l) if (v[0] !== net.me) { seen.add(v[0]); setRemote(v[0], v.slice(1)); }
           for (const id of Array.from(remotes.keys())) if (!seen.has(id)) dropRemote(id);
@@ -4429,8 +4537,70 @@
           if (Array.isArray(m.m)) syncMobs(m.m);
           if (Array.isArray(m.a)) syncArrows(m.a);
         }
-      });
+      };
+      conn.on('data', onData);
     });
+  }
+  // The link to the host dropped: stop play (the pause card shows the countdown) and redial.
+  function linkLost() {
+    if (!net || net.host || net.down) return;
+    net.down = performance.now(); net.conn = null; net.fast = null; net.fastOk = false;
+    addChat('Connection lost. Reconnecting…');
+    if (document.exitPointerLock) document.exitPointerLock();
+    redial();
+    roomUi();
+  }
+  function redial() {
+    if (!net || !net.down) return;
+    dial(net.code, { id: net.me, tok: net.tok });
+    clearTimeout(net.retry);
+    net.retry = setTimeout(redial, 5000);   // ICE on a bad link can take a few seconds
+  }
+  function giveUp(why) {
+    if (source) leaveWorld(); else closeNet();
+    showMenu(); showTab('multiplayer');
+    mpSay(why);
+  }
+  // Bring the world back into line with the host's after a reconnect: take every cell it has, and
+  // put back to generated terrain any cell edited here that never reached it.
+  function resyncEdits(list) {
+    const cell = (k, i) => {
+      const [cx, cz] = k.split(',').map(Number), y = i % HEIGHT, t = (i - y) / HEIGHT;
+      return [cx * CHUNK + Math.floor(t / CHUNK), y, cz * CHUNK + t % CHUNK];
+    };
+    for (const [k, arr] of list) {
+      const loaded = chunkData.get(k);
+      for (let j = 0; j + 1 < arr.length; j += 2) {
+        const i = arr[j], id = arr[j + 1];
+        if (!Number.isInteger(i) || !Number.isInteger(id) || id < 0 || id >= BLOCKS.length) continue;
+        if (loaded) { if (loaded.data[i] !== id) setBlock(...cell(k, i), id); }
+        else {                                  // generated with its edits whenever it is first read
+          let e = edits.get(k);
+          if (!e) { e = new Map(); edits.set(k, e); }
+          if (!e.has(i)) editCount++;
+          e.set(i, id);
+        }
+      }
+    }
+    for (const [k, e] of Array.from(edits)) {
+      const theirs = new Set();
+      for (let j = 0, a = list.get(k) || []; j < a.length; j += 2) theirs.add(a[j]);
+      const stray = Array.from(e.keys()).filter((i) => !theirs.has(i));
+      if (!stray.length) continue;
+      const loaded = chunkData.get(k);
+      let fresh = null;
+      if (loaded) {                             // what the terrain was before anyone touched it
+        edits.delete(k);
+        const [cx, cz] = k.split(',').map(Number);
+        fresh = generateChunk(cx, cz).data;
+        edits.set(k, e);
+      }
+      for (const i of stray) {
+        if (loaded) { if (loaded.data[i] !== fresh[i]) setBlock(...cell(k, i), fresh[i]); }
+        e.delete(i); editCount--;
+      }
+      if (!e.size) edits.delete(k);
+    }
   }
 
   // Poses at 20 Hz, on a timer rather than the frame loop so a hidden tab still keeps its link alive.
@@ -4440,16 +4610,22 @@
     const now = performance.now();
     const v = [P.x, P.y, P.z, P.yaw, P.pitch].map(r2).concat(armorCode());
     if (!net.host) {
-      if (now - net.heard > NET_TIMEOUT) net.lost();
-      else if (net.conn.open) net.conn.send({ t: 'p', v });
+      if (net.down) {
+        if (now - net.down > NET_GRACE) giveUp('Lost connection to the host.');
+        else roomUi();
+      } else if (now - net.heard > NET_TIMEOUT) {
+        const c = net.conn;
+        linkLost();
+        try { c.close(); } catch (e) { /* gone */ }
+      } else stream({ t: 'p', v });
       return;
     }
     const l = [[0, ...v]];
     for (const [id, p] of net.peers) {
-      if (now - p.heard > NET_TIMEOUT) { p.conn.close(); p.drop(); }
+      if (now - p.heard > NET_TIMEOUT) { p.drop(); try { p.conn.close(); } catch (e) { /* gone */ } }
       else if (p.v) l.push([id, ...p.v]);
     }
-    broadcast({ t: 'ps', l, tm: worldTime, m: mobSnapshot(),
+    stream({ t: 'ps', l, tm: worldTime, m: mobSnapshot(),
       a: arrows.filter((a) => !a.stuck).map((a) => [a.x, a.y, a.z, a.vx, a.vy, a.vz].map(r2)) });
   }, 50);
   $('hostBtn').addEventListener('click', () => loadPeer(openRoom, roomSay));

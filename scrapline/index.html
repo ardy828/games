@@ -55,6 +55,12 @@
   .stat b{color:var(--amber);font-weight:400}
   .stat small{display:block;font-size:.72em;opacity:.55;letter-spacing:.1em}
 
+  #netwarn{
+    position:absolute;left:0;right:0;bottom:.85em;text-align:center;opacity:0;transition:opacity 160ms;
+    font-family:var(--pixel);font-size:.72em;letter-spacing:.16em;color:var(--amber);text-shadow:.09em .09em 0 #000;
+  }
+  #netwarn.on{opacity:1}
+
   /* ---------------- wave banner ---------------- */
   #banner{
     position:absolute;left:0;right:0;top:26%;text-align:center;
@@ -291,6 +297,7 @@
     </div>
 
     <div id="banner"><div class="n" id="bn">WAVE 1</div><div class="m" id="bm"></div></div>
+    <div id="netwarn"></div>
 
     <div class="screen on" id="s-menu">
       <div class="eyebrow">SECTOR 7 &middot; SALVAGE OPS</div>
@@ -2359,7 +2366,7 @@ var SCREENS = { menu:"s-menu", net:"s-net", upgrade:"s-up", over:"s-over", pause
 var el = {};
 ["hud","hpbar","hpfill","hpnum","hpmax","dashpips","dlabel","hwave","hkills",
  "banner","bn","bm","up-eyebrow","up-cards","over-wave","o-kills","o-time",
- "o-best","o-seed","menubest","trophy","hp2s","hp2","n-msg","n-code"].forEach(function(id){ el[id] = document.getElementById(id); });
+ "o-best","o-seed","menubest","trophy","hp2s","hp2","n-msg","n-code","netwarn"].forEach(function(id){ el[id] = document.getElementById(id); });
 
 function show(which){
   adminOn = which === "debug"; egBuf = "";
@@ -2474,11 +2481,12 @@ function openUpgrades(){
   }
   bind(local);
   if (!any){ startWave(); return; }
-  if (net && net.host) netSend({ t:"up", w:wave, k:kills, o:PL[1].offers.map(function(u){ return u.id; }) });
+  if (net && net.host) sendOffers();
   paintUpgrades();
   state = "upgrade";
   show("upgrade");
 }
+function sendOffers(){ netSend({ t:"up", w:wave, k:kills, o:PL[1].offers.map(function(u){ return u.id; }) }); }
 function paintUpgrades(){
   el["up-eyebrow"].textContent = "WAVE " + wave + " CLEARED · " + kills + " DOWN";
   var html = "";
@@ -2499,6 +2507,7 @@ function paintUpgrades(){
 /* each player picks their own card; the wave starts once every context has a pick */
 function chooseUpgrade(i){
   if (state !== "upgrade" || !offers[i] || PL[local].pick >= 0) return;
+  if (net && !net.host && net.away) return;   /* the pick could not reach the host */
   PL[local].pick = i;
   SFX.upgrade();
   var cards = el["up-cards"].children;
@@ -2726,10 +2735,21 @@ document.getElementById("d-resume").addEventListener("click", togglePause);
    with two contexts and streams a snapshot every other frame; the joiner sends its input and
    draws what it is told. Side effects the sim produces (bursts, floats, shake, banners, sound)
    are queued in fxq on the host and replayed on the joiner, so the particle array never ships.
-   ponytail: one reliable ordered channel; move snapshots to an unreliable one if head-of-line
-   blocking is felt on lossy links. */
+
+   Built for bad Wi-Fi. Two lanes share one RTCPeerConnection: PeerJS's reliable ordered channel
+   carries the messages that must land (go, up, st, pick, pause, again, banners), and a second
+   "fast" channel, unordered and never retransmitted, carries the streams where only the newest
+   message matters (snapshots, input, heartbeats). A lost snapshot is simply replaced by the next
+   one instead of holding every later one hostage while it is resent. Stream messages carry a
+   sequence number so a late one is ignored, and are dropped rather than queued when the link is
+   backed up, so a stall never turns into seconds of stale state replayed in a burst. A dropped
+   link pauses the run on both sides for NET_GRACE while the joiner redials; only then is it over. */
 var net = null, peer = null, fxq = null, netFrame = 0;
 var PEER_URL = "https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js";
+var FAST_ID = 9;          /* negotiated channel id; PeerJS's own channel takes 0 or 1 */
+var NET_BACKLOG = 32768;  /* bytes already queued on a lane before stream messages are skipped */
+var NET_TIMEOUT = 8000;   /* ms of silence before a link is treated as dropped */
+var NET_GRACE = 30000;    /* ms a dropped partner has to come back before the run ends */
 var F = {   /* snapshot field lists — everything render() reads, nothing more */
   p:  ["x","y","ang","hp","recoil","iframe","dashT","dashCd","step","shield"],
   e:  ["spr","x","y","ang","frame","flash","hp","maxhp","r","wind","windMax","next"],
@@ -2770,15 +2790,19 @@ function netSnapshot(){
   if (netFrame) return;
   var m = { t:"s", w:wave, k:kills, rt:runTime, mist:mist, p:[], dr:[], se:[],
             e:pack(enemies, F.e), b:pack(bullets, F.b), eb:pack(ebullets, F.eb), rg:pack(rings, F.rg),
-            mo:pack(mortars, F.mo), te:pack(teles, F.te), ar:pack(arcs, F.ar), ca:pack(casings, F.ca), fx:fxq };
+            mo:pack(mortars, F.mo), te:pack(teles, F.te), ar:pack(arcs, F.ar), ca:pack(casings, F.ca), fx:[] };
   for (var i = 0; i < PL.length; i++){
     var c = PL[i];
     m.p.push({ v:pack([c.p], F.p)[0], mhp:c.S.maxhp, dcd:c.S.dashcd, down:c.down });
     m.dr.push(pack(c.drones, F.dr));
     m.se.push(pack(c.sentries, F.se));
   }
+  /* wave banners are rare and must not be lost, so they take the reliable lane */
+  for (i = 0; i < fxq.length; i++){
+    if (fxq[i][0] === "n") netSend({ t:"fx", a:fxq[i] }); else m.fx.push(fxq[i]);
+  }
   fxq = [];
-  netSend(m);
+  netStream(m);
 }
 function applySnapshot(m){
   wave = m.w; kills = m.k; runTime = m.rt; mist = m.mist;
@@ -2791,7 +2815,6 @@ function applySnapshot(m){
   rings = unpack(m.rg, F.rg); mortars = unpack(m.mo, F.mo); teles = unpack(m.te, F.te);
   arcs = unpack(m.ar, F.ar); casings = unpack(m.ca, F.ca);
   bind(local);
-  for (i = 0; i < m.fx.length; i++) playFx(m.fx[i]);
 }
 function playFx(a){
   var k = a[0];
@@ -2815,7 +2838,7 @@ function wrapSfx(){
 /* joiner frame: report input, coast projectiles between snapshots, age local effects */
 function clientTick(dt){
   netFrame ^= 1;
-  if (netFrame){ var m = readInput(); m.t = "i"; netSend(m); }
+  if (netFrame){ var m = readInput(); m.t = "i"; netStream(m); }
   var i;
   for (i = 0; i < bullets.length; i++){ bullets[i].x += bullets[i].vx * dt; bullets[i].y += bullets[i].vy * dt; }
   for (i = 0; i < ebullets.length; i++){ ebullets[i].x += ebullets[i].vx * dt; ebullets[i].y += ebullets[i].vy * dt; }
@@ -2823,16 +2846,62 @@ function clientTick(dt){
 }
 
 function netMsg(t){ el["n-msg"].textContent = t; }
+/* reliable lane: queued and resent until it lands */
 function netSend(m){ if (net && net.conn && net.conn.open) net.conn.send(m); }
-function netClose(){
-  net = null; fxq = null;
-  if (peer){ try { peer.destroy(); } catch (err) {} peer = null; }
+/* stream lane: newest-wins messages. Until the partner's fast channel has been heard from, each
+   message also goes over the reliable lane (when that is idle), so a browser that cannot open
+   the second channel still plays; the sequence number discards the duplicate. */
+function netStream(m){
+  if (!net || !net.conn || !net.conn.open) return;
+  m.q = ++net.q;
+  var dc = net.fast, rc = net.conn.dataChannel;
+  try {
+    if (dc && dc.readyState === "open" && dc.bufferedAmount < NET_BACKLOG) dc.send(JSON.stringify(m));
+    if (!net.fastOk && !net.conn.bufferSize && rc && rc.bufferedAmount < NET_BACKLOG) net.conn.send(m);
+  } catch (err) { /* oversized or closing: this one is skipped, the next replaces it */ }
 }
+function openFast(conn){
+  var dc;
+  try {
+    dc = conn.peerConnection.createDataChannel("fast", { negotiated:true, id:FAST_ID, ordered:false, maxRetransmits:0 });
+  } catch (err) { return null; }
+  dc.onmessage = function(e){
+    if (!net || net.fast !== dc) return;
+    var m;
+    try { m = JSON.parse(e.data); } catch (err) { return; }
+    net.fastOk = true;
+    onNet(m);
+  };
+  return dc;
+}
+function netClose(){
+  var old = peer, wait = 0;
+  if (net){
+    clearTimeout(net.retry);
+    /* say goodbye so the partner ends at once instead of waiting out NET_GRACE; the peer
+       lives a moment longer so the message can leave */
+    if (net.conn && net.conn.open){ try { net.conn.send({ t:"bye" }); wait = 300; } catch (err) {} }
+  }
+  net = null; fxq = null; peer = null;
+  if (old) setTimeout(function(){ try { old.destroy(); } catch (err) {} }, wait);
+  paintLink();
+}
+var LIVE = { play:1, upgrade:1, paused:1 };
 function netLost(){
-  if (!net) return;
+  if (!net || net.away) return;
+  if (LIVE[state]){
+    /* hold the run (the loop freezes while away) and give the partner time to come back */
+    net.away = performance.now(); net.conn = null; net.fast = null; net.fastOk = false;
+    if (!net.host) redial();
+    paintLink();
+    return;
+  }
   netClose();
-  if (state === "play" || state === "upgrade" || state === "paused"){ bind(local); gameOver(); }
-  else if (state === "menu") netMsg("PARTNER LEFT");
+  if (state === "menu") netMsg("PARTNER LEFT");
+}
+function netGiveUp(){
+  netClose();
+  if (LIVE[state]){ bind(local); gameOver(); }
 }
 var peerCbs = null;   /* callbacks waiting on the script while it loads */
 function loadPeer(cb){
@@ -2845,26 +2914,51 @@ function loadPeer(cb){
   s.onerror = function(){ peerCbs = null; netMsg("COULD NOT LOAD THE NETWORK LIBRARY"); };
   document.head.appendChild(s);
 }
-function wire(conn, host){
-  net = { host:host, conn:conn };
-  conn.on("data", onNet);
-  conn.on("close", netLost);
-  conn.on("error", netLost);
+/* adopt an open connection, as the first link or a replacement for a dropped one */
+function wire(conn, host, code){
+  if (!net) net = { host:host, code:code, q:0, retry:0 };
+  clearTimeout(net.retry);
+  net.conn = conn; net.fast = openFast(conn); net.fastOk = false;
+  net.away = 0; net.rq = 0; net.heard = performance.now();
+  conn.on("data", function(m){ if (net && net.conn === conn) onNet(m); });
+  conn.on("close", function(){ if (net && net.conn === conn) netLost(); });
+  /* PeerJS also reports non-fatal errors (a message too big, a send while closing); only a
+     connection that is actually down counts, and a real failure is followed by close anyway */
+  conn.on("error", function(){ if (net && net.conn === conn && !conn.open) netLost(); });
+  paintLink();
+}
+/* the signalling server only matters for new connections, but a host that loses it cannot be
+   redialled, so keep reconnecting with the same id while the room is open */
+function keepSignal(me){
+  me.on("disconnected", function(){
+    setTimeout(function(){
+      if (peer === me && me.disconnected && !me.destroyed){ try { me.reconnect(); } catch (err) {} }
+    }, 2000);
+  });
 }
 function fmtCode(c){ return c.slice(0, 3) + " " + c.slice(3); }
 function hostGame(){
   netClose();
   var code = String(100000 + Math.floor(Math.random() * 900000));
   netMsg("OPENING ROOM…");
-  peer = new Peer("scrapline-" + code);
-  peer.on("open", function(){ netMsg("YOUR CODE  " + fmtCode(code) + "  · WAITING FOR PARTNER…"); });
-  peer.on("error", function(e){
-    if (e.type === "unavailable-id"){ hostGame(); return; }
-    netMsg("NETWORK ERROR · " + e.type);
+  var me = peer = new Peer("scrapline-" + code), opened = false;
+  keepSignal(me);
+  me.on("open", function(){
+    if (opened) return;   /* a signalling reconnect opens again */
+    opened = true;
+    netMsg("YOUR CODE  " + fmtCode(code) + "  · WAITING FOR PARTNER…");
   });
-  peer.on("connection", function(conn){
-    if (net){ conn.close(); return; }
+  me.on("error", function(e){
+    if (peer !== me) return;
+    if (e.type === "unavailable-id" && !opened){ hostGame(); return; }
+    if (!net) netMsg("NETWORK ERROR · " + e.type);
+  });
+  me.on("connection", function(conn){
+    var taken = function(){ return peer !== me || (net && (!net.away || !LIVE[state])); };
+    if (taken()){ conn.close(); return; }
     conn.on("open", function(){
+      if (taken()){ conn.close(); return; }
+      if (net){ wire(conn, true); resync(); return; }   /* the partner is back */
       wire(conn, true);
       wrapSfx(); fxq = [];
       local = 0;
@@ -2874,29 +2968,79 @@ function hostGame(){
     });
   });
 }
-function joinGame(code){
-  netClose();
-  netMsg("CONNECTING…");
-  peer = new Peer();
-  peer.on("open", function(){
-    var conn = peer.connect("scrapline-" + code, { reliable:true, serialization:"json" });
-    conn.on("open", function(){ wire(conn, false); netMsg("LINKED · WAITING FOR HOST…"); });
+/* host: bring a returning partner back to wherever the run is */
+function resync(){
+  netSend({ t:"go", seed:runSeed, re:1 });
+  if (state === "upgrade"){ if (PL[1].pick < 0) sendOffers(); }
+  else netSend({ t:"st", w:state === "paused" ? "paused" : null });
+}
+/* joiner: open a fresh peer and connect; used to join and to redial after a drop */
+function dial(code){
+  if (peer){ try { peer.destroy(); } catch (err) {} }
+  var me = peer = new Peer();
+  me.on("open", function(){
+    var conn = me.connect("scrapline-" + code, { reliable:true, serialization:"json" });
+    conn.on("open", function(){
+      if (peer !== me) return;
+      var back = !!net;
+      wire(conn, false, code);
+      if (!back) netMsg("LINKED · WAITING FOR HOST…");
+    });
   });
-  peer.on("error", function(e){
+  me.on("error", function(e){
+    if (peer !== me || net) return;   /* while redialling the retry timer handles failures */
     netMsg(e.type === "peer-unavailable" ? "NO ROOM WITH THAT CODE" : "NETWORK ERROR · " + e.type);
   });
 }
+function joinGame(code){
+  netClose();
+  netMsg("CONNECTING…");
+  dial(code);
+}
+function redial(){
+  if (!net || !net.away || net.host) return;
+  dial(net.code);
+  clearTimeout(net.retry);
+  net.retry = setTimeout(redial, 5000);   /* ICE on a bad link can take a few seconds */
+}
+/* heartbeat, timeout and the link indicator; a timer, not the frame loop, so a paused tab still answers */
+setInterval(function(){
+  if (!net) return;
+  var now = performance.now();
+  if (net.away){ if (now - net.away > NET_GRACE || !LIVE[state]) netGiveUp(); else paintLink(); return; }
+  if (now - net.heard > NET_TIMEOUT){
+    var c = net.conn;
+    netLost();
+    try { c.close(); } catch (err) {}
+    return;
+  }
+  netStream({ t:"hb" });
+  paintLink();
+}, 250);
+function paintLink(){
+  var t = "";
+  if (net && LIVE[state]){
+    if (net.away) t = (net.host ? "PARTNER SIGNAL LOST · WAITING " : "SIGNAL LOST · RECONNECTING ") +
+                      Math.max(0, Math.ceil((NET_GRACE - (performance.now() - net.away)) / 1000));
+    else if (performance.now() - net.heard > 1000) t = "WEAK SIGNAL";
+  }
+  if (el.netwarn.textContent !== t) el.netwarn.textContent = t;
+  el.netwarn.classList.toggle("on", !!t);
+}
 function onNet(m){
   if (!m || !net) return;
+  net.heard = performance.now();
+  if (m.t === "bye"){ netGiveUp(); if (state === "menu") netMsg("PARTNER LEFT"); return; }
   var i;
   if (net.host){
-    if (m.t === "i") PL[1].inp = m;
+    if (m.t === "i"){ if (m.q > net.rq){ net.rq = m.q; PL[1].inp = m; } }
     else if (m.t === "pick"){ if (state === "upgrade" && PL[1].pick < 0 && PL[1].offers[m.i]){ PL[1].pick = m.i; tryApply(); } }
     else if (m.t === "pause"){ if (state === "play" || state === "paused") togglePause(); }
     else if (m.t === "again" && state === "over"){ startRun(null, 2); netSend({ t:"go", seed:runSeed }); }
     return;
   }
   if (m.t === "go"){
+    if (m.re && local === 1 && PL.length === 2 && LIVE[state]) return;   /* rejoined our own run */
     local = 1;
     PL = [mkCtx(), mkCtx()];
     for (i = 0; i < 2; i++){
@@ -2915,7 +3059,11 @@ function onNet(m){
     state = "play";
     show(null);
   } else if (m.t === "s"){
-    if (state === "play") applySnapshot(m);
+    /* a snapshot older than one already drawn is stale, but its effects still happened */
+    if (state === "play" && m.q > net.rq){ net.rq = m.q; applySnapshot(m); }
+    if (state === "play") for (i = 0; i < m.fx.length; i++) playFx(m.fx[i]);
+  } else if (m.t === "fx"){
+    playFx(m.a);
   } else if (m.t === "up"){
     wave = m.w; kills = m.k;
     bind(local);
@@ -2949,7 +3097,7 @@ function loop(ts){
   last = ts;
   if (dt > 0.033) dt = 0.033;
 
-  if (state === "play"){
+  if (state === "play" && !(net && net.away)){   /* a dropped link freezes the run */
     runTime += dt;
     if (net && !net.host){
       clientTick(dt);
