@@ -134,7 +134,7 @@ html{touch-action:manipulation}
 body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 img,svg,canvas,a{-webkit-user-drag:none}
-html{overflow-x:hidden;touch-action:pan-y}
+html{touch-action:pan-y} /* no overflow here: body's overflow-x then applies to the window, which scrolls normally */
 </style>
 </head>
 <body>
