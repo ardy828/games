@@ -75,6 +75,7 @@
 /* Locked down: no selecting, copying, long-press menus or image dragging (text fields excepted),
    and no rubber-band scrolling or pull-to-refresh */
 html,body{overscroll-behavior:none}
+html{touch-action:manipulation}
 body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 img,svg,canvas,a{-webkit-user-drag:none}
@@ -1014,6 +1015,14 @@ requestAnimationFrame(frame);
   ["contextmenu", "copy", "cut", "selectstart", "dragstart"].forEach(function (ev) { document.addEventListener(ev, stop); });
   ["gesturestart", "gesturechange"].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }); });
   document.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // iPhones ignore user-scalable=no, so a second tap within 350 ms is cancelled to stop double-tap zoom
+  // (games read taps on pointerdown, which has already fired by then)
+  var lastTap = 0;
+  document.addEventListener("touchend", function (e) {
+    var now = Date.now();
+    if (now - lastTap < 350 && !field(e.target)) e.preventDefault();
+    lastTap = now;
+  }, { passive: false });
   document.addEventListener("keydown", function (e) {
     if (!(e.ctrlKey || e.metaKey)) return;
     var k = e.key.toLowerCase();

@@ -27,7 +27,9 @@ Nothing is compiled or transpiled. Editing a file *is* deploying it.
 
 Every page (the landing page and each game) ends with the same **lockdown** block: CSS that turns off
 selection, long-press callouts, image dragging and overscroll, and a script that cancels the right-click
-menu, copy/cut, selectstart, dragstart, pinch and Ctrl zoom and Ctrl+S/U/P/A/C/X. Text fields are
+menu, copy/cut, selectstart, dragstart, pinch and Ctrl zoom and Ctrl+S/U/P/A/C/X, and cancels a
+second `touchend` within 350 ms, since iPhones ignore `user-scalable=no` and double-tap zoom otherwise
+(gameplay reads taps on `pointerdown`, so only a fast second click on a menu button is lost). Text fields are
 exempt. Keep the copies identical; a new game gets the same block. The landing page still scrolls
 vertically (`touch-action: pan-y`), since its cards run past a phone screen.
 

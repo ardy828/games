@@ -62,17 +62,14 @@ input{font:inherit;font-weight:700;background:#0f0b18;color:var(--text);border:1
 #touchNote{display:none}
 
 /* Touch: the game fills the screen, a floating stick on the left, action buttons on the right.
-   #pad sits outside #wrap so in portrait the controls use the empty space under the game. */
+   #pad sits outside #wrap so in portrait the controls use the empty space below the centred game. */
 body.tui{padding:0;touch-action:manipulation}
 body.tui #wrap canvas{touch-action:none}
 body.tui #wrap{width:min(100vw,calc(100dvh * 16 / 9));border-radius:0;box-shadow:none}
 body.tui .keys{display:none}
 body.tui #touchNote{display:block}
-@media (orientation:portrait){
-  body.tui{align-items:flex-start;padding-top:env(safe-area-inset-top)}
-  body.tui #rot{display:block}
-}
-#rot{display:none;position:fixed;left:0;right:0;top:calc(100vw * 9 / 16 + env(safe-area-inset-top) + 18px);text-align:center;font-size:13px;color:var(--muted);pointer-events:none}
+@media (orientation:portrait){body.tui #rot{display:block}}
+#rot{display:none;position:fixed;left:0;right:0;top:calc(50% + 100vw * 9 / 32 + 14px);text-align:center;font-size:13px;color:var(--muted);pointer-events:none}
 #pad{position:fixed;inset:0;z-index:5;pointer-events:none;display:none}
 body.tui #pad.on{display:block}
 #pad button{pointer-events:auto;touch-action:none;font-family:var(--body);font-weight:700;color:var(--text);-webkit-tap-highlight-color:transparent}
@@ -93,6 +90,7 @@ body.tui #pad.on{display:block}
 /* Locked down: no selecting, copying, long-press menus or image dragging (text fields excepted),
    and no rubber-band scrolling or pull-to-refresh */
 html,body{overscroll-behavior:none}
+html{touch-action:manipulation}
 body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 img,svg,canvas,a{-webkit-user-drag:none}
@@ -1287,6 +1285,14 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
   ["contextmenu", "copy", "cut", "selectstart", "dragstart"].forEach(function (ev) { document.addEventListener(ev, stop); });
   ["gesturestart", "gesturechange"].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }); });
   document.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // iPhones ignore user-scalable=no, so a second tap within 350 ms is cancelled to stop double-tap zoom
+  // (games read taps on pointerdown, which has already fired by then)
+  var lastTap = 0;
+  document.addEventListener("touchend", function (e) {
+    var now = Date.now();
+    if (now - lastTap < 350 && !field(e.target)) e.preventDefault();
+    lastTap = now;
+  }, { passive: false });
   document.addEventListener("keydown", function (e) {
     if (!(e.ctrlKey || e.metaKey)) return;
     var k = e.key.toLowerCase();
