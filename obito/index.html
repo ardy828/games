@@ -161,8 +161,16 @@ img,svg,canvas,a{-webkit-user-drag:none}
 const $=id=>document.getElementById(id);
 const cv=$('c');
 let g=cv.getContext('2d');
-const W=960,H=540,DPR=Math.min(2,window.devicePixelRatio||1);
-cv.width=W*DPR;cv.height=H*DPR;
+const W=960,H=540;
+// The canvas backing store matches the pixels it covers on screen (display size times pixel density,
+// capped at 3x), so canvas text and HUD stay sharp on a big monitor instead of a 960x540 image
+// stretched up. Everything draws in 960x540 logical units through the frame's setTransform(DPR).
+let DPR=1;
+function fitCanvas(){const r=cv.getBoundingClientRect(),k=Math.min(3,Math.max(1,(r.width||W)*(window.devicePixelRatio||1)/W));
+  const w=Math.round(W*k);if(w===cv.width)return;DPR=w/W;cv.width=w;cv.height=Math.round(H*DPR)}
+fitCanvas();
+addEventListener('resize',fitCanvas);
+if(window.ResizeObserver)new ResizeObserver(fitCanvas).observe(cv);
 const TAU=Math.PI*2;
 const FD="'Dela Gothic One','Arial Black',sans-serif", FB="'Zen Kaku Gothic New','Segoe UI',sans-serif";
 const rand=(a,b)=>a+Math.random()*(b-a), pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -295,8 +303,28 @@ function postFx(){if(flashA>0){g.globalAlpha=Math.min(1,flashA);g.fillStyle=flas
 function wrap(text,maxW){const words=text.split(' '),lines=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(g.measureText(t).width>maxW&&cur){lines.push(cur);cur=w}else cur=t}if(cur)lines.push(cur);return lines}
 
 /* ---------------- character art ---------------- */
+// The three-tomoe Sharingan: red iris with a dark rim, the thin inner ring, a black pupil and three
+// comma-shaped tomoe on the ring that turn slowly, tails trailing. Under about 5 screen pixels the detail would only
+// blur, so it drops to the iris, rim and pupil.
+function sharingan(x,y,R){
+  const T=g.getTransform(),px=R*Math.hypot(T.a,T.b);
+  const gr=g.createRadialGradient(x-R*.2,y-R*.25,R*.1,x,y,R);gr.addColorStop(0,'#ff4a4f');gr.addColorStop(.7,'#d8262f');gr.addColorStop(1,'#8e1016');
+  g.fillStyle=gr;circ(x,y,R);
+  g.strokeStyle='#1a0507';g.lineWidth=R*.16;g.beginPath();g.arc(x,y,R-R*.08,0,TAU);g.stroke();
+  g.fillStyle='#120406';
+  if(px<5){circ(x,y,R*.35);return}
+  g.strokeStyle='rgba(26,5,7,.75)';g.lineWidth=R*.06;g.beginPath();g.arc(x,y,R*.55,0,TAU);g.stroke();
+  circ(x,y,R*.2);
+  const rr=R*.55,hr=R*.16,a0=performance.now()/1000*1.1;
+  for(let i=0;i<3;i++){const th=a0+i*TAU/3;
+    circ(x+Math.cos(th)*rr,y+Math.sin(th)*rr,hr);
+    // the tail trails back along the ring, tapering and curling slightly outward
+    const out=[],inn=[];
+    for(let k=0;k<=10;k++){const u=k/10,ph=th-u*.95,w=hr*.8*Math.pow(1-u,1.5),rc=rr+hr*.55*u;
+      out.push([x+Math.cos(ph)*(rc+w),y+Math.sin(ph)*(rc+w)]);inn.push([x+Math.cos(ph)*(rc-w),y+Math.sin(ph)*(rc-w)])}
+    g.beginPath();out.forEach(([px2,py2],k)=>k?g.lineTo(px2,py2):g.moveTo(px2,py2));inn.reverse().forEach(([px2,py2])=>g.lineTo(px2,py2));g.closePath();g.fill()}}
 function eye(x,y,type,r){
-  if(type==='sharingan'){g.fillStyle='#d8262f';circ(x,y,r+.5);g.fillStyle='#120a0a';circ(x,y,r*.4)}
+  if(type==='sharingan'){sharingan(x,y,r+.6);return}
   else if(type==='rinnegan'){g.fillStyle='#bba6ea';circ(x,y,r+.6);g.strokeStyle='#4a3a7a';g.lineWidth=.6;g.beginPath();g.arc(x,y,r*.6,0,TAU);g.stroke();g.fillStyle='#2a1f45';circ(x,y,r*.25)}
   else if(type==='sukuna'){g.fillStyle='#d42a2a';circ(x,y,r)}
   else{g.fillStyle='#1a1420';circ(x,y,r*.85)}}
@@ -504,7 +532,7 @@ const MAPDEF={
   void:()=>({w:1200,h:800,walls:[R(0,0,1200,70),R(0,730,1200,70),R(0,0,70,800),R(1130,0,70,800)],paint:paintVoid,dyn:dynVoid}),
   tunnel:()=>({w:W,h:H,walls:[],dyn:(m,t)=>paintTunnel(t,W/2,H/2)})};
 const MAPCACHE={};
-function getMap(id){if(MAPCACHE[id])return MAPCACHE[id];const m=MAPDEF[id]();m.id=id;if(m.paint){const sc=m.w*m.h*DPR*DPR<6e6?DPR:1;m.ground=offscreen(m.w,m.h,()=>m.paint(m),sc)}if(m.tick)m.tick=m.tick.bind(m);MAPCACHE[id]=m;return m}
+function getMap(id){if(MAPCACHE[id])return MAPCACHE[id];const m=MAPDEF[id]();m.id=id;if(m.paint){const sc=Math.min(DPR,Math.max(1,Math.sqrt(6e6/(m.w*m.h))));m.ground=offscreen(m.w,m.h,()=>m.paint(m),sc)}if(m.tick)m.tick=m.tick.bind(m);MAPCACHE[id]=m;return m}
 function paintMap(m,t){if(m.ground)g.drawImage(m.ground,0,0,m.w,m.h);m.dyn&&m.dyn(m,t)}
 
 /* ---------------- dialogue ---------------- */
