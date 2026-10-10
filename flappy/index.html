@@ -173,6 +173,13 @@
   @media (prefers-reduced-motion:reduce){
     .score.pop,.tap .k,#sOver.on .title2,#sOver.on .card,#sOver .row,.screen.fade{animation:none}
   }
+
+/* Locked down: no selecting, copying, long-press menus or image dragging (text fields excepted),
+   and no rubber-band scrolling or pull-to-refresh */
+html,body{overscroll-behavior:none}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+img,svg,canvas,a{-webkit-user-drag:none}
 </style>
 </head>
 <body>
@@ -934,6 +941,23 @@ if (window.claude && window.claude.hot && window.claude.hot.ready){
 } else {
   start((window.claude && window.claude.hot && window.claude.hot.data) || {});
 }
+})();
+</script>
+<script>
+/* Locked down: the right-click menu, copy and cut, selecting, dragging, pinch and Ctrl zoom, and the
+   save / print / view-source / select-all shortcuts are switched off, except inside text fields. */
+(function () {
+  function field(t) { return t && t.closest && t.closest("input,textarea,select,[contenteditable]"); }
+  function stop(e) { if (!field(e.target)) e.preventDefault(); }
+  ["contextmenu", "copy", "cut", "selectstart", "dragstart"].forEach(function (ev) { document.addEventListener(ev, stop); });
+  ["gesturestart", "gesturechange"].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }); });
+  document.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  document.addEventListener("keydown", function (e) {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    var k = e.key.toLowerCase();
+    if (k === "s" || k === "u" || k === "p" || k === "+" || k === "-" || k === "=" || k === "0") e.preventDefault();
+    else if ((k === "a" || k === "c" || k === "x") && !field(e.target)) e.preventDefault();
+  });
 })();
 </script>
 </body>
