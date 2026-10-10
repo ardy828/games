@@ -17,7 +17,9 @@ Touch support is one section after the keyboard input: `TOUCH` (set via the `tui
 `.touch` was already a class), a floating stick read in `updatePlayer()`, and `#pad` buttons that
 write the same `keys`/`hit` tables as the keyboard. `syncPad()` runs each frame: outside a fight the
 pad hides and a tap anywhere presses Enter. Obito's spiral mask is drawn after the hair (`late` in
-`drawPerson()`), with its eye hole on the left, matching the landing-page icon.
+`drawPerson()`), with its eye hole on the left, matching the landing-page icon. The bob and long side
+locks are drawn by `drawLocks()` before the face and turn with the head (the near lock thins and tucks
+in), so a turned head never hides an eye; `drawHair()` only draws them from behind.
 
 `flatcraft/index.html` is the other exception: it loads Three.js r128 (the last UMD build) from cdnjs at
 boot (and carries its texture art inline as one base64 PNG strip), since a voxel renderer without WebGL helpers is not worth hand-rolling. It also injects the same

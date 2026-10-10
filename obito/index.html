@@ -324,8 +324,16 @@ function drawHair(o,back){
   if(back)circ(0,-15,11.6);else{g.beginPath();g.arc(0,-15,11.8,Math.PI*1.03,Math.PI*1.97);g.closePath();g.fill()}
   if(s==='spiky'||s==='white'||s==='messy'){const n=s==='white'?8:7,L=s==='white'?21:18,v=[0,3,-2,4,-1,3,-3,2];
     for(let i=0;i<n;i++){const a=Math.PI*1.04+i/(n-1)*Math.PI*.92,len=L+(s==='messy'?v[i]:0);g.beginPath();g.moveTo(Math.cos(a-.3)*10,-15+Math.sin(a-.3)*10);g.lineTo(Math.cos(a)*len,-15+Math.sin(a)*len);g.lineTo(Math.cos(a+.3)*10,-15+Math.sin(a+.3)*10);g.fill()}}
-  if(s==='bob'){ell(-9.5,-11,4,8);ell(9.5,-11,4,8)}
-  if(s==='long'){ell(-9.5,-6,4,13);ell(9.5,-6,4,13);if(back)ell(0,-4,10,12)}}
+  if(back&&s==='bob'){ell(-9.5,-11,4,8);ell(9.5,-11,4,8)}
+  if(back&&s==='long'){ell(-9.5,-6,4,13);ell(9.5,-6,4,13);ell(0,-4,10,12)}}
+// Side locks for the bob and long styles, seen from the front. They turn with the head: the lock on the
+// side the face turns toward thins and tucks to the edge, the far one widens, and both sit under the eyes,
+// so a turned head never loses an eye behind its hair.
+function drawLocks(o,fx){
+  const s=o.style;if(s!=='bob'&&s!=='long')return;
+  const t=clamp(fx/3.5,-1,1),a=Math.abs(t);g.fillStyle=o.hair;
+  for(const d of[-1,1]){const near=d*t>0,x=d*(9.5+(near?1.3*a:-1.8*a)),rx=4+(near?-2*a:a);
+    if(s==='bob')ell(x,-11,rx,8);else ell(x,-6,rx,13)}}
 function drawPerson(x,y,o){
   const s=o.s||1,f=o.facing??Math.PI/2,step=Math.sin(o.walk||0)*2.5;
   g.save();g.translate(x,y);g.scale(s,s);if(o.alpha!=null)g.globalAlpha=o.alpha;
@@ -340,6 +348,7 @@ function drawPerson(x,y,o){
   g.fillStyle=o.skin;circ(0,-14,11);
   const back=Math.sin(f)<-.5,fx=clamp(Math.cos(f),-1,1)*3.5;
   const late=o.mask==='spiral'; // the spiral mask sits over the hair, the rest under it
+  if(!back)drawLocks(o,fx);
   if(!back&&!late)drawFace(o,fx);
   drawHair(o,back);
   if(!back&&late)drawFace(o,fx);
