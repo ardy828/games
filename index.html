@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Addict Games</title>
-<meta name="description" content="Browser games: Scrapline, Block Blast, Flappy Finch and Flatcraft.">
+<meta name="description" content="Browser games: Scrapline, Block Blast, Flappy Finch, Flatcraft and Obito's Multiverse.">
 <meta name="color-scheme" content="dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -69,6 +69,7 @@
   .blockblast{--fill:#3fc4d9}
   .flappy{--fill:#f6d98a}
   .flatcraft{--fill:#5ec99a}
+  .obito{--fill:#c3b1ff}
   .wave{
     width:100%;max-width:880px;height:24px;margin-top:-24px;
     background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%238fd3e8' d='M0 2h1v1H0zM1 1h1v1H1zM2 0h1v1H2zM3 0h1v1H3zM4 1h1v1H4zM5 2h1v1H5zM6 3h1v1H6zM7 3h1v1H7z'/%3E%3C/svg%3E") repeat-x;
@@ -84,7 +85,7 @@
 </head>
 <body>
 <div class="bubbles" aria-hidden="true"></div>
-<h1>ADDICT GAMES<small>Four games. Dive in.</small></h1>
+<h1>ADDICT GAMES<small>Five games. Dive in.</small></h1>
 
 <div class="wave" aria-hidden="true"></div>
 
@@ -160,11 +161,29 @@
     <span class="nm">FLATCRAFT</span>
     <span class="kind">3D survival sandbox, up to 8 players</span>
   </a>
+
+  <a class="tile obito" href="obito/">
+    <i class="px" data-map="
+....1111....
+..11666611..
+.1666116661.
+.1666661661.
+166666666661
+166661166661
+166661166661
+161666666661
+161166661161
+.1666661661.
+..11666611..
+....1111...."></i>
+    <span class="nm">OBITO'S MULTIVERSE</span>
+    <span class="kind">Ninja story adventure, keyboard</span>
+  </a>
 </div>
 
 <script>
   // Pixel icons: each digit in data-map is a colour; drawn once into a canvas, scaled by CSS.
-  var PAL = {1:"#04223a", 2:"#eafaff", 3:"#ff7a5c", 4:"#2fbf6b", 5:"#c4523a"};
+  var PAL = {1:"#04223a", 2:"#eafaff", 3:"#ff7a5c", 4:"#2fbf6b", 5:"#c4523a", 6:"#d8262f"};
   document.querySelectorAll(".px").forEach(function (el) {
     var rows = el.dataset.map.trim().split("\n").map(function (r) { return r.trim(); });
     var c = document.createElement("canvas"), g = c.getContext("2d");

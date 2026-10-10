@@ -12,6 +12,7 @@ which pulls PeerJS from a CDN when you press CO-OP.
 | **Scrapline** | Top-down arena shooter | [Play](https://ardy828.github.io/games/scrapline/) | [`scrapline/`](scrapline/) |
 | **Flappy Finch** | One-button arcade | [Play](https://ardy828.github.io/games/flappy/) | [`flappy/`](flappy/) |
 | **Flatcraft** | 3D survival sandbox with biomes, mobs and crafting | [Play](https://ardy828.github.io/games/flatcraft/) | [`flatcraft/`](flatcraft/) |
+| **Obito's Multiverse** | Story-driven ninja action adventure | [Play](https://ardy828.github.io/games/obito/) | [`obito/`](obito/) |
 
 ## Block Blast
 
@@ -119,6 +120,22 @@ always makes the same world.
   Held and dropped items are extruded into 3D. Sounds are synthesised. Rendering uses Three.js from
   cdnjs.
 - Desktop only for now: it needs a mouse and keyboard (pointer lock).
+
+## Obito's Multiverse
+
+A story-driven ninja action game. Obito is stealing power from other worlds to become the perfect
+villain; you are a normal ninja from the Leaf who has to stop him, chapter by chapter, through
+fights against bosses pulled from other worlds and a final showdown with Obito himself.
+
+- **Controls** — WASD or the arrow keys to move, `J` to strike, `K` and `L` for your two jutsu,
+  Space to dash and to advance dialogue, Shift, `R` and `I` for powers unlocked along the way,
+  `M` toggles sound and Esc skips a cutscene.
+- **Your ninja** — pick a name, hairstyle, hair, skin, outfit and headband colours, and two of five
+  elements (Fire, Water, Lightning, Wind, Earth), each with its own jutsu.
+- Progress is saved per chapter in `localStorage`, so Continue picks up where you left off; losing
+  a fight lets you retry it.
+- Everything is drawn on a canvas in code and all audio is synthesised with the Web Audio API.
+- Desktop only: it needs a keyboard.
 
 ## Running locally
 

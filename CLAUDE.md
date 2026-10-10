@@ -10,6 +10,10 @@ when the player presses CO-OP; solo play never loads it. `scrapline/index.html` 
 (~970 lines) each hold their own markup, CSS and JS. The repo root `index.html` is a landing page
 linking to them; `README.md` documents controls.
 
+`obito/index.html` (Obito's Multiverse, ~1150 lines) is another single-file game: modern syntax, canvas
+plus DOM menus, Google Fonts, progress in `localStorage` (`obito-multiverse-save-v1`). It was written
+as a Claude Artifact, so it guards its `window.claude.hot` calls and runs unchanged as a static page.
+
 `flatcraft/index.html` is the other exception: it loads Three.js r128 (the last UMD build) from cdnjs at
 boot (and carries its texture art inline as one base64 PNG strip), since a voxel renderer without WebGL helpers is not worth hand-rolling. It also injects the same
 PeerJS build as Scrapline, only when the player hosts or joins a multiplayer room.
