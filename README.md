@@ -121,6 +121,9 @@ always makes the same world.
   lines up, and glass, water, plants, torches, cracks, mobs and a few blocks are painted in code.
   Held and dropped items are extruded into 3D. Sounds are synthesised. Rendering uses Three.js from
   cdnjs.
+- **Title screen** — the logo is built from grass blocks, a splash line pops beside it and a world
+  turns slowly behind the menu. Hits while falling are critical hits (half as much again, with a burst
+  of stars), and sword hits sweep.
 - Desktop only for now: it needs a mouse and keyboard (pointer lock).
 
 ## Obito's Multiverse

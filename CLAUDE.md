@@ -386,6 +386,12 @@ interaction, UI, multiplayer, main loop.
   - **Resync.** The joiner keeps its inventory and runs `resyncEdits()`. That function takes every
     cell the host has, and puts any cell edited only locally back to its generated block (by
     generating the chunk without its edits).
+- **Title screen**: `drawLogo()` builds the FLATCRAFT title from grass blocks (a five-row pixel font,
+  each set pixel a block with its front, top and right faces) into `#logoCanvas`; a random `SPLASHES`
+  line sits beside it; `updatePanorama()` turns a fixed-seed world behind the menu, a world with no
+  source (nothing saves, no mobs) that entering a real world clears. `body.in-menu` styles all of it.
+- **Combat feel**: a hit while falling is a critical hit (×1.5, `critStars()` and `SFX.crit`); a sword
+  hit draws a `slash()` sweep. Held tools swing about the grip on Minecraft's curves (`swingHand()`).
 - **Screens**: `screen` is `menu`, `pause`, `play` or `dead`. A solo world only simulates in `play`
   (it pauses under the pause card and death screen); a shared world keeps running.
 - Flatcraft uses modern syntax (`const`, arrows, template literals); the ES5 rule below applies to
