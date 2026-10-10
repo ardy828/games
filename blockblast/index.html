@@ -77,6 +77,9 @@
 <div id="stage">
   <canvas id="c"></canvas>
 
+  <button id="bHome" class="btn" title="Back to Ardy Games" aria-label="Back to Ardy Games">
+    <svg viewBox="0 0 24 24"><path d="M3.5 11.5L12 4.5l8.5 7"/><path d="M6 10v9.5h4.2v-5.6h3.6v5.6H18V10"/></svg>
+  </button>
   <button id="bSound" class="btn" title="Sound (M)" aria-label="Toggle sound">
     <svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z"/><g class="on"><path d="M15.6 9.2a4 4 0 0 1 0 5.6"/><path d="M18.2 6.6a7.6 7.6 0 0 1 0 10.8"/></g><g class="mute"><path d="M16 9.6l5 4.8M21 9.6l-5 4.8"/></g></svg>
   </button>
@@ -189,6 +192,7 @@ var elOBest = document.getElementById("oBest");
 var elOTitle = document.getElementById("oTitle");
 var bSound = document.getElementById("bSound");
 var bNew = document.getElementById("bNew");
+var bHome = document.getElementById("bHome");
 var bAgain = document.getElementById("bAgain");
 
 var grid = new Int8Array(GRID*GRID);   /* -1 empty, else colour index */
@@ -527,11 +531,12 @@ function layout(){
   trayH  = u*2.75;
 
   var bs = Math.max(34, Math.min(u*0.72, 50));
-  bSound.style.width = bNew.style.width = bs + "px";
-  bSound.style.height = bNew.style.height = bs + "px";
-  bSound.style.left = boardX + "px";
+  bHome.style.width = bSound.style.width = bNew.style.width = bs + "px";
+  bHome.style.height = bSound.style.height = bNew.style.height = bs + "px";
+  bHome.style.left = boardX + "px";
+  bSound.style.left = (boardX + bs*1.25) + "px";
   bNew.style.left = (boardX + boardW - bs) + "px";
-  bSound.style.top = bNew.style.top = (headY + u*0.1) + "px";
+  bHome.style.top = bSound.style.top = bNew.style.top = (headY + u*0.1) + "px";
 }
 
 /* ---------------------------------------------------------------- drawing */
@@ -967,6 +972,7 @@ window.addEventListener("keydown", function(e){
 
 bSound.addEventListener("click", function(){ audioInit(); setMuted(!muted); });
 bNew.addEventListener("click", function(){ audioInit(); reset(); });
+bHome.addEventListener("click", function(){ location.href = "../"; });
 bAgain.addEventListener("click", function(){ audioInit(); reset(); });
 
 window.addEventListener("resize", layout);

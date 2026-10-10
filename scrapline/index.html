@@ -304,6 +304,7 @@
       <h1 class="title">SCRAPLINE</h1>
       <p class="lede">The yard&rsquo;s drones went bad three shifts ago. They come in from every bearing, they do not stop, and there is no extraction. Hold the line as long as you can.</p>
       <div class="row"><button id="b-play">PLAY</button><button class="ghost" id="b-coop">CO-OP</button><button class="ghost" id="b-mute">SOUND: ON</button></div>
+      <div class="row"><button class="ghost" id="b-home">&larr; ARDY GAMES</button></div>
       <div class="keys" id="keys-kb">
         <div><b>WASD</b>move</div>
         <div><b>MOUSE</b>aim</div>
@@ -2635,6 +2636,7 @@ document.getElementById("b-again").addEventListener("click", function(){
   if (net) netSend({ t:"go", seed:runSeed });
 });
 document.getElementById("b-mute").addEventListener("click", function(){ audioInit(); setMuted(!muted); SFX.click(); });
+document.getElementById("b-home").addEventListener("click", function(){ location.href = "../"; });
 document.getElementById("b-mute2").addEventListener("click", function(){ audioInit(); setMuted(!muted); SFX.click(); });
 window.addEventListener("pointerdown", function(){ audioInit(); }, true);
 document.getElementById("b-menu").addEventListener("click", toMenu);

@@ -101,6 +101,7 @@
   .btn:focus-visible{outline:var(--u) solid var(--gold);outline-offset:calc(var(--u)*2)}
   .btn.ghost{background:var(--paper);box-shadow:inset 0 calc(var(--u)*-2) 0 var(--paper2), 0 calc(var(--u)*2) 0 var(--plum)}
   .btn.ghost:hover{background:#fff8ea}
+  .foot .btn.ghost{font-size:calc(var(--u)*6.5);padding:calc(var(--u)*3.5) calc(var(--u)*9) calc(var(--u)*2.8)}
   .row .btn{font-size:calc(var(--u)*7.5);padding:calc(var(--u)*4) calc(var(--u)*10) calc(var(--u)*3.2);white-space:nowrap}
 
   .foot{
@@ -185,6 +186,7 @@
       <p class="sub">Dusk run over the rooftops</p>
       <div class="foot">
         <button id="bPlay" class="btn">Play</button>
+        <button id="bHome" class="btn ghost">Ardy Games</button>
         <p class="hint">Best <b id="tBest">0</b></p>
       </div>
     </section>
@@ -896,6 +898,7 @@ function onClick(id, fn){
   b.addEventListener("click", function(e){ e.stopPropagation(); audioInit(); fn(); b.blur(); });
 }
 onClick("bPlay", toReady);
+onClick("bHome", function(){ location.href = "../"; });
 onClick("bAgain", toReady);
 onClick("bMenu", toTitle);
 onClick("bQuit", toTitle);

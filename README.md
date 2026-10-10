@@ -14,6 +14,8 @@ which pulls PeerJS from a CDN when you press CO-OP.
 | **Flatcraft** | 3D survival sandbox with biomes, mobs and crafting | [Play](https://ardy828.github.io/games/flatcraft/) | [`flatcraft/`](flatcraft/) |
 | **Obito's Multiverse** | Story-driven ninja action adventure | [Play](https://ardy828.github.io/games/obito/) | [`obito/`](obito/) |
 
+Each game's menu has a button back to the landing page.
+
 ## Block Blast
 
 Drag pieces from the tray onto an 8×8 grid. Fill a whole row or column and it blasts away.
@@ -130,12 +132,15 @@ fights against bosses pulled from other worlds and a final showdown with Obito h
 - **Controls** — WASD or the arrow keys to move, `J` to strike, `K` and `L` for your two jutsu,
   Space to dash and to advance dialogue, Shift, `R` and `I` for powers unlocked along the way,
   `M` toggles sound and Esc skips a cutscene.
+- **Touch** — on a phone or tablet a floating stick on the left moves you and buttons on the right
+  strike, cast both jutsu, dash and use unlocked powers (they light up as cooldowns finish). Tap the
+  screen to go through dialogue; Skip, sound, full screen and home sit in the top corner. Best played
+  sideways.
 - **Your ninja** — pick a name, hairstyle, hair, skin, outfit and headband colours, and two of five
   elements (Fire, Water, Lightning, Wind, Earth), each with its own jutsu.
 - Progress is saved per chapter in `localStorage`, so Continue picks up where you left off; losing
   a fight lets you retry it.
 - Everything is drawn on a canvas in code and all audio is synthesised with the Web Audio API.
-- Desktop only: it needs a keyboard.
 
 ## Running locally
 

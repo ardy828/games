@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Obito's Multiverse</title>
 <meta name="description" content="A multiverse ninja adventure: make your own ninja from the Leaf and stop Obito stealing power from other worlds.">
 <meta name="color-scheme" content="dark">
@@ -56,6 +56,39 @@ input{font:inherit;font-weight:700;background:#0f0b18;color:var(--text);border:1
 .el[aria-pressed="true"]{border-color:var(--gold);background:#3a2a14}
 .eldesc{font-size:.85em;color:var(--muted);margin:0;min-height:3em}
 .eldesc b{color:var(--text)}
+.home{position:absolute;top:2.6cqw;left:6cqw;font-size:.8em;font-weight:700;letter-spacing:.06em;color:var(--muted);text-decoration:none;border:1px solid var(--edge);border-radius:99px;padding:.3em .9em;background:rgba(16,12,26,.6)}
+.home:hover{color:var(--text);border-color:var(--text)}
+.home:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+#touchNote{display:none}
+
+/* Touch: the game fills the screen, a floating stick on the left, action buttons on the right.
+   #pad sits outside #wrap so in portrait the controls use the empty space under the game. */
+body.tui{padding:0;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.tui input{-webkit-user-select:text;user-select:text}
+body.tui #wrap{width:min(100vw,calc(100dvh * 16 / 9));border-radius:0;box-shadow:none}
+body.tui .keys{display:none}
+body.tui #touchNote{display:block}
+@media (orientation:portrait){
+  body.tui{align-items:flex-start;padding-top:env(safe-area-inset-top)}
+  body.tui #rot{display:block}
+}
+#rot{display:none;position:fixed;left:0;right:0;top:calc(100vw * 9 / 16 + env(safe-area-inset-top) + 18px);text-align:center;font-size:13px;color:var(--muted);pointer-events:none}
+#pad{position:fixed;inset:0;z-index:5;pointer-events:none;display:none}
+body.tui #pad.on{display:block}
+#pad button{pointer-events:auto;touch-action:none;font-family:var(--body);font-weight:700;color:var(--text);-webkit-tap-highlight-color:transparent}
+#zone{position:absolute;left:0;bottom:0;width:50%;height:70%;pointer-events:auto;touch-action:none}
+#base{position:absolute;left:calc(env(safe-area-inset-left) + 15vmin + 20px);bottom:calc(env(safe-area-inset-bottom) + 15vmin + 14px);width:min(30vmin,150px);aspect-ratio:1;border-radius:50%;
+  transform:translate(-50%,50%);background:rgba(16,12,26,.35);border:2px solid rgba(241,236,255,.22);opacity:.6}
+#base.held{opacity:1;transform:translate(-50%,-50%)}
+#knob{position:absolute;left:50%;top:50%;width:44%;aspect-ratio:1;margin:-22% 0 0 -22%;border-radius:50%;background:rgba(241,236,255,.5);border:2px solid rgba(241,236,255,.7)}
+#acts{position:absolute;right:calc(env(safe-area-inset-right) + 2vmin);bottom:calc(env(safe-area-inset-bottom) + 2vmin);width:min(58vmin,320px);aspect-ratio:1}
+.act{position:absolute;width:var(--s);height:var(--s);left:calc(var(--x) - var(--s) / 2);top:calc(var(--y) - var(--s) / 2);
+  border-radius:50%;border:2px solid var(--c,rgba(241,236,255,.4));background:rgba(16,12,26,.55);font-size:min(2.6vmin,12px);line-height:1.1;padding:0;overflow:hidden}
+.act::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(0,0,0,.62) calc(var(--cd,0) * 360deg),transparent 0)}
+.act.on{background:rgba(241,236,255,.28)}
+.act.big{font-size:min(3.2vmin,15px)}
+#tbar{position:absolute;top:calc(env(safe-area-inset-top) + 8px);right:calc(env(safe-area-inset-right) + 8px);display:flex;gap:8px}
+#tbar button{pointer-events:auto;min-width:40px;height:40px;padding:0 12px;border-radius:99px;border:1px solid var(--edge);background:rgba(16,12,26,.75);font-size:14px}
 </style>
 </head>
 <body>
@@ -64,6 +97,7 @@ input{font:inherit;font-weight:700;background:#0f0b18;color:var(--text);border:1
   <canvas id="c" aria-label="Obito's Multiverse game screen"></canvas>
 
   <div id="title" class="ui" hidden>
+    <a class="home" href="../">&larr; Ardy Games</a>
     <p class="kicker">A multiverse ninja adventure</p>
     <h1>Obito's <span>Multiverse</span></h1>
     <p class="tag">Obito is stealing power from other worlds to become the perfect villain. You're just a normal ninja from the Leaf, and you're the one who has to stop him.</p>
@@ -78,7 +112,7 @@ input{font:inherit;font-weight:700;background:#0f0b18;color:var(--text);border:1
       <span><kbd>Shift</kbd> <kbd>R</kbd> <kbd>I</kbd></span><span>Powers you unlock along the way</span>
       <span><kbd>M</kbd></span><span>Sound on or off · <kbd>Esc</kbd> skips a cutscene</span>
     </div>
-    <p class="touch" id="touchNote" hidden>This game needs a keyboard. Play it on a computer.</p>
+    <p class="touch" id="touchNote">Left thumb moves, the buttons on the right fight. Tap the screen to go through dialogue.</p>
   </div>
 
   <div id="creator" class="ui" hidden>
@@ -95,6 +129,25 @@ input{font:inherit;font-weight:700;background:#0f0b18;color:var(--text);border:1
       <p class="eldesc" id="elDesc"></p>
       <div class="btns"><button id="startBtn" class="btn primary">Start the story</button><button id="backBtn" class="btn">Back</button></div>
     </div>
+  </div>
+</div>
+<p id="rot">Turn your phone sideways for a bigger screen</p>
+<div id="pad">
+  <div id="zone"><div id="base"><div id="knob"></div></div></div>
+  <div id="acts">
+    <button class="act big" data-k="j" style="--x:78%;--y:78%;--s:36%">Strike</button>
+    <button class="act" data-k="space" style="--x:42%;--y:88%;--s:23%">Dash</button>
+    <button class="act" data-k="k" style="--x:48%;--y:58%;--s:23%"></button>
+    <button class="act" data-k="l" style="--x:68%;--y:40%;--s:23%"></button>
+    <button class="act" data-k="i" style="--x:92%;--y:44%;--s:19%;--c:#ff5a1f">Flame Wave</button>
+    <button class="act" data-k="shift" style="--x:44%;--y:26%;--s:19%;--c:#ff3344">Sharin&shy;gan</button>
+    <button class="act" data-k="r" style="--x:70%;--y:14%;--s:19%;--c:#9df7c9">Heal</button>
+  </div>
+  <div id="tbar">
+    <button id="skipBtn" data-k="escape">Skip &#9656;&#9656;</button>
+    <button data-k="m" id="muteBtn" aria-label="Sound on or off">&#128266;</button>
+    <button id="fsBtn" aria-label="Full screen">&#x26F6;</button>
+    <button id="homeBtn" aria-label="Back to Ardy Games">&#8962;</button>
   </div>
 </div>
 
@@ -133,6 +186,41 @@ addEventListener('keyup',e=>{keys[kname(e)]=false});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false});
 addEventListener('pointerdown',()=>sfx.unlock());
 const dn=k=>!!keys[k], tp=k=>!!hit[k];
+
+/* ---------------- touch ---------------- */
+// TOUCH flips on for coarse pointers or the first touch. The pad feeds the same keys/hit tables as the
+// keyboard, so gameplay code is untouched apart from the stick in updatePlayer().
+let TOUCH=false;
+const stick={id:null,x:0,y:0,R:60};
+function setTouch(){if(TOUCH)return;TOUCH=true;document.body.classList.add('tui')}
+try{if(matchMedia('(hover:none) and (pointer:coarse)').matches)setTouch()}catch(e){}
+addEventListener('touchstart',setTouch,{passive:true});
+const press=k=>{if(!keys[k])hit[k]=true;keys[k]=true};
+function stickAt(e){const b=$('base').getBoundingClientRect(),cx=b.left+b.width/2,cy=b.top+b.height/2;
+  let dx=e.clientX-cx,dy=e.clientY-cy;const d=Math.hypot(dx,dy);if(d>stick.R){dx*=stick.R/d;dy*=stick.R/d}
+  stick.x=dx/stick.R;stick.y=dy/stick.R;$('knob').style.transform=`translate(${dx}px,${dy}px)`}
+$('zone').addEventListener('pointerdown',e=>{if(stick.id!==null)return;e.preventDefault();stick.id=e.pointerId;
+  try{$('zone').setPointerCapture(e.pointerId)}catch(err){}
+  const base=$('base'),z=$('zone').getBoundingClientRect();stick.R=base.offsetWidth*.42;
+  base.classList.add('held');base.style.left=(e.clientX-z.left)+'px';base.style.top=(e.clientY-z.top)+'px';base.style.bottom='auto';stickAt(e)});
+$('zone').addEventListener('pointermove',e=>{if(e.pointerId===stick.id)stickAt(e)});
+function stickUp(){stick.id=null;stick.x=stick.y=0;const base=$('base');base.classList.remove('held');base.style.left=base.style.top=base.style.bottom='';$('knob').style.transform=''}
+for(const ev of['pointerup','pointercancel','lostpointercapture'])$('zone').addEventListener(ev,e=>{if(e.pointerId===stick.id)stickUp()});
+document.querySelectorAll('#pad [data-k]').forEach(b=>{const k=b.dataset.k;
+  b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(err){}press(k);b.classList.add('on')});
+  const up=()=>{keys[k]=false;b.classList.remove('on')};
+  for(const ev of['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,up)});
+function releaseTouch(){if(stick.id!==null)stickUp();document.querySelectorAll('#pad [data-k]').forEach(b=>{keys[b.dataset.k]=false;b.classList.remove('on')})}
+addEventListener('blur',releaseTouch);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseTouch()});
+$('fsBtn').hidden=!document.documentElement.requestFullscreen;
+$('fsBtn').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})).catch(()=>{})};
+$('homeBtn').onclick=()=>{location.href='../'};
+// Outside a fight the stick and buttons hide and a tap anywhere acts as Enter (next line, retry, skip a title card).
+let padTap=false,padSig='';
+document.addEventListener('pointerdown',e=>{if(TOUCH&&padTap&&!e.target.closest('button,a,input'))press('enter')});
+addEventListener('pointerup',()=>{if(padTap)keys.enter=false});
+const touchText=t=>TOUCH?t.replace(/Hold SHIFT/g,'Hold the Sharingan button').replace(/Press I\b/g,'Tap the Flame Wave button').replace(/Hold R\b/g,'Hold the Heal button'):t;
 
 /* ---------------- sound ---------------- */
 const sfx={ac:null,muted:false,nb:null,
@@ -184,7 +272,7 @@ function writeSave(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}cat
 const has=p=>!!(save.powers&&save.powers[p]);
 function grantFor(ch){const i=ORDER.indexOf(ch);save.powers={sharingan:i>=3,sword:i>=5,rct:i>=8,bf:i>=8,vit:i>=8}}
 function playerLook(extra){const L=save.look;return{skin:SKINS[L.skin],hair:HAIRS[L.hair],outfit:OUTFITS[L.outfit],band:BANDS[L.band],style:HSTYLES[L.style][1],accent:'#1d1a26',...extra}}
-const fmt=s=>s.replace(/\{name\}/g,save.name);
+const fmt=s=>touchText(s.replace(/\{name\}/g,save.name));
 
 /* ---------------- effects ---------------- */
 let parts=[],texts=[],ban=null,shake=0,flashA=0,flashC='#fff';
@@ -196,7 +284,7 @@ function drawParts(){for(const add of[false,true]){g.globalCompositeOperation=ad
 function floatText(x,y,txt,col='#fff',size=14){texts.push({x,y,txt,col,size,life:.9})}
 function updateTexts(dt){for(const t of texts){t.life-=dt;t.y-=34*dt}texts=texts.filter(t=>t.life>0)}
 function drawTexts(){g.textAlign='center';for(const t of texts){g.globalAlpha=Math.min(1,t.life*2);g.font=`${t.size}px ${FD}`;g.lineWidth=3;g.strokeStyle='rgba(0,0,0,.75)';g.strokeText(t.txt,t.x,t.y);g.fillStyle=t.col;g.fillText(t.txt,t.x,t.y)}g.globalAlpha=1;g.textAlign='left'}
-function banner(a,b='',col='#f1ecff',dur=2.4){ban={a,b,col,t:0,dur}}
+function banner(a,b='',col='#f1ecff',dur=2.4){ban={a,b:touchText(b),col,t:0,dur}}
 function drawBanner(){if(!ban)return;const k=Math.max(0,Math.min(1,ban.t*4,(ban.dur-ban.t)*3));g.globalAlpha=k;g.textAlign='center';g.font=`34px ${FD}`;g.lineWidth=6;g.strokeStyle='rgba(0,0,0,.8)';g.strokeText(ban.a,W/2,140);g.fillStyle=ban.col;g.fillText(ban.a,W/2,140);if(ban.b){g.font=`700 16px ${FB}`;g.lineWidth=4;g.strokeText(ban.b,W/2,168);g.fillStyle='#f1ecff';g.fillText(ban.b,W/2,168)}g.textAlign='left';g.globalAlpha=1}
 function postFx(){if(flashA>0){g.globalAlpha=Math.min(1,flashA);g.fillStyle=flashC;g.fillRect(0,0,W,H);g.globalAlpha=1}drawBanner()}
 function wrap(text,maxW){const words=text.split(' '),lines=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(g.measureText(t).width>maxW&&cur){lines.push(cur);cur=w}else cur=t}if(cur)lines.push(cur);return lines}
@@ -208,7 +296,19 @@ function eye(x,y,type,r){
   else if(type==='sukuna'){g.fillStyle='#d42a2a';circ(x,y,r)}
   else{g.fillStyle='#1a1420';circ(x,y,r*.85)}}
 function drawFace(o,fx){
-  if(o.mask==='spiral'){const mx=fx*.4;g.fillStyle='#e9772c';circ(mx,-13,10.5);g.strokeStyle='#8a3c12';g.lineWidth=1;g.beginPath();for(let a=0;a<TAU*2.3;a+=.25){const r=.6+a*1.15;g.lineTo(mx+3+Math.cos(a)*r*.62,-16+Math.sin(a)*r*.62)}g.stroke();eye(mx+3,-16,o.eyes||'rinnegan',2.4);return}
+  if(o.mask==='spiral'){
+    // Tobi's mask: covers the whole face and is drawn over the fringe; grooves spiral out from the one eye hole
+    const mx=fx*.5,my=-14.5,rx=10.4,ry=12,ex=mx-3.3,ey=my-2.6;
+    const gr=g.createRadialGradient(mx-3,my-5,1,mx,my,14);gr.addColorStop(0,'#ffab5c');gr.addColorStop(.65,'#ec7a2b');gr.addColorStop(1,'#bf5718');
+    g.save();g.fillStyle=gr;ell(mx,my,rx,ry);
+    g.beginPath();g.ellipse(mx,my,rx,ry,0,0,TAU);g.clip();
+    const groove=(ox,oy)=>{g.beginPath();for(let a=0;a<TAU*3.4;a+=.1){const r=2.8+a*.72,x=ex+ox+Math.cos(a+2.4)*r,y=ey+oy+Math.sin(a+2.4)*r;a?g.lineTo(x,y):g.moveTo(x,y)}g.stroke()};
+    g.lineCap='round';g.strokeStyle='rgba(255,214,160,.5)';g.lineWidth=.7;groove(-.45,-.55);
+    g.strokeStyle='#8f3d12';g.lineWidth=1.15;groove(0,0);
+    g.restore();
+    g.strokeStyle='#5a2508';g.lineWidth=1;g.beginPath();g.ellipse(mx,my,rx,ry,0,0,TAU);g.stroke();
+    g.fillStyle='#120a0a';ell(ex,ey,2.9,2.6);eye(ex,ey,o.eyes||'rinnegan',1.5);
+    g.fillStyle='rgba(255,255,255,.55)';circ(ex+.8,ey-.8,.45);return}
   if(o.blindfold){g.fillStyle='#121218';g.fillRect(-11,-17,22,6)}
   else{eye(-4+fx,-11,o.eyes,2);eye(4+fx,-11,o.eyes,2)}
   if(o.eyes==='sukuna'){eye(-4+fx,-7,'sukuna',1.1);eye(4+fx,-7,'sukuna',1.1);g.strokeStyle='#2b1414';g.lineWidth=1.1;g.beginPath();g.moveTo(-9+fx,-9);g.lineTo(-6+fx,-5);g.moveTo(9+fx,-9);g.lineTo(6+fx,-5);g.moveTo(-3+fx,-19);g.lineTo(3+fx,-19);g.stroke()}
@@ -234,8 +334,10 @@ function drawPerson(x,y,o){
   g.fillStyle=o.skin;circ(-11,7+step*.3,3);circ(11,7-step*.3,3);
   g.fillStyle=o.skin;circ(0,-14,11);
   const back=Math.sin(f)<-.5,fx=clamp(Math.cos(f),-1,1)*3.5;
-  if(!back)drawFace(o,fx);
+  const late=o.mask==='spiral'; // the spiral mask sits over the hair, the rest under it
+  if(!back&&!late)drawFace(o,fx);
   drawHair(o,back);
+  if(!back&&late)drawFace(o,fx);
   if(o.band){g.fillStyle=o.band;g.fillRect(-11,-21,22,4.5);
     if(back){g.fillRect(-2,-19,4,9)}
     else{g.fillStyle='#cfd6e0';rr(-5+fx*.5,-21.5,10,5.5,1.5);g.fill();if(o.slash){g.strokeStyle='#333';g.lineWidth=1;g.beginPath();g.moveTo(-4+fx*.5,-19);g.lineTo(4+fx*.5,-19);g.stroke()}}}
@@ -405,7 +507,7 @@ function drawDialog(L,ch){
   g.font=`500 17px ${FB}`;g.fillStyle=sp?'#f1ecff':'#ffe9b0';
   let left=Math.floor(ch);const lines=wrap(tx,w-(tx0-x)-28);
   lines.forEach((l,i)=>{if(left>0)g.fillText(l.slice(0,left),tx0,y+(sp?62:44)+i*24);left-=l.length+1});
-  if(ch>=tx.length&&Math.floor(performance.now()/400)%2){g.font=`700 12px ${FB}`;g.fillStyle='#a99fc4';g.textAlign='right';g.fillText('SPACE ▸',x+w-16,y+h-12);g.textAlign='left'}}
+  if(ch>=tx.length&&Math.floor(performance.now()/400)%2){g.font=`700 12px ${FB}`;g.fillStyle='#a99fc4';g.textAlign='right';g.fillText(TOUCH?'TAP ▸':'SPACE ▸',x+w-16,y+h-12);g.textAlign='left'}}
 
 /* ---------------- stage (gameplay) ---------------- */
 const ETYPES={
@@ -438,6 +540,7 @@ const BF_TIME=.6,BF_SWEET=.17;
 function updatePlayer(st,p,dt,wdt){
   p.inv=Math.max(0,p.inv-dt);p.flash=Math.max(0,p.flash-dt);p.atkCd-=dt;p.atkAnim-=dt;p.dashCd-=dt;for(const k in p.cds)p.cds[k]-=dt;
   let ax=(dn('d')||dn('arrowright'))-(dn('a')||dn('arrowleft')),ay=(dn('s')||dn('arrowdown'))-(dn('w')||dn('arrowup'));
+  if(stick.id!==null&&Math.hypot(stick.x,stick.y)>.25){ax=stick.x;ay=stick.y}
   const mag=Math.hypot(ax,ay);if(mag){ax/=mag;ay/=mag;if(p.atkAnim<=0)p.facing=Math.atan2(ay,ax)}
   if(st.slow)p.ch-=22*dt;
   let spd=215;p.healing=false;
@@ -652,7 +755,7 @@ function drawHud(st){
   S.push({k:'SPACE',n:'Dash',c:'#cfd6ff'});
   if(has('sharingan'))S.push({k:'SHIFT',n:'Sharingan',c:'#ff3344',on:st.slow});
   if(has('rct'))S.push({k:'R',n:'Heal (RCT)',c:'#9df7c9',on:p.healing});
-  S.forEach((s,i)=>{const x=14+i*90,y=H-56;g.fillStyle=s.on?'rgba(60,20,30,.9)':'rgba(13,10,22,.8)';rr(x,y,84,42,8);g.fill();g.strokeStyle=s.on?s.c:'rgba(255,255,255,.12)';g.lineWidth=s.on?2:1;g.stroke();
+  if(!TOUCH)S.forEach((s,i)=>{const x=14+i*90,y=H-56;g.fillStyle=s.on?'rgba(60,20,30,.9)':'rgba(13,10,22,.8)';rr(x,y,84,42,8);g.fill();g.strokeStyle=s.on?s.c:'rgba(255,255,255,.12)';g.lineWidth=s.on?2:1;g.stroke();
     if(s.cd&&p.cds[s.cd]>0){g.fillStyle='rgba(0,0,0,.55)';g.fillRect(x+1,y+1,82*clamp(p.cds[s.cd]/p.cdMax[s.cd],0,1),40)}
     g.font=`11px ${FD}`;g.fillStyle=s.c;g.fillText(s.k,x+8,y+17);g.font=`700 10px ${FB}`;g.fillStyle='#d9d2ee';g.fillText(s.n,x+8,y+33)});
   const b=st.boss;
@@ -680,7 +783,7 @@ function stageDraw(st){
   st.drawScreen&&st.drawScreen(st);
   drawMarker(st);drawHud(st);
   if(st.dlg)st.dlg.draw();
-  if(st.lost){g.fillStyle='rgba(10,0,4,.75)';g.fillRect(0,0,W,H);g.textAlign='center';g.font=`52px ${FD}`;g.fillStyle='#d8262f';g.fillText('Defeated',W/2,H/2-20);g.font=`700 17px ${FB}`;g.fillStyle='#f1ecff';g.fillText(`${st.boss?st.boss.name:'The enemy'} was too strong this time.`,W/2,H/2+20);if(st.lostT>.8){g.fillStyle='#ffc94a';g.fillText('Press SPACE to retry the fight',W/2,H/2+56)}g.textAlign='left'}
+  if(st.lost){g.fillStyle='rgba(10,0,4,.75)';g.fillRect(0,0,W,H);g.textAlign='center';g.font=`52px ${FD}`;g.fillStyle='#d8262f';g.fillText('Defeated',W/2,H/2-20);g.font=`700 17px ${FB}`;g.fillStyle='#f1ecff';g.fillText(`${st.boss?st.boss.name:'The enemy'} was too strong this time.`,W/2,H/2+20);if(st.lostT>.8){g.fillStyle='#ffc94a';g.fillText(TOUCH?'Tap to retry the fight':'Press SPACE to retry the fight',W/2,H/2+56)}g.textAlign='left'}
   postFx()}
 const stageScene=st=>({st,update:dt=>stageUpdate(st,dt),draw:()=>stageDraw(st)});
 
@@ -689,7 +792,7 @@ function ringFx(x,y){return{x,y,t:0,life:.8,draw(f){const k=f.t/.8;g.save();g.gl
 function portalFx(x,y,max=70){return{x,y,t:0,max,shrink:null,draw(f){let r=Math.min(f.max,f.t*120);if(f.shrink!=null)r*=Math.max(0,1-(f.t-f.shrink)/1.2);drawPortal(f.x,f.y,r,f.t)}}}
 function cutscene(o){
   const m=o.map?getMap(o.map):null,cam=o.cam||{x:0,y:0},steps=o.steps;
-  const cs={t:0,i:0,cur:null,actors:o.actors||{},fx:[],fade:o.fadeIn?1:0,fadeTo:o.fadeIn?1:0,fadeDur:.6,fadeColor:o.fadeColor||'0,0,0',card:null,dlg:null,ended:false};
+  const cs={t:0,i:0,cur:null,actors:o.actors||{},fx:[],fade:o.fadeIn?1:0,fadeTo:o.fadeIn?1:0,fadeDur:.6,fadeColor:o.fadeColor||'0,0,0',card:null,dlg:null,ended:false,skip:true};
   for(const k in cs.actors){const a=cs.actors[k];a.walk=a.walk||0;if(a.facing==null)a.facing=Math.PI/2}
   function start(s){const[ty,...a]=s;
     if(ty==='say')cs.dlg=Dialogue([[a[0],a[1]]]);
@@ -730,7 +833,7 @@ function cutscene(o){
     postFx();
     if(cs.fade>0){g.fillStyle=`rgba(${cs.fadeColor},${cs.fade})`;g.fillRect(0,0,W,H)}
     if(cs.card){const t=cs.cur?cs.cur.t:0,k=Math.max(0,Math.min(1,t*3,(2.6-t)*3));g.globalAlpha=k;g.fillStyle='rgba(8,6,14,.88)';g.fillRect(0,H/2-70,W,140);g.fillStyle='#d8262f';g.fillRect(0,H/2-70,W,3);g.fillRect(0,H/2+67,W,3);g.textAlign='center';g.font=`700 14px ${FB}`;g.fillStyle='#ffc94a';g.fillText(cs.card.a.toUpperCase().split('').join(' '),W/2,H/2-24);g.font=`44px ${FD}`;g.fillStyle='#f1ecff';g.fillText(cs.card.b,W/2,H/2+30);g.textAlign='left';g.globalAlpha=1}
-    g.font=`700 11px ${FB}`;g.fillStyle='rgba(255,255,255,.45)';g.textAlign='right';g.fillText('ESC: skip scene',W-14,20);g.textAlign='left'};
+    g.font=`700 11px ${FB}`;g.fillStyle='rgba(255,255,255,.45)';if(!TOUCH){g.textAlign='right';g.fillText('ESC: skip scene',W-14,20);g.textAlign='left'}};
   return cs}
 
 /* ---------------- chapter: Leaf Village ---------------- */
@@ -1082,7 +1185,7 @@ function creditsScene(){let t=0;const lines=[["OBITO'S MULTIVERSE",'h'],['',''],
   return{update(dt){t+=dt;if(t>3&&(tp('space')||tp('enter')))go(TitleScene)},
     draw(){paintTunnel(t*.4,W/2,H/2,280);g.fillStyle='rgba(5,3,10,.55)';g.fillRect(0,0,W,H);const top=Math.max(H-t*45,-lines.length*34+H/2+40);g.textAlign='center';
       lines.forEach(([s,k],i)=>{const y=top+i*34;if(y<-20||y>H+20)return;g.font=k==='h'?`30px ${FD}`:k==='n'?`26px ${FD}`:k==='k'?`700 13px ${FB}`:k==='s'?`500 14px ${FB}`:`700 18px ${FB}`;g.fillStyle=k==='k'?'#ffc94a':k==='h'?'#d8262f':k==='s'?'#a99fc4':'#f1ecff';g.fillText(k==='k'?s.toUpperCase():s,W/2,y)});
-      if(t>3){g.font=`700 13px ${FB}`;g.fillStyle='#a99fc4';g.fillText('Press SPACE to return to the title',W/2,H-20)}g.textAlign='left';postFx()}}}
+      if(t>3){g.font=`700 13px ${FB}`;g.fillStyle='#a99fc4';g.fillText(TOUCH?'Tap to return to the title':'Press SPACE to return to the title',W/2,H-20)}g.textAlign='left';postFx()}}}
 
 /* ---------------- menus ---------------- */
 function showUI(id){for(const k of['title','creator'])$(k).hidden=k!==id}
@@ -1121,7 +1224,6 @@ $('newBtn').onclick=()=>{save=defaultSave();go(CreatorScene)};
 $('contBtn').onclick=()=>{const s=readSave();if(!s)return;save=s;startChapter(s.chapter)};
 $('backBtn').onclick=()=>go(TitleScene);
 $('startBtn').onclick=()=>{if(creatorEls.length!==2)return;save.name=($('nameIn').value.trim()||'Kaito').slice(0,12);save.elements=[...creatorEls];startChapter('village')};
-try{if(matchMedia('(pointer:coarse)').matches&&!matchMedia('(pointer:fine)').matches)$('touchNote').hidden=false}catch(e){}
 
 /* ---------------- flow ---------------- */
 function startChapter(ch){
@@ -1138,6 +1240,21 @@ function drawDebug(){const x=W-262,y=12,w=248,h=292;g.fillStyle='rgba(10,8,16,.9
   const inGame=scene!==TitleScene&&scene!==CreatorScene;
   DBG.forEach(([k,n],i)=>{const yy=y+48+i*17,cur=inGame&&ORDER[i]===save.chapter;g.font=`11px ${FD}`;g.fillStyle='#ffc94a';g.fillText(k,x+16,yy);g.font=`700 12px ${FB}`;g.fillStyle=cur?'#ffc94a':'#f1ecff';g.fillText(n+(cur?'  ◂ you are here':''),x+36,yy)});
   const y2=y+48+DBG.length*17+8;[['=','Damage enemies (bosses lose 24%)'],['H','Refill health and chakra'],['G','God mode: '+(godMode?'ON':'off')]].forEach(([k,n],i)=>{g.font=`11px ${FD}`;g.fillStyle='#ffc94a';g.fillText(k,x+16,y2+i*17);g.font=`700 12px ${FB}`;g.fillStyle=k==='G'&&godMode?'#9df7c9':'#f1ecff';g.fillText(n,x+36,y2+i*17)})}
+function syncPad(){
+  if(!TOUCH)return;
+  const menu=!scene||scene===TitleScene||scene===CreatorScene,st=scene&&scene.st,p=st&&st.player;
+  const move=!!(st&&!st.dlg&&!st.lost),fight=move&&!st.noAttack;
+  padTap=!menu&&!move;
+  const els=save.elements,sig=[menu,move,fight,!!(scene&&scene.skip),has('sword'),has('sharingan'),has('rct'),els[0],els[1],sfx.muted].join();
+  if(sig!==padSig){padSig=sig;$('pad').classList.toggle('on',!menu);
+    if(!move)releaseTouch();
+    $('zone').hidden=!move;$('acts').hidden=!fight;$('skipBtn').hidden=!(scene&&scene.skip);
+    const set=(k,show,txt,col)=>{const b=document.querySelector(`#acts [data-k="${k}"]`);b.hidden=!show;if(txt)b.textContent=txt;if(col)b.style.setProperty('--c',col)};
+    set('j',true,has('sword')?'Flame Strike':'Strike');set('k',true,JUTSU[els[0]].name,JUTSU[els[0]].col);set('l',true,JUTSU[els[1]].name,JUTSU[els[1]].col);
+    set('i',has('sword'));set('shift',has('sharingan'));set('r',has('rct'));
+    $('muteBtn').innerHTML=sfx.muted?'&#128263;':'&#128266;'}
+  if(fight)for(const k of['k','l','i']){const b=document.querySelector(`#acts [data-k="${k}"]`),v=p.cds[k]>0&&p.cdMax[k]?clamp(p.cds[k]/p.cdMax[k],0,1):0,r=String(Math.ceil(v*20)/20);if(b.dataset.cd!==r){b.dataset.cd=r;b.style.setProperty('--cd',r)}}
+  if(fight){document.querySelector('#acts [data-k="shift"]').classList.toggle('on',!!st.slow);document.querySelector('#acts [data-k="r"]').classList.toggle('on',!!p.healing)}}
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;
   if(tp('m')&&!uiOpen())sfx.muted=!sfx.muted;
@@ -1145,8 +1262,9 @@ function frame(now){
   g.setTransform(DPR,0,0,DPR,0,0);
   try{if(scene){scene.update(dt);scene.draw()}}catch(err){console.error(err)}
   shake=Math.max(0,shake-dt*28);flashA=Math.max(0,flashA-dt*2.2);if(ban){ban.t+=dt;if(ban.t>ban.dur)ban=null}
-  if(sfx.muted&&!uiOpen()){g.font=`700 11px ${FB}`;g.fillStyle='rgba(255,255,255,.55)';g.textAlign='right';g.fillText('Sound off (M)',W-14,H-14);g.textAlign='left'}
+  if(sfx.muted&&!uiOpen()&&!TOUCH){g.font=`700 11px ${FB}`;g.fillStyle='rgba(255,255,255,.55)';g.textAlign='right';g.fillText('Sound off (M)',W-14,H-14);g.textAlign='left'}
   if(DEBUG)drawDebug();
+  syncPad();
   for(const k in hit)delete hit[k];
   requestAnimationFrame(frame)}
 function boot(data){if(data&&data.save&&ORDER.includes(data.save.chapter)){save=data.save;startChapter(save.chapter)}else go(TitleScene);requestAnimationFrame(frame)}

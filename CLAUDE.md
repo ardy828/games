@@ -13,6 +13,11 @@ linking to them; `README.md` documents controls.
 `obito/index.html` (Obito's Multiverse, ~1150 lines) is another single-file game: modern syntax, canvas
 plus DOM menus, Google Fonts, progress in `localStorage` (`obito-multiverse-save-v1`). It was written
 as a Claude Artifact, so it guards its `window.claude.hot` calls and runs unchanged as a static page.
+Touch support is one section after the keyboard input: `TOUCH` (set via the `tui` body class, since
+`.touch` was already a class), a floating stick read in `updatePlayer()`, and `#pad` buttons that
+write the same `keys`/`hit` tables as the keyboard. `syncPad()` runs each frame: outside a fight the
+pad hides and a tap anywhere presses Enter. Obito's spiral mask is drawn after the hair (`late` in
+`drawPerson()`), with its eye hole on the left, matching the landing-page icon.
 
 `flatcraft/index.html` is the other exception: it loads Three.js r128 (the last UMD build) from cdnjs at
 boot (and carries its texture art inline as one base64 PNG strip), since a voxel renderer without WebGL helpers is not worth hand-rolling. It also injects the same
