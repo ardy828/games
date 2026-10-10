@@ -124,6 +124,8 @@ img,svg,canvas,a{-webkit-user-drag:none}
     <div class="sheet">
       <h2>Who are you?</h2>
       <div class="row"><label for="nameIn">Name</label><input id="nameIn" maxlength="12" autocomplete="off" spellcheck="false"></div>
+      <div class="row"><span class="lbl">Mode</span><div class="chips" id="diffSel"></div></div>
+      <p class="eldesc" id="diffDesc" style="min-height:0"></p>
       <div class="row"><span class="lbl">Hairstyle</span><div class="chips" id="hairStyle"></div></div>
       <div class="row"><span class="lbl">Hair</span><div class="sws" id="swHair"></div></div>
       <div class="row"><span class="lbl">Skin</span><div class="sws" id="swSkin"></div></div>
@@ -283,6 +285,8 @@ let save=defaultSave();
 function readSave(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));return s&&ORDER.includes(s.chapter)&&s.look&&Array.isArray(s.elements)?s:null}catch(e){return null}}
 function writeSave(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}catch(e){}}
 const has=p=>!!(save.powers&&save.powers[p]);
+// Easy mode (save.easy, chosen in the creator): damage taken x0.6, health and chakra x1.5, chakra refills a quarter faster
+const EASY={dmg:.6,hp:1.5,ch:1.5,regen:1.25},easy=k=>save.easy?EASY[k]:1;
 function grantFor(ch){const i=ORDER.indexOf(ch);save.powers={sharingan:i>=3,sword:i>=5,rct:i>=8,bf:i>=8,vit:i>=8}}
 function playerLook(extra){const L=save.look;return{skin:SKINS[L.skin],hair:HAIRS[L.hair],outfit:OUTFITS[L.outfit],band:BANDS[L.band],style:HSTYLES[L.style][1],accent:'#1d1a26',...extra}}
 const fmt=s=>touchText(s.replace(/\{name\}/g,save.name));
@@ -566,7 +570,7 @@ function makeStage(mapId,opts={}){
   st.player=makePlayer(opts.start[0],opts.start[1]);
   st.after=(t,fn)=>st.timers.push({t,fn});
   return st}
-function makePlayer(x,y){const mh=has('vit')?150:100;return{x,y,r:12,hp:mh,maxHp:mh,ch:100,maxCh:100,facing:-Math.PI/2,walk:0,atkCd:0,atkAnim:0,atkA:0,dash:0,dashA:0,dashCd:0,rush:0,rushA:0,rushHit:null,inv:0,flash:0,kbx:0,kby:0,cds:{k:0,l:0,i:0},cdMax:{k:1,l:1,i:1},bf:null,healing:false}}
+function makePlayer(x,y){const mh=(has('vit')?150:100)*easy('hp'),mc=100*easy('ch');return{x,y,r:12,hp:mh,maxHp:mh,ch:mc,maxCh:mc,facing:-Math.PI/2,walk:0,atkCd:0,atkAnim:0,atkA:0,dash:0,dashA:0,dashCd:0,rush:0,rushA:0,rushHit:null,inv:0,flash:0,kbx:0,kby:0,cds:{k:0,l:0,i:0},cdMax:{k:1,l:1,i:1},bf:null,healing:false}}
 function makeAlly(kind,x,y){return{ally:kind,x,y,r:12,look:LOOK[kind==='clone'?'Naruto':kind],facing:Math.PI/2,walk:0,cd:0,sp:3,life:kind==='clone'?6:Infinity,kbx:0,kby:0}}
 function freeSpot(st,x0,x1,y0,y1,r=16){for(let i=0;i<30;i++){const x=rand(x0,x1),y=rand(y0,y1);if(!st.walls.some(w=>x>w.x-r&&x<w.x+w.w+r&&y>w.y-r&&y<w.y+w.h+r))return[x,y]}return[(x0+x1)/2,(y0+y1)/2]}
 function spawn(st,type,x,y,extra={}){const T=ETYPES[type];const e={type,x,y,r:T.r,hp:T.hp,maxHp:T.hp,spd:T.spd,ai:T.ai,dmg:T.dmg,look:T.look,draw:T.draw,heavy:T.heavy,shotKind:T.shotKind,cd:rand(.6,1.5),state:'idle',st:0,kbx:0,kby:0,facing:Math.PI/2,walk:0,flash:0,stun:0,burn:0,strafe:1,...extra};if(extra.hp&&!extra.maxHp)e.maxHp=extra.hp;st.enemies.push(e);puff(x,y,10,'rgba(200,200,210,.6)',100,.5,6);return e}
@@ -587,7 +591,7 @@ function updatePlayer(st,p,dt,wdt){
   if(st.slow)p.ch-=22*dt;
   let spd=215;p.healing=false;
   if(has('rct')&&dn('r')&&p.ch>1&&p.hp<p.maxHp){p.healing=true;p.hp=Math.min(p.maxHp,p.hp+30*dt);p.ch-=24*dt;spd*=.55;if(Math.random()<dt*20)puff(p.x+rand(-12,12),p.y+rand(-20,10),1,'#9df7c9',30,.6,3,-40,true)}
-  if(!st.slow&&!p.healing)p.ch=Math.min(p.maxCh,p.ch+9*dt);p.ch=Math.max(0,p.ch);
+  if(!st.slow&&!p.healing)p.ch=Math.min(p.maxCh,p.ch+9*easy('regen')*dt);p.ch=Math.max(0,p.ch);
   if(tp('space')&&p.dashCd<=0){p.dash=.17;p.dashCd=.5;p.inv=Math.max(p.inv,.24);p.dashA=mag?Math.atan2(ay,ax):p.facing;SND.dash()}
   let vx=ax*spd,vy=ay*spd;
   if(p.dash>0){p.dash-=dt;vx=Math.cos(p.dashA)*640;vy=Math.sin(p.dashA)*640;puff(p.x,p.y,1,'rgba(220,220,255,.5)',10,.25,6)}
@@ -647,7 +651,7 @@ function hurtEnemy(st,e,dmg,o={}){
 function killEnemy(st,e){if(e.dead)return;e.hp=0;if(e.onDie)e.onDie(st,e);else{e.dead=true;puff(e.x,e.y-6,18,e.look?'#cfcfd8':'#3a1a4a',160,.6,6)}}
 function hurtPlayer(st,dmg,src,force,kb=260){
   const p=st.player;if(st.won||st.lost||godMode)return false;if(!force&&(p.inv>0||p.dash>0||p.rush>0))return false;
-  p.hp-=dmg;p.inv=.6;p.flash=.15;if(src){const a=Math.atan2(p.y-src.y,p.x-src.x);p.kbx=Math.cos(a)*kb;p.kby=Math.sin(a)*kb}
+  dmg*=easy('dmg');p.hp-=dmg;p.inv=.6;p.flash=.15;if(src){const a=Math.atan2(p.y-src.y,p.x-src.x);p.kbx=Math.cos(a)*kb;p.kby=Math.sin(a)*kb}
   shake=Math.max(shake,7);SND.hurt();floatText(p.x,p.y-36,'-'+Math.round(dmg),'#ff5a64',16);
   if(st.minHp){if(p.hp<st.minHp)p.hp=st.minHp}
   else if(p.hp<=0){p.hp=0;if(st.onDown)st.onDown(st);else{st.lost=true;st.lostT=0;ban=null}}
@@ -1232,7 +1236,7 @@ function creditsScene(){let t=0;const lines=[["OBITO'S MULTIVERSE",'h'],['',''],
 /* ---------------- menus ---------------- */
 function showUI(id){for(const k of['title','creator'])$(k).hidden=k!==id}
 const TitleScene={t:0,
-  enter(){showUI('title');const s=readSave();$('contBtn').hidden=!s;if(s)$('contBtn').textContent='Continue · '+CHNAME[s.chapter];setTimeout(()=>$('newBtn').focus({preventScroll:true}),0)},
+  enter(){showUI('title');const s=readSave();$('contBtn').hidden=!s;if(s)$('contBtn').textContent='Continue · '+CHNAME[s.chapter]+(s.easy?' · Easy':'');setTimeout(()=>$('newBtn').focus({preventScroll:true}),0)},
   update(dt){this.t+=dt},
   draw(){const t=this.t;paintTunnel(t*.6,W*.72,H*.5,280);drawPortal(W*.72,H*.5,120,t);
     ['deathnote','sword','fruit','necklace'].forEach((k,i)=>{const a=t*.5+i/4*TAU;drawItem(k,W*.72+Math.cos(a)*200,H*.5+Math.sin(a)*90,t,1.7)});
@@ -1253,6 +1257,8 @@ function buildCreator(){
   const L=save.look;$('nameIn').value=save.name;creatorEls.length=0;creatorEls.push(...save.elements);
   const group=(id,items,get,set)=>{const box=$(id);box.innerHTML='';items.forEach((it,i)=>{const b=document.createElement('button');if(it.color){b.className='sw';b.style.background=it.color;b.setAttribute('aria-label',it.label)}else{b.className='chip';b.textContent=it.label}b.setAttribute('aria-pressed',String(get()===i));b.onclick=()=>{set(i);SND.ui();box.querySelectorAll('button').forEach((x,j)=>x.setAttribute('aria-pressed',String(j===i)))};box.appendChild(b)})};
   const cols=(arr,name)=>arr.map((c,i)=>({color:c,label:`${name} ${i+1}`}));
+  const diffNote=()=>{$('diffDesc').textContent=save.easy?'Easy: enemies hit for 40% less, and you get 50% more health and chakra.':'Normal: the game as designed.'};
+  group('diffSel',[{label:'Normal'},{label:'Easy'}],()=>save.easy?1:0,i=>{save.easy=i===1;diffNote()});diffNote();
   group('hairStyle',HSTYLES.map(h=>({label:h[0]})),()=>L.style,i=>L.style=i);
   group('swHair',cols(HAIRS,'Hair color'),()=>L.hair,i=>L.hair=i);group('swSkin',cols(SKINS,'Skin tone'),()=>L.skin,i=>L.skin=i);
   group('swOutfit',cols(OUTFITS,'Outfit color'),()=>L.outfit,i=>L.outfit=i);group('swBand',cols(BANDS,'Headband color'),()=>L.band,i=>L.band=i);

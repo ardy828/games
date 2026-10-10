@@ -24,7 +24,9 @@ The canvas is not a fixed 960x540 bitmap: `fitCanvas()` (on resize and a `Resize
 backing store to the displayed size times `devicePixelRatio`, capped at 3x, and sets `DPR` to that
 scale; all drawing stays in 960x540 logical units through `setTransform(DPR)`. Map grounds are cached
 once at the sharpest scale within a 6M-pixel budget. `sharingan()` draws the three-tomoe eye (the
-tomoe spin; below about 5 screen pixels it is just iris, rim and pupil).
+tomoe spin; below about 5 screen pixels it is just iris, rim and pupil). Easy mode is `save.easy`, picked
+in the creator; `easy(k)` returns the `EASY` multiplier or 1, applied in `makePlayer()` (health and
+chakra), the chakra regen line in `updatePlayer()` and `hurtPlayer()` (damage taken).
 
 `flatcraft/index.html` is the other exception: it loads Three.js r128 (the last UMD build) from cdnjs at
 boot (and carries its texture art inline as one base64 PNG strip), since a voxel renderer without WebGL helpers is not worth hand-rolling. It also injects the same

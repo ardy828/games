@@ -139,6 +139,8 @@ fights against bosses pulled from other worlds and a final showdown with Obito h
   strike, cast both jutsu, dash and use unlocked powers (they light up as cooldowns finish). Tap the
   screen to go through dialogue; Skip, sound, full screen and home sit in the top corner. Best played
   sideways.
+- **Easy mode** — pick Easy in the character creator: enemies hit for 40% less, and you get 50% more
+  health and chakra, which also refills faster. It is saved with your progress.
 - **Your ninja** — pick a name, hairstyle, hair, skin, outfit and headband colours, and two of five
   elements (Fire, Water, Lightning, Wind, Earth), each with its own jutsu.
 - Progress is saved per chapter in `localStorage`, so Continue picks up where you left off; losing
