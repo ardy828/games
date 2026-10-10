@@ -5,208 +5,329 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Addict Games</title>
 <meta name="description" content="Browser games: Scrapline, Block Blast, Flappy Finch, Flatcraft and Obito's Multiverse.">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="light dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
 <style>
+  /* Washi paper, sumi ink and vermilion; each game card is a woodblock-style print */
   :root{
-    --sky:#062a4a;
-    --ink:#eafaff;
-    --shadow:#02121f;
-    --pixel:"Silkscreen","Courier New",monospace;
-    --px:6px;
+    --paper:#f4ecdc; --card:#fbf6ea; --ink:#1f1b16; --muted:#6b5f50;
+    --shu:#c8402a; --edge:#1f1b16; --drop:#1f1b16; --wave:#d9c9ab;
+    --serif:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",Georgia,serif;
+    --sans:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#16151b; --card:#221f27; --ink:#f1e8d6; --muted:#ab9f8c;
+      --shu:#d6513a; --edge:#e9dfca; --drop:#050407; --wave:#2e2a33;
+    }
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html{background:linear-gradient(#1a6b8f 0,#0a3d63 40%,#041d36 100%) fixed var(--sky)}
+  html{background:var(--paper)}
   body{
-    color:var(--ink);font-family:var(--pixel);
-    min-height:100vh;padding:48px 16px 64px;
-    display:flex;flex-direction:column;align-items:center;gap:40px;
-    -webkit-font-smoothing:none;
+    position:relative;min-height:100vh;padding:56px 16px 48px;
+    background:var(--paper);color:var(--ink);font-family:var(--sans);
+    display:flex;flex-direction:column;align-items:center;gap:36px;overflow-x:hidden;
+    isolation:isolate; /* so the sun and petals (z-index -1) sit above the body background */
   }
+  /* paper fibre: a faint fixed noise layer over everything */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.07;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  header{position:relative;display:grid;justify-items:center;gap:14px;text-align:center;padding-top:8px}
+  .sun{
+    position:absolute;z-index:-1;left:50%;top:-36px;translate:-50% 0;
+    width:clamp(120px,26vw,172px);aspect-ratio:1;border-radius:50%;background:var(--shu);opacity:.92;
+  }
+  .hanko{
+    font-family:var(--serif);font-weight:800;font-size:28px;line-height:1;
+    width:52px;height:52px;display:grid;place-items:center;
+    color:#fbf3e2;background:var(--ink);border-radius:6px;rotate:-4deg;
+    box-shadow:inset 0 0 0 3px var(--ink),inset 0 0 0 5px #fbf3e2;
+  }
+  @media (prefers-color-scheme:dark){.hanko{color:var(--paper);box-shadow:inset 0 0 0 3px var(--ink),inset 0 0 0 5px var(--paper)}}
   h1{
-    font-weight:700;font-size:clamp(2rem,8vw,4rem);line-height:1;
-    letter-spacing:.02em;text-align:center;
-    text-shadow:var(--px) var(--px) 0 var(--shadow);
+    font-family:var(--serif);font-weight:800;line-height:1;
+    font-size:clamp(2.3rem,9vw,4.6rem);letter-spacing:.06em;text-transform:uppercase;
   }
-  h1 small{display:block;font-weight:400;font-size:.28em;letter-spacing:.1em;margin-top:14px;text-shadow:none;color:#8fd3e8}
+  .sub{font-size:clamp(.85rem,2.4vw,1rem);color:var(--muted);letter-spacing:.08em}
+  .sub span{font-family:var(--serif);font-weight:700;color:var(--shu);letter-spacing:.18em}
+
+  /* seigaiha wave band under the header */
+  .nami{
+    width:100%;max-width:1040px;height:40px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='20'%3E%3Cg fill='none' stroke='%23c8402a' stroke-width='1.4'%3E%3Cg id='s'%3E%3Ccircle r='19' fill='%23f4ecdc'/%3E%3Ccircle r='14'/%3E%3Ccircle r='9'/%3E%3Ccircle r='4'/%3E%3C/g%3E%3Cuse href='%23s' x='40'/%3E%3Cuse href='%23s' x='20' y='10'/%3E%3Cuse href='%23s' y='20'/%3E%3Cuse href='%23s' x='40' y='20'/%3E%3C/g%3E%3C/svg%3E") repeat-x;
+    background-size:40px 20px;opacity:.5;
+    -webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);
+            mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);
+  }
+  @media (prefers-color-scheme:dark){.nami{opacity:.35;filter:invert(1) hue-rotate(180deg)}}
+
   .grid{
-    width:100%;max-width:880px;
-    display:grid;grid-template-columns:repeat(2,1fr);gap:22px;
+    width:100%;max-width:1040px;
+    display:flex;flex-wrap:wrap;justify-content:center;gap:30px 28px;
   }
-  @media (max-width:560px){.grid{grid-template-columns:1fr}}
-  a.tile{
-    --ink-on:#04223a;
-    position:relative;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;
-    aspect-ratio:4/3;padding:22px;
-    background:var(--fill);color:var(--ink-on);text-decoration:none;
-    box-shadow:var(--px) var(--px) 0 var(--shadow);
-    transition:transform 90ms steps(3),box-shadow 90ms steps(3);
+  a.card{
+    flex:0 1 310px;min-width:0;display:flex;flex-direction:column;
+    background:var(--card);color:var(--ink);text-decoration:none;
+    border:2px solid var(--edge);border-radius:4px;
+    box-shadow:6px 6px 0 var(--drop);
+    transition:translate 120ms ease,box-shadow 120ms ease;
   }
-  a.tile:hover,a.tile:focus-visible{
-    transform:translate(-3px,-3px);
-    box-shadow:calc(var(--px) + 3px) calc(var(--px) + 3px) 0 var(--shadow);
-    outline:none;
+  @media (max-width:560px){a.card{flex-basis:100%;max-width:420px}}
+  a.card:hover,a.card:focus-visible{translate:-3px -3px;box-shadow:9px 9px 0 var(--drop);outline:none}
+  a.card:focus-visible{outline:3px solid var(--shu);outline-offset:5px}
+  a.card:active{translate:3px 3px;box-shadow:2px 2px 0 var(--drop)}
+
+  .art{position:relative;aspect-ratio:4/3;overflow:hidden;border-bottom:2px solid var(--edge)}
+  .art svg{display:block;width:100%;height:100%}
+  .art svg .zoom{transform-origin:100px 75px;transition:transform 220ms ease}
+  a.card:hover .art svg .zoom,a.card:focus-visible .art svg .zoom{transform:scale(1.06)}
+  .kana{
+    position:absolute;top:12px;right:10px;writing-mode:vertical-rl;
+    font-family:var(--serif);font-weight:700;font-size:.82rem;letter-spacing:.2em;
+    color:var(--kana,#fbf3e2);opacity:.9;
   }
-  a.tile:focus-visible{outline:4px solid var(--ink);outline-offset:4px}
-  a.tile:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--shadow)}
-  .nm{font-weight:700;font-size:clamp(1.05rem,3vw,1.5rem);line-height:1.1}
-  .nm::before{content:"▶ ";visibility:hidden}
-  a.tile:hover .nm::before,a.tile:focus-visible .nm::before{visibility:visible;animation:blink 1s steps(2) infinite}
-  .kind{font-size:.7rem;opacity:.8}
-  .px{position:absolute;top:22px;left:22px;--cell:10px;line-height:0}
-  .px canvas{image-rendering:pixelated}
-  .bubbles{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
-  .bubbles i{
-    position:absolute;bottom:-12px;
-    border:3px solid rgba(234,250,255,.7);
-    animation:rise 12s linear infinite;
+  .num{
+    position:absolute;left:12px;top:12px;width:30px;height:30px;display:grid;place-items:center;
+    font-family:var(--serif);font-weight:800;font-size:17px;line-height:1;
+    color:#fbf3e2;background:#1f1b16;border-radius:4px;rotate:-3deg;
   }
-  @keyframes rise{to{transform:translateY(-110vh)}}
-  @media (min-width:561px){.px{--cell:14px}}
-  .scrapline{--fill:#ff7a5c}
-  .blockblast{--fill:#3fc4d9}
-  .flappy{--fill:#f6d98a}
-  .flatcraft{--fill:#5ec99a}
-  .obito{--fill:#c3b1ff}
-  .wave{
-    width:100%;max-width:880px;height:24px;margin-top:-24px;
-    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%238fd3e8' d='M0 2h1v1H0zM1 1h1v1H1zM2 0h1v1H2zM3 0h1v1H3zM4 1h1v1H4zM5 2h1v1H5zM6 3h1v1H6zM7 3h1v1H7z'/%3E%3C/svg%3E") repeat-x;
-    background-size:32px 16px;image-rendering:pixelated;
+  .label{display:grid;gap:4px;padding:14px 16px 16px}
+  .nm{font-family:var(--serif);font-weight:800;font-size:1.32rem;line-height:1.15;letter-spacing:.02em}
+  .nm::after{
+    content:"";display:inline-block;width:.42em;height:.42em;margin-left:.45em;vertical-align:.12em;
+    background:var(--shu);border-radius:50%;scale:0;transition:scale 140ms ease;
   }
-  @keyframes blink{50%{visibility:hidden}}
+  a.card:hover .nm::after,a.card:focus-visible .nm::after{scale:1}
+  .kind{font-size:.84rem;color:var(--muted)}
+
+  .k-dark{--kana:#1f1b16}
+
+  footer{font-size:.8rem;color:var(--muted);letter-spacing:.1em}
+  footer span{font-family:var(--serif);font-weight:700;color:var(--shu)}
+
+  /* sakura petals drifting down behind the cards */
+  .petals{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+  .petals i{
+    position:absolute;top:-24px;border-radius:100% 0 100% 0;
+    background:linear-gradient(135deg,#f7c6d0,#e894a8);opacity:.85;
+    animation:fall linear infinite;
+  }
+  @keyframes fall{
+    0%{transform:translate(0,0) rotate(0deg)}
+    50%{transform:translate(var(--dx),55vh) rotate(200deg)}
+    100%{transform:translate(0,112vh) rotate(400deg)}
+  }
   @media (prefers-reduced-motion:reduce){
-    a.tile{transition:none}
-    .bubbles{display:none}
-    a.tile:hover .nm::before,a.tile:focus-visible .nm::before{animation:none}
+    a.card,.art svg .zoom,.nm::after{transition:none}
+    .petals{display:none}
   }
 </style>
 </head>
 <body>
-<div class="bubbles" aria-hidden="true"></div>
-<h1>ADDICT GAMES<small>Five games. Dive in.</small></h1>
+<div class="petals" aria-hidden="true"></div>
 
-<div class="wave" aria-hidden="true"></div>
+<header>
+  <div class="sun" aria-hidden="true"></div>
+  <div class="hanko" lang="ja" aria-hidden="true">遊</div>
+  <h1>Addict Games</h1>
+  <p class="sub"><span lang="ja">アディクト・ゲームズ</span> &nbsp;·&nbsp; Five games. Dive in.</p>
+</header>
 
-<div class="grid">
-  <a class="tile scrapline" href="scrapline/">
-    <i class="px" data-map="
-.....11.....
-.....11.....
-...111111...
-..11....11..
-.11..22..11.
-11..2332..11
-11..2332..11
-.11..22..11.
-..11....11..
-...111111...
-.....11.....
-.....11....."></i>
-    <span class="nm">SCRAPLINE</span>
-    <span class="kind">Top-down shooter, solo or co-op</span>
+<div class="nami" aria-hidden="true"></div>
+
+<main class="grid">
+  <a class="card" href="scrapline/">
+    <div class="art">
+      <svg viewBox="0 0 200 150" aria-hidden="true">
+        <defs>
+          <pattern id="p-ichi" width="20" height="20" patternUnits="userSpaceOnUse">
+            <rect width="10" height="10" fill="#000" opacity=".09"/><rect x="10" y="10" width="10" height="10" fill="#000" opacity=".09"/>
+          </pattern>
+        </defs>
+        <rect width="200" height="150" fill="#d9472b"/>
+        <rect width="200" height="150" fill="url(#p-ichi)"/>
+        <g class="zoom">
+          <circle cx="100" cy="75" r="50" fill="none" stroke="#fbf3e2" stroke-width="5"/>
+          <circle cx="100" cy="75" r="40" fill="none" stroke="#fbf3e2" stroke-width="1.5" stroke-dasharray="3 5" opacity=".7"/>
+          <path d="M100 13v20M100 117v20M38 75h20M142 75h20" stroke="#fbf3e2" stroke-width="5" stroke-linecap="round"/>
+          <path d="M122.3 69.5 L129.7 70.5 L129.7 79.5 L122.3 80.5 L119.7 86.9 L124.1 92.8 L117.8 99.1 L111.9 94.7 L105.5 97.3 L104.5 104.7 L95.5 104.7 L94.5 97.3 L88.1 94.7 L82.2 99.1 L75.9 92.8 L80.3 86.9 L77.7 80.5 L70.3 79.5 L70.3 70.5 L77.7 69.5 L80.3 63.1 L75.9 57.2 L82.2 50.9 L88.1 55.3 L94.5 52.7 L95.5 45.3 L104.5 45.3 L105.5 52.7 L111.9 55.3 L117.8 50.9 L124.1 57.2 L119.7 63.1Z" fill="#1f1b16" stroke="#1f1b16" stroke-width="2" stroke-linejoin="round"/>
+          <circle cx="100" cy="75" r="11" fill="#fbf3e2"/>
+          <circle cx="100" cy="75" r="4.5" fill="#d9472b"/>
+          <path d="M146 30l7-7M156 40l9-2M141 21l2-9M54 120l-7 7M44 110l-9 2M59 129l-2 9" stroke="#ffd36b" stroke-width="3.5" stroke-linecap="round"/>
+        </g>
+      </svg>
+      <span class="num" lang="ja" aria-hidden="true">一</span>
+      <span class="kana" lang="ja" aria-hidden="true">スクラップライン</span>
+    </div>
+    <div class="label">
+      <span class="nm">Scrapline</span>
+      <span class="kind">Top-down shooter, solo or co-op</span>
+    </div>
   </a>
 
-  <a class="tile blockblast" href="blockblast/">
-    <i class="px" data-map="
-............
-.11...222...
-.11...222...
-.11....22...
-.1111..22...
-.1111.......
-............
-..33....44..
-.333....44..
-.33.....44..
-........44..
-............"></i>
-    <span class="nm">BLOCK BLAST</span>
-    <span class="kind">Grid puzzle, clear lines</span>
+  <a class="card k-dark" href="blockblast/">
+    <div class="art">
+      <svg viewBox="0 0 200 150" aria-hidden="true">
+        <defs>
+          <pattern id="p-shippo" width="24" height="24" patternUnits="userSpaceOnUse">
+            <g fill="none" stroke="#fff6dc" stroke-width="1.2" opacity=".45">
+              <circle r="12"/><circle cx="24" r="12"/><circle cy="24" r="12"/><circle cx="24" cy="24" r="12"/><circle cx="12" cy="12" r="12"/>
+            </g>
+          </pattern>
+          <g id="cell"><rect width="22" height="22" rx="4" stroke="#1f1b16" stroke-width="2.5"/><rect x="4" y="3.5" width="14" height="4.5" rx="2" fill="#fff" opacity=".4"/></g>
+        </defs>
+        <rect width="200" height="150" fill="#e8a93a"/>
+        <rect width="200" height="150" fill="url(#p-shippo)"/>
+        <g class="zoom">
+          <rect x="18" y="99" width="164" height="32" rx="7" fill="#fff4cf" opacity=".75"/>
+          <g fill="#2f8fa3"><use href="#cell" x="23" y="104"/><use href="#cell" x="45" y="104"/><use href="#cell" x="67" y="104"/><use href="#cell" x="23" y="82"/></g>
+          <g fill="#2b4a7a"><use href="#cell" x="133" y="104"/><use href="#cell" x="155" y="104"/><use href="#cell" x="155" y="82"/></g>
+          <g fill="#d9472b" fill-opacity=".28" stroke="#1f1b16" stroke-width="2" stroke-dasharray="3.5 3">
+            <rect x="89" y="82" width="22" height="22" rx="4"/><rect x="89" y="104" width="22" height="22" rx="4"/><rect x="111" y="104" width="22" height="22" rx="4"/>
+          </g>
+          <g fill="#1f1b16" opacity=".22"><rect x="101" y="38" width="22" height="22" rx="4"/><rect x="101" y="60" width="22" height="22" rx="4"/><rect x="123" y="60" width="22" height="22" rx="4"/></g>
+          <g fill="#d9472b"><use href="#cell" x="95" y="30"/><use href="#cell" x="95" y="52"/><use href="#cell" x="117" y="52"/></g>
+        </g>
+      </svg>
+      <span class="num" lang="ja" aria-hidden="true">二</span>
+      <span class="kana" lang="ja" aria-hidden="true">ブロックブラスト</span>
+    </div>
+    <div class="label">
+      <span class="nm">Block Blast</span>
+      <span class="kind">Grid puzzle, clear lines</span>
+    </div>
   </a>
 
-  <a class="tile flappy" href="flappy/">
-    <i class="px" data-map="
-............
-....111111..
-...13333331.
-..133333221.
-.1333333211.
-133111333355
-13311133335.
-.1333222231.
-..13322221..
-...1111111..
-.....1..1...
-............"></i>
-    <span class="nm">FLAPPY FINCH</span>
-    <span class="kind">One-button arcade</span>
+  <a class="card k-dark" href="flappy/">
+    <div class="art">
+      <svg viewBox="0 0 200 150" aria-hidden="true">
+        <defs>
+          <pattern id="p-seigaiha" width="40" height="20" patternUnits="userSpaceOnUse">
+            <g fill="none" stroke="#f8d6de" stroke-width="1.3">
+              <g id="sg"><circle r="19" fill="#e7a1b0"/><circle r="14"/><circle r="9"/><circle r="4"/></g>
+              <use href="#sg" x="40"/><use href="#sg" x="20" y="10"/><use href="#sg" y="20"/><use href="#sg" x="40" y="20"/>
+            </g>
+          </pattern>
+          <g id="stalk" stroke="#1f1b16" stroke-width="2.5" stroke-linejoin="round">
+            <rect width="26" height="60" fill="#6aa84f"/>
+            <rect x="5" y="0" width="5" height="60" fill="#9ccc72" stroke="none"/>
+            <path d="M-2 24h30M-2 48h30" stroke-width="3"/>
+          </g>
+        </defs>
+        <rect width="200" height="150" fill="#e7a1b0"/>
+        <rect width="200" height="150" fill="url(#p-seigaiha)" opacity=".8"/>
+        <g class="zoom">
+          <use href="#stalk" x="150" y="-14"/>
+          <path d="M150 46l10 0" stroke="#1f1b16" stroke-width="3"/>
+          <use href="#stalk" x="150" y="104"/>
+          <path d="M176 112c10-8 18-8 26-4-9 6-17 7-26 4z" fill="#6aa84f" stroke="#1f1b16" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M150 30c-10-6-18-5-24 0 8 5 16 5 24 0z" fill="#6aa84f" stroke="#1f1b16" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M36 62h-14M40 75h-20M36 88h-12" stroke="#fbf3e2" stroke-width="3.5" stroke-linecap="round"/>
+          <ellipse cx="84" cy="76" rx="29" ry="25" fill="#f6c945" stroke="#1f1b16" stroke-width="3"/>
+          <ellipse cx="90" cy="88" rx="17" ry="10" fill="#fbe7a1"/>
+          <ellipse cx="70" cy="80" rx="15" ry="10" fill="#fbf3e2" stroke="#1f1b16" stroke-width="2.5" transform="rotate(-18 70 80)"/>
+          <path d="M60 80c5 3 12 3 18 0" fill="none" stroke="#1f1b16" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="97" cy="67" r="7.5" fill="#fff" stroke="#1f1b16" stroke-width="2.5"/>
+          <circle cx="99.5" cy="67" r="3.2" fill="#1f1b16"/>
+          <circle cx="101" cy="81" r="4" fill="#e86a6a" opacity=".55"/>
+          <path d="M108 73l19 5-19 7z" fill="#e8742c" stroke="#1f1b16" stroke-width="2.5" stroke-linejoin="round"/>
+        </g>
+      </svg>
+      <span class="num" lang="ja" aria-hidden="true">三</span>
+      <span class="kana" lang="ja" aria-hidden="true" style="right:auto;left:14px;top:auto;bottom:12px">フラッピー</span>
+    </div>
+    <div class="label">
+      <span class="nm">Flappy Finch</span>
+      <span class="kind">One-button arcade</span>
+    </div>
   </a>
 
-  <a class="tile flatcraft" href="flatcraft/">
-    <i class="px" data-map="
-...111111111
-..1444444441
-.14444444451
-144444444551
-111111111551
-133333331551
-133333331551
-133333331551
-133333331551
-13333333151.
-1333333311..
-111111111..."></i>
-    <span class="nm">FLATCRAFT</span>
-    <span class="kind">3D survival sandbox, up to 8 players</span>
+  <a class="card" href="flatcraft/">
+    <div class="art">
+      <svg viewBox="0 0 200 150" aria-hidden="true">
+        <defs>
+          <pattern id="p-dots" width="14" height="14" patternUnits="userSpaceOnUse">
+            <circle cx="3" cy="3" r="1.2" fill="#fbf3e2" opacity=".18"/><circle cx="10" cy="10" r="1.2" fill="#fbf3e2" opacity=".18"/>
+          </pattern>
+        </defs>
+        <rect width="200" height="150" fill="#2b4a7a"/>
+        <rect width="200" height="150" fill="url(#p-dots)"/>
+        <circle cx="38" cy="36" r="15" fill="#fbf3e2"/>
+        <circle cx="45" cy="31" r="13" fill="#2b4a7a"/>
+        <g class="zoom">
+          <ellipse cx="100" cy="132" rx="52" ry="8" fill="#000" opacity=".22"/>
+          <path d="M54 54 L100 78 L100 128 L54 104Z" fill="#8b5a34"/>
+          <path d="M100 78 L146 54 L146 104 L100 128Z" fill="#6e4527"/>
+          <path d="M54 54 L100 78 L100 90 L94 87 L94 93 L86 89 L86 84 L78 80 L78 86 L70 82 L70 75 L62 71 L62 76 L54 72Z" fill="#4f9a3f"/>
+          <path d="M100 78 L146 54 L146 70 L138 74 L138 69 L130 73 L130 80 L122 84 L122 78 L114 82 L114 87 L106 91 L106 87 L100 90Z" fill="#3f7f33"/>
+          <path d="M100 30 L146 54 L100 78 L54 54Z" fill="#6cbf5a"/>
+          <g fill="#8fd672"><path d="M88 42l6 3-6 3-6-3z"/><path d="M114 50l6 3-6 3-6-3z"/><path d="M96 62l6 3-6 3-6-3z"/><path d="M74 52l6 3-6 3-6-3z"/></g>
+          <g fill="#5c3a20"><rect x="64" y="90" width="5" height="5"/><rect x="82" y="104" width="5" height="5"/><rect x="72" y="100" width="4" height="4"/></g>
+          <g fill="#4d301b"><rect x="118" y="96" width="5" height="5"/><rect x="132" y="88" width="5" height="5"/><rect x="110" y="110" width="4" height="4"/></g>
+          <path d="M100 30 L146 54 L146 104 L100 128 L54 104 L54 54Z M54 54 L100 78 L146 54 M100 78 L100 128" fill="none" stroke="#1f1b16" stroke-width="3" stroke-linejoin="round"/>
+        </g>
+        <g fill="#fbf3e2"><circle cx="160" cy="24" r="1.6"/><circle cx="176" cy="44" r="1.2"/><circle cx="150" cy="40" r="1"/><circle cx="72" cy="18" r="1.2"/></g>
+      </svg>
+      <span class="num" lang="ja" aria-hidden="true">四</span>
+      <span class="kana" lang="ja" aria-hidden="true">フラットクラフト</span>
+    </div>
+    <div class="label">
+      <span class="nm">Flatcraft</span>
+      <span class="kind">3D survival sandbox, up to 8 players</span>
+    </div>
   </a>
 
-  <a class="tile obito" href="obito/">
-    <i class="px" data-map="
-....1111....
-..11666611..
-.1666116661.
-.1666661661.
-166666666661
-166661166661
-166661166661
-161666666661
-161166661161
-.1666661661.
-..11666611..
-....1111...."></i>
-    <span class="nm">OBITO'S MULTIVERSE</span>
-    <span class="kind">Ninja story adventure, keyboard</span>
+  <a class="card" href="obito/">
+    <div class="art">
+      <svg viewBox="0 0 200 150" aria-hidden="true">
+        <defs>
+          <pattern id="p-hishi" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M10 1 L19 10 L10 19 L1 10Z" fill="none" stroke="#fbf3e2" stroke-width="1" opacity=".14"/>
+          </pattern>
+          <clipPath id="c-mask"><ellipse cx="100" cy="80" rx="37" ry="45"/></clipPath>
+        </defs>
+        <rect width="200" height="150" fill="#5b3f7f"/>
+        <rect width="200" height="150" fill="url(#p-hishi)"/>
+        <g class="zoom">
+          <path d="M44 152 C50 126 150 126 156 152Z" fill="#1f1b16"/>
+          <path d="M128 146c-2-6 3-10 8-8 1-5 8-6 11-2 4-2 9 1 8 6 4 1 4 6 0 7h-24c-3 0-4-2-3-3z" fill="#d8262f" stroke="#fbf3e2" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M46 65 L62 65 L54 51 L69 56 L64 40 L78 49 L78 33 L89 45 L92 29 L100 43 L108 29 L111 45 L122 33 L122 49 L136 40 L131 56 L146 51 L138 65 L154 65 L120 90 L80 90Z" fill="#1f1b16" stroke="#1f1b16" stroke-width="2" stroke-linejoin="round"/>
+          <ellipse cx="100" cy="80" rx="37" ry="45" fill="#f08a2c"/>
+          <path clip-path="url(#c-mask)" d="M109 70 L108 68 L108 67 L109 65 L110 64 L111 62 L113 61 L116 60 L119 61 L122 62 L125 64 L127 67 L128 71 L128 75 L126 79 L124 83 L120 86 L116 87 L111 88 L105 87 L100 84 L96 81 L93 75 L92 70 L92 63 L94 57 L98 52 L104 47 L110 44 L118 44 L125 45 L132 48 L138 54 L142 61 L144 69 L144 78 L142 86 L137 94 L130 100 L121 103 L111 105 L102 103 L92 99 L85 93 L79 84 L76 74 L75 63 L78 52 L84 42 L92 34 L103 29 L115 27 L127 28 L138 32 L148 40 L156 51 L160 63 L161 76 L159 89 L152 101 L142 111 L130 118 L116 121 L102 121 L88 116 L75 108 L66 96 L60 82 L58 66 L61 51 L67 36" fill="none" stroke="#b5521c" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <ellipse cx="100" cy="80" rx="37" ry="45" fill="none" stroke="#1f1b16" stroke-width="3"/>
+          <circle cx="114" cy="70" r="6.5" fill="#1f1b16"/>
+          <circle cx="114" cy="70" r="2.8" fill="#e0262f"/>
+        </g>
+      </svg>
+      <span class="num" lang="ja" aria-hidden="true">五</span>
+      <span class="kana" lang="ja" aria-hidden="true">オビトの多元宇宙</span>
+    </div>
+    <div class="label">
+      <span class="nm">Obito's Multiverse</span>
+      <span class="kind">Ninja story adventure, keyboard</span>
+    </div>
   </a>
-</div>
+</main>
+
+<footer><span lang="ja">遊んでね</span> &nbsp;·&nbsp; have fun</footer>
 
 <script>
-  // Pixel icons: each digit in data-map is a colour; drawn once into a canvas, scaled by CSS.
-  var PAL = {1:"#04223a", 2:"#eafaff", 3:"#ff7a5c", 4:"#2fbf6b", 5:"#c4523a", 6:"#d8262f"};
-  document.querySelectorAll(".px").forEach(function (el) {
-    var rows = el.dataset.map.trim().split("\n").map(function (r) { return r.trim(); });
-    var c = document.createElement("canvas"), g = c.getContext("2d");
-    c.width = rows[0].length; c.height = rows.length;
-    rows.forEach(function (r, y) {
-      r.split("").forEach(function (ch, x) {
-        if (PAL[ch]) { g.fillStyle = PAL[ch]; g.fillRect(x, y, 1, 1); }
-      });
-    });
-    c.style.width = "calc(" + c.width + " * var(--cell))";
-    c.style.height = "calc(" + c.height + " * var(--cell))";
-    el.appendChild(c);
-  });
-
-  // Bubbles: a handful of pixel squares rising behind the tiles.
-  var bub = document.querySelector(".bubbles");
-  for (var i = 0; i < 18; i++) {
-    var b = document.createElement("i"), sz = [6, 8, 10, 14][i % 4];
-    b.style.left = Math.random() * 100 + "vw";
-    b.style.width = b.style.height = sz + "px";
-    b.style.animationDuration = 9 + Math.random() * 9 + "s";
-    b.style.animationDelay = -Math.random() * 18 + "s";
-    bub.appendChild(b);
+  // Sakura petals: a handful drifting down behind the cards, each with its own size, sway and pace.
+  var box = document.querySelector(".petals");
+  for (var i = 0; i < 16; i++) {
+    var p = document.createElement("i"), sz = 8 + Math.random() * 8;
+    p.style.left = Math.random() * 100 + "vw";
+    p.style.width = sz + "px";
+    p.style.height = sz * 0.8 + "px";
+    p.style.setProperty("--dx", (Math.random() * 120 - 60) + "px");
+    p.style.animationDuration = 11 + Math.random() * 10 + "s";
+    p.style.animationDelay = -Math.random() * 21 + "s";
+    box.appendChild(p);
   }
 </script>
 </body>

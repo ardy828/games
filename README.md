@@ -19,8 +19,8 @@ which pulls PeerJS from a CDN when you press CO-OP.
 Drag pieces from the tray onto an 8×8 grid. Fill a whole row or column and it blasts away.
 The game ends when none of the three pieces in the tray fit anywhere.
 
-- **Controls** — drag a piece onto the grid with the mouse or a finger; it snaps to the grid
-  while it is over a legal spot. On touch the piece rides a cell above your thumb so you can
+- **Controls** — drag a piece onto the grid with the mouse or a finger. The piece stays
+  under your pointer, and a shadow on the board shows where it will land. On touch the piece rides a cell above your thumb so you can
   see where it lands. `M` mutes, `R` starts a new game; both also have buttons.
 - 42 block shapes: bars up to five long, squares, corners, S/Z, T, J/L, a plus and diagonals.
   Each piece is dealt in one of eight colours.

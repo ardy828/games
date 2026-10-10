@@ -857,19 +857,12 @@ function draw(){
   if(drag){
     sh = drag.sh;
     var gs = drag.g0 + (1 - drag.g0) * Math.min(1, (performance.now() - drag.t0)/90);
+    /* it stays under the pointer even over a legal spot; the ghost cells on
+       the board show where it would land */
     var cw2 = u*gs;
-    if(drag.valid){
-      px = boardX + drag.gx*u;
-      py = boardY + drag.gy*u;
-      cw2 = u;
-    } else {
-      px = drag.px - sh.w*cw2/2;
-      py = drag.py - sh.h*cw2/2 - drag.lift;
-    }
-    drag.rx += (px - drag.rx) * 0.5;
-    drag.ry += (py - drag.ry) * 0.5;
-    drag.rc += (cw2 - drag.rc) * 0.5;
-    px = drag.rx; py = drag.ry; cw2 = drag.rc;
+    px = drag.px - sh.w*cw2/2;
+    py = drag.py - sh.h*cw2/2 - drag.lift;
+    drag.rx = px; drag.ry = py; drag.rc = cw2;
     g.save();
     g.shadowColor = "rgba(0,0,0,.45)";
     g.shadowBlur = u*0.5;
