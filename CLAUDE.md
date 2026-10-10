@@ -39,6 +39,10 @@ python3 -m http.server 8000                     # then open localhost:8000
 git add -A && git commit -m "..." && git push   # live at ardy828.github.io/games/ in ~1 min
 ```
 
+**Work directly on `main`.** Do not create branches (feature, `claude/...` session branches or
+otherwise) unless the owner asks for one: commit to `main` and push to `main`. If a session starts
+on a branch, push the commits to `main` (`git push origin HEAD:main`) and leave no branch behind.
+
 Firefox *is* installed, and headless it is the only way to actually execute this code:
 
 ```bash
