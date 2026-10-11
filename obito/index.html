@@ -146,7 +146,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     <button class="act" data-k="space" style="--x:42%;--y:88%;--s:23%">Dash</button>
     <button class="act" data-k="k" style="--x:48%;--y:58%;--s:23%"></button>
     <button class="act" data-k="l" style="--x:68%;--y:40%;--s:23%"></button>
-    <button class="act" data-k="i" style="--x:92%;--y:44%;--s:19%;--c:#ff5a1f">Flame Wave</button>
+    <button class="act" data-k="i" style="--x:92%;--y:44%;--s:19%;--c:#e0b04a">Cloud Sweep</button>
     <button class="act" data-k="shift" style="--x:44%;--y:26%;--s:19%;--c:#ff3344">Sharin&shy;gan</button>
     <button class="act" data-k="r" style="--x:70%;--y:14%;--s:19%;--c:#9df7c9">Heal</button>
   </div>
@@ -235,7 +235,7 @@ $('homeBtn').onclick=()=>{location.href='../'};
 let padTap=false,padSig='';
 document.addEventListener('pointerdown',e=>{if(TOUCH&&padTap&&!e.target.closest('button,a,input'))press('enter')});
 addEventListener('pointerup',()=>{if(padTap)keys.enter=false});
-const touchText=t=>TOUCH?t.replace(/Hold SHIFT/g,'Hold the Sharingan button').replace(/Press I\b/g,'Tap the Flame Wave button').replace(/Hold R\b/g,'Hold the Heal button'):t;
+const touchText=t=>TOUCH?t.replace(/Hold SHIFT/g,'Hold the Sharingan button').replace(/Press I\b/g,'Tap the Cloud Sweep button').replace(/Hold R\b/g,'Hold the Heal button'):t;
 
 /* ---------------- sound ---------------- */
 const sfx={ac:null,muted:false,nb:null,
@@ -260,7 +260,7 @@ const JUTSU={
   lightning:{el:'Lightning',name:'Chidori Rush',col:'#bfe8ff',cost:26,cd:1.3,desc:'Dash through enemies wrapped in lightning. Nothing can hit you mid-rush.'},
   wind:{el:'Wind',name:'Wind Blades',col:'#8ff0bf',cost:18,cd:.8,desc:'Three fast blades that cut through every enemy in a line.'},
   earth:{el:'Earth',name:'Earth Wall',col:'#c99a5b',cost:28,cd:3,desc:'Stone pillars burst up, slamming nearby foes and blocking shots.'},
-  flame:{name:'Flame Wave',col:'#ff5a1f',cost:28,cd:1.8}};
+  cloud:{name:'Cloud Sweep',col:'#e0b04a',cost:22,cd:1.6}};
 const LOOK={
   Naruto:{skin:'#f3cfa6',hair:'#f4cf3a',outfit:'#ef7a22',band:'#2d4ea0',style:'spiky',accent:'#1f2a4a',whiskers:true},
   Sasuke:{skin:'#f1d3b8',hair:'#1a1a28',outfit:'#e9e6f0',accent:'#5b3f99',style:'spiky',eyes:'sharingan'},
@@ -274,6 +274,9 @@ const LOOK={
   Sukuna:{skin:'#f0c9a2',hair:'#f29bb0',outfit:'#e8e2d4',accent:'#2a2a2a',style:'spiky',eyes:'sukuna'},
   Ninja:{skin:'#e0b896',hair:'#2a2a2a',outfit:'#4a4f5a',band:'#5b5f6a',style:'flat',mask:'cloth',slash:true},
   Thrower:{skin:'#d8ae88',hair:'#3a2a1a',outfit:'#5a4a3a',band:'#5b5f6a',style:'messy',mask:'cloth',slash:true},
+  Maki:{skin:'#efd2b8',hair:'#2f4a36',outfit:'#1b1e2c',accent:'#3a3a48',style:'flat',glasses:true},
+  Toji:{skin:'#e8c4a0',hair:'#16141c',outfit:'#22222a',accent:'#e8e2d4',style:'messy',mouthScar:true},
+  'Granny Ogami':{skin:'#e6c6a6',hair:'#d4d4da',outfit:'#6a5a7a',accent:'#a89060',style:'bob'},
   Luffy:{skin:'#f0c9a2',hair:'#16141c',outfit:'#d8262f',accent:'#e8c040',style:'messy',hat:'straw',scar:true},
   Zoro:{skin:'#e2b892',hair:'#4fa456',outfit:'#ecebe4',accent:'#3d8a57',style:'flat'},
   Nami:{skin:'#f3d0b0',hair:'#f08a2c',outfit:'#f2f2f6',accent:'#3a7fd0',style:'long'},
@@ -287,11 +290,12 @@ const LOOK={
   Edo:{skin:'#b9b2ad',hair:'#3a3a3a',outfit:'#4a4f5a',band:'#5b5f6a',style:'flat',eyes:'edo',cracks:true,slash:true},
   Kaido:{skin:'#e0a07a',hair:'#16141c',outfit:'#e8e2d4',cloak:'#5a3a8a',accent:'#c8a040',style:'long',horns:true},
   Beast:{skin:'#d8ae88',hair:'#4a2f1f',outfit:'#3a2a2a',accent:'#7a1a1a',style:'messy',horns:true}};
-const SPK={Naruto:'#ff9a3d',Sasuke:'#b58cff',Obito:'#c07bff',Gojo:'#8fd8ff',Yuji:'#ff9fb8',Megumi:'#9fb6d9',Nobara:'#ffb36b',Sukuna:'#ff4a5a',Stranger:'#cfd6e0',
+const SPK={Naruto:'#ff9a3d',Sasuke:'#b58cff',Obito:'#c07bff',Gojo:'#8fd8ff',Yuji:'#ff9fb8',Megumi:'#9fb6d9',Nobara:'#ffb36b',Sukuna:'#ff4a5a',Stranger:'#cfd6e0',Maki:'#7fd0a0',Toji:'#d8d8e0','Granny Ogami':'#c9b090',
   Luffy:'#ff5a4a',Zoro:'#7fd07a',Nami:'#ffa64a',Sanji:'#f2d24b',Usopp:'#d9b77a','Shanks?':'#ff6a5a','Den Den Mushi':'#c9e07a','Vice Admiral':'#8fb8ff',Kabuto:'#b8a8e0',Kaido:'#a98cff'};
-const ORDER=['village','clash','portal','jjk','spirits','fingers','sukuna','rewards','sea','marines','kabuto','sage','kaido','final','obito','ending'];
-const CHNAME={village:'Ch. 1 · The Leaf Burns',clash:'Ch. 1 · The Masked Man',portal:'Ch. 2 · Through the Portal',jjk:'Ch. 3 · Jujutsu High',spirits:'Ch. 4 · Shibuya Night',fingers:'Ch. 5 · The King of Curses',sukuna:'Boss · Sukuna',rewards:'Ch. 5 · Lessons',
-  sea:'Ch. 6 · The Grand Line',marines:'Ch. 6 · Rendezvous Island',kabuto:'Ch. 6 · The Snake in the Sand',sage:'Boss · Kabuto',kaido:'Ch. 7 · The Strongest Creature',final:'Final Chapter',obito:'Final Boss · Obito',ending:'Epilogue'};
+const ORDER=['village','clash','portal','jjk','maki','spirits','ogami','station','toji','fingers','sukuna','rewards','sea','marines','kabuto','sage','kaido','final','obito','ending'];
+const CHNAME={village:'Ch. 1 · The Leaf Burns',clash:'Ch. 1 · The Masked Man',portal:'Ch. 2 · Through the Portal',jjk:'Ch. 3 · Jujutsu High',maki:"Ch. 3 · Maki's Gifts",spirits:'Ch. 4 · Shibuya Night',ogami:'Ch. 4 · The Seance',
+  station:'Ch. 5 · Shibuya Station',toji:'Boss · Toji',fingers:'Ch. 6 · The King of Curses',sukuna:'Boss · Sukuna',rewards:'Ch. 6 · Lessons',
+  sea:'Ch. 7 · The Grand Line',marines:'Ch. 7 · Rendezvous Island',kabuto:'Ch. 7 · The Snake in the Sand',sage:'Boss · Kabuto',kaido:'Ch. 8 · The Strongest Creature',final:'Final Chapter',obito:'Final Boss · Obito',ending:'Epilogue'};
 
 /* ---------------- save ---------------- */
 const SAVE_KEY='obito-multiverse-save-v1';
@@ -302,7 +306,7 @@ function writeSave(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}cat
 const has=p=>!!(save.powers&&save.powers[p]);
 // Easy mode (save.easy, chosen in the creator): damage taken x0.6, health and chakra x1.5, chakra refills a quarter faster
 const EASY={dmg:.6,hp:1.5,ch:1.5,regen:1.25},easy=k=>save.easy?EASY[k]:1;
-function grantFor(ch){const i=ORDER.indexOf(ch);save.powers={sharingan:i>=3,sword:i>=5,rct:i>=8,bf:i>=8,vit:i>=8}}
+function grantFor(ch){const i=ORDER.indexOf(ch),at=k=>i>=ORDER.indexOf(k);save.powers={sharingan:at('jjk'),cloud:at('spirits'),contacts:at('spirits'),rct:at('sea'),bf:at('sea'),vit:at('sea')}}
 function playerLook(extra){const L=save.look;return{skin:SKINS[L.skin],hair:HAIRS[L.hair],outfit:OUTFITS[L.outfit],band:BANDS[L.band],style:HSTYLES[L.style][1],accent:'#1d1a26',...extra}}
 const fmt=s=>touchText(s.replace(/\{name\}/g,save.name));
 
@@ -369,6 +373,7 @@ function drawFace(o,fx){
   else{if(o.sage){g.fillStyle='#6a3a8a';ell(-4.5+fx,-11,4,3);ell(4.5+fx,-11,4,3)}const er=o.eyes==='sharingan'?2.6:2;eye(-4+fx,-11,o.eyes,er);eye(4+fx,-11,o.eyes,er)}
   if(o.glasses){g.strokeStyle='#cfd2e0';g.lineWidth=.8;g.beginPath();g.arc(-4+fx,-11,3.2,0,TAU);g.moveTo(7.2+fx,-11);g.arc(4+fx,-11,3.2,0,TAU);g.moveTo(-.8+fx,-11);g.lineTo(.8+fx,-11);g.stroke()}
   if(o.scar){g.strokeStyle='#a0402a';g.lineWidth=.8;g.beginPath();g.moveTo(-6.5+fx,-7.8);g.lineTo(-2+fx,-8.4);g.moveTo(-5.2+fx,-9.2);g.lineTo(-5.2+fx,-7);g.moveTo(-3.6+fx,-9.4);g.lineTo(-3.6+fx,-7.2);g.stroke()}
+  if(o.mouthScar){g.strokeStyle='#b06a5a';g.lineWidth=.9;g.beginPath();g.moveTo(1.5+fx,-6.8);g.lineTo(4+fx,-4.2);g.stroke()}
   if(o.nose){g.fillStyle=o.skin;g.strokeStyle='rgba(90,50,30,.6)';g.lineWidth=.7;rr(-1.2+fx*1.3,-10,2.4,9,1.2);g.fill();g.stroke()}
   if(o.cracks){g.strokeStyle='rgba(60,50,50,.6)';g.lineWidth=.7;g.beginPath();g.moveTo(-9+fx,-18);g.lineTo(-6+fx,-15);g.lineTo(-7+fx,-12);g.moveTo(7+fx,-6);g.lineTo(5+fx,-9);g.lineTo(8+fx,-12);g.stroke()}
   if(o.eyes==='sukuna'){eye(-4+fx,-7,'sukuna',1.1);eye(4+fx,-7,'sukuna',1.1);g.strokeStyle='#2b1414';g.lineWidth=1.1;g.beginPath();g.moveTo(-9+fx,-9);g.lineTo(-6+fx,-5);g.moveTo(9+fx,-9);g.lineTo(6+fx,-5);g.moveTo(-3+fx,-19);g.lineTo(3+fx,-19);g.stroke()}
@@ -461,10 +466,13 @@ function drawDragon(b,t){
   g.restore()}
 function drawItem(k,x,y,t,s=1){
   g.save();g.translate(x,y+Math.sin(t*3+x)*4);g.scale(s,s);
-  const col={deathnote:'rgba(220,220,235,.4)',sword:'rgba(155,92,255,.5)',fruit:'rgba(80,150,255,.5)',necklace:'rgba(255,201,74,.6)',fingers:'rgba(220,40,60,.45)',flame:'rgba(255,138,61,.6)'}[k];
+  const col={deathnote:'rgba(220,220,235,.4)',spear:'rgba(200,185,255,.55)',cloud:'rgba(255,200,90,.5)',fruit:'rgba(80,150,255,.5)',necklace:'rgba(255,201,74,.6)',fingers:'rgba(220,40,60,.45)'}[k];
   g.globalCompositeOperation='lighter';glow(0,0,28,col);g.globalCompositeOperation='source-over';
   if(k==='deathnote'){g.fillStyle='#111';rr(-11,-14,22,28,2);g.fill();g.strokeStyle='#444';g.lineWidth=1;g.stroke();g.fillStyle='#e6e6e6';g.font='bold 5px serif';g.textAlign='center';g.fillText('DEATH',0,-2);g.fillText('NOTE',0,5);g.textAlign='left'}
-  else if(k==='sword'||k==='flame'){g.rotate(-.7);g.fillStyle='#2a1a2a';g.fillRect(-3,8,6,11);g.fillStyle=k==='sword'?'#6a4a8a':'#d8b04a';g.fillRect(-8,6,16,3);g.fillStyle=k==='sword'?'#3a2a4a':'#ff8a3d';g.beginPath();g.moveTo(-3,6);g.lineTo(0,-24);g.lineTo(3,6);g.fill();g.strokeStyle=k==='sword'?'#b58cff':'#ffe0a0';g.lineWidth=.8;g.stroke()}
+  // the Inverted Spear of Heaven: a long hilt with a ring at the end and a forked pale blade
+  else if(k==='spear'){g.rotate(-.7);g.strokeStyle='#5a4a6a';g.lineWidth=1.6;g.beginPath();g.arc(0,21,3.2,0,TAU);g.stroke();g.fillStyle='#2a2030';g.fillRect(-2,2,4,16);g.fillStyle='#8a7aa8';g.fillRect(-5,1,10,2.5);
+    g.fillStyle='#e6e2f4';g.beginPath();g.moveTo(-2.5,1);g.lineTo(0,-24);g.lineTo(2.5,1);g.fill();g.beginPath();g.moveTo(2,-4);g.lineTo(8,-14);g.lineTo(3.5,-1);g.fill();g.strokeStyle='#b9a8e8';g.lineWidth=.7;g.stroke()}
+  else if(k==='cloud'){g.rotate(-.5);drawCloud(-20,4,-.2,0)}
   else if(k==='fruit'){g.fillStyle='#3d6fd6';circ(0,2,11);g.strokeStyle='#a9ccff';g.lineWidth=1.3;for(let i=0;i<3;i++){g.beginPath();g.arc(-3+i*3,2,4+i,0,Math.PI*1.4);g.stroke()}g.fillStyle='#2f6e3a';ell(4,-10,6,2.5,-.5);g.fillRect(-1,-12,2,4)}
   else if(k==='necklace'){g.strokeStyle='#d8b04a';g.lineWidth=1.2;g.beginPath();g.arc(0,-6,13,Math.PI*1.1,Math.PI*1.9);g.stroke();g.fillStyle='#ffc94a';g.beginPath();g.moveTo(-6,-6);g.lineTo(6,-6);g.lineTo(0,2);g.lineTo(6,10);g.lineTo(-6,10);g.lineTo(0,2);g.closePath();g.fill();g.fillStyle='#fff3c4';g.beginPath();g.moveTo(-2,8);g.lineTo(2,8);g.lineTo(0,4);g.fill()}
   else if(k==='fingers'){g.fillStyle='#5a4a3a';rr(-15,-10,30,20,2);g.fill();g.fillStyle='#e8e0c8';g.fillRect(-15,-3,30,6);g.fillRect(-3,-10,6,20);g.fillStyle='#b8202a';g.fillRect(-1,-8,2,16)}
@@ -493,6 +501,24 @@ function paintShip(m){
   g.fillStyle='#f8d98a';circ(0,0,25);g.fillStyle='#2a1a10';circ(-8,-6,2.5);circ(8,-6,2.5);ell(0,3,4,3);g.strokeStyle='#2a1a10';g.lineWidth=1.5;g.beginPath();g.moveTo(-8,10);g.quadraticCurveTo(0,16,8,10);g.stroke();g.restore()}
 function dynShip(m,t){g.save();g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=2;
   for(let i=0;i<46;i++){const x=(i*97+t*40)%(m.w+60)-30,y=(i*53)%m.h;if(x>80&&x<940&&y>80&&y<460)continue;g.beginPath();g.arc(x,y,8,Math.PI*1.15,Math.PI*1.85);g.stroke()}g.restore()}
+// Shibuya Station's lowest platform from above: the track along the top, a tiled platform, pillars and the station sign.
+function paintStation(m){
+  g.fillStyle='#93959c';g.fillRect(0,0,m.w,m.h);const Rn=srand(91);
+  for(let r=0;r*40<m.h;r++)for(let c=0;c*40<m.w;c++){g.fillStyle=(r+c)%2?'#9a9ca3':'#8f9198';g.fillRect(c*40,170+r*40,40,40)}
+  for(let i=0;i<1500;i++){g.fillStyle=Rn()<.5?'rgba(0,0,0,.08)':'rgba(255,255,255,.08)';g.fillRect(Rn()*m.w,170+Rn()*470,2,2)}
+  g.fillStyle='#24242a';g.fillRect(0,0,m.w,170);g.fillStyle='#3a332c';for(let x=0;x<m.w;x+=22)g.fillRect(x,40,10,110);
+  g.fillStyle='#b8bcc4';g.fillRect(0,62,m.w,5);g.fillRect(0,122,m.w,5);
+  g.fillStyle='#55555c';g.fillRect(0,166,m.w,6);g.fillStyle='#d9b23a';g.fillRect(0,174,m.w,12);g.fillStyle='rgba(0,0,0,.18)';for(let x=4;x<m.w;x+=10)g.fillRect(x,178,4,4);
+  g.fillStyle='#3a3c44';g.fillRect(0,640,m.w,60);g.fillRect(0,170,30,530);g.fillRect(m.w-30,170,30,530);
+  for(let x=80;x<m.w-80;x+=260){g.fillStyle=['#c8303a','#3a7fd0','#e0b04a','#7ac143'][(x/260|0)%4];g.fillRect(x,652,90,36)}
+  g.fillStyle='#f2f2f6';rr(470,650,260,38,4);g.fill();g.fillStyle='#7ac143';g.fillRect(470,682,260,6);g.fillStyle='#1a1a22';g.font='bold 18px sans-serif';g.textAlign='center';g.fillText('SHIBUYA  渋谷',600,676);g.textAlign='left';
+  for(const w of m.walls.filter(w=>w.pillar)){g.fillStyle='rgba(0,0,0,.3)';g.fillRect(w.x+5,w.y+6,w.w,w.h);g.fillStyle='#c9ccd2';g.fillRect(w.x,w.y,w.w,w.h);g.fillStyle='#b0b3ba';g.fillRect(w.x+4,w.y+4,w.w-8,w.h-8);g.fillStyle='#7ac143';g.fillRect(w.x,w.y+w.h/2-3,w.w,6)}}
+function dynStation(m,t){g.save();g.globalCompositeOperation='lighter';for(let x=150;x<m.w;x+=300){const f=Math.sin(t*23+x)>.97?.02:.1;glow(x,420,170,`rgba(220,235,255,${f})`)}g.restore()}
+// A Yamanote-green commuter train from above, five cars; open doors show the dark inside.
+function drawTrain(x,open){
+  for(let c=0;c<5;c++){const cx=x+c*230;g.fillStyle='rgba(0,0,0,.35)';rr(cx+4,58,222,98,8);g.fill();g.fillStyle='#d9dce2';rr(cx,52,222,96,8);g.fill();
+    g.fillStyle='#7ac143';g.fillRect(cx,136,222,7);g.fillStyle='#b9bdc6';for(let v=0;v<3;v++){rr(cx+30+v*62,72,40,18,3);g.fill()}
+    for(let d=0;d<3;d++){const dx=cx+28+d*72;if(open){g.fillStyle='#14161c';g.fillRect(dx,140,36,10);g.fillStyle='#9aa0aa';g.fillRect(dx-12,142,12,7);g.fillRect(dx+36,142,12,7)}else{g.fillStyle='#9aa0aa';g.fillRect(dx,142,36,7);g.fillStyle='#5a5e66';g.fillRect(dx+17.5,142,1,7)}}}}
 // Rendezvous Island: a sand cove with the sea along the top, a Marine warship anchored offshore and jungle around the edges.
 function paintCove(m){
   g.fillStyle='#e6d29c';g.fillRect(0,0,m.w,m.h);const Rn=srand(81);for(let i=0;i<4000;i++){g.fillStyle=Rn()<.5?'rgba(150,120,60,.18)':'rgba(255,250,220,.3)';g.fillRect(Rn()*m.w,Rn()*m.h,2,2)}
@@ -618,6 +644,7 @@ const MAPDEF={
   tunnel:()=>({w:W,h:H,walls:[],dyn:(m,t)=>paintTunnel(t,W/2,H/2)}),
   tunnelSea:()=>({w:W,h:H,walls:[],dyn:(m,t)=>paintTunnel(t,W/2,H/2,195)}),
   ship:()=>({w:960,h:540,walls:[],paint:paintShip,dyn:dynShip}),
+  station:()=>({w:1200,h:700,walls:[R(0,0,1200,170),R(0,640,1200,60),R(0,0,30,700),R(1170,0,30,700),...[[282,342],[882,342],[282,522],[882,522]].map(([x,y])=>R(x,y,36,36,{pillar:1}))],paint:paintStation,dyn:dynStation}),
   cove:()=>{const trees=[[80,300],[1320,560],[300,200],[1180,690],[110,620],[1290,250]];
     return{w:1400,h:800,trees,walls:[R(0,0,1400,140),R(0,748,1400,52),R(0,0,44,800),R(1356,0,44,800),R(420,330,64,44,{rock:1}),R(930,560,70,46,{rock:1}),R(1080,250,56,40,{rock:1}),...trees.map(([x,y])=>R(x-8,y-6,16,12,{tree:1}))],paint:paintCove,dyn:dynCove,over:overCove}}};
 const MAPCACHE={};
@@ -644,10 +671,10 @@ function drawDialog(L,ch){
 const ETYPES={
   ninja:{hp:40,r:12,spd:115,ai:'melee',dmg:10,look:LOOK.Ninja},
   thrower:{hp:30,r:12,spd:100,ai:'ranged',dmg:8,look:LOOK.Thrower,shotKind:'kunai'},
-  blob:{hp:55,r:16,spd:88,ai:'melee',dmg:12,draw:'blob'},
-  eye:{hp:40,r:14,spd:70,ai:'ranged',dmg:10,draw:'eye',shotKind:'orb'},
-  hand:{hp:45,r:13,spd:75,ai:'charger',dmg:14,draw:'hand'},
-  womb:{hp:420,r:30,spd:55,ai:'none',dmg:16,draw:'womb',heavy:true},
+  blob:{hp:55,r:16,spd:88,ai:'melee',dmg:12,draw:'blob',curse:true},
+  eye:{hp:40,r:14,spd:70,ai:'ranged',dmg:10,draw:'eye',shotKind:'orb',curse:true},
+  hand:{hp:45,r:13,spd:75,ai:'charger',dmg:14,draw:'hand',curse:true},
+  womb:{hp:420,r:30,spd:55,ai:'none',dmg:16,draw:'womb',heavy:true,curse:true},
   marine:{hp:45,r:12,spd:112,ai:'melee',dmg:10,look:LOOK.Marine},
   rifle:{hp:34,r:12,spd:95,ai:'ranged',dmg:9,look:LOOK.Rifle,shotKind:'bullet'},
   snake:{hp:28,r:11,spd:150,ai:'melee',dmg:8,draw:'snake'},
@@ -661,7 +688,7 @@ function makeStage(mapId,opts={}){
 function makePlayer(x,y){const mh=(has('vit')?150:100)*easy('hp'),mc=100*easy('ch');return{x,y,r:12,hp:mh,maxHp:mh,ch:mc,maxCh:mc,facing:-Math.PI/2,walk:0,atkCd:0,atkAnim:0,atkA:0,dash:0,dashA:0,dashCd:0,rush:0,rushA:0,rushHit:null,inv:0,flash:0,kbx:0,kby:0,cds:{k:0,l:0,i:0},cdMax:{k:1,l:1,i:1},bf:null,healing:false}}
 function makeAlly(kind,x,y){return{ally:kind,x,y,r:12,look:LOOK[kind==='clone'?'Naruto':kind],facing:Math.PI/2,walk:0,cd:0,sp:3,life:kind==='clone'?6:Infinity,kbx:0,kby:0}}
 function freeSpot(st,x0,x1,y0,y1,r=16){for(let i=0;i<30;i++){const x=rand(x0,x1),y=rand(y0,y1);if(!st.walls.some(w=>x>w.x-r&&x<w.x+w.w+r&&y>w.y-r&&y<w.y+w.h+r))return[x,y]}return[(x0+x1)/2,(y0+y1)/2]}
-function spawn(st,type,x,y,extra={}){const T=ETYPES[type];const e={type,x,y,r:T.r,hp:T.hp,maxHp:T.hp,spd:T.spd,ai:T.ai,dmg:T.dmg,look:T.look,draw:T.draw,heavy:T.heavy,shotKind:T.shotKind,cd:rand(.6,1.5),state:'idle',st:0,kbx:0,kby:0,facing:Math.PI/2,walk:0,flash:0,stun:0,burn:0,strafe:1,...extra};if(extra.hp&&!extra.maxHp)e.maxHp=extra.hp;st.enemies.push(e);puff(x,y,10,'rgba(200,200,210,.6)',100,.5,6);return e}
+function spawn(st,type,x,y,extra={}){const T=ETYPES[type];const e={type,x,y,r:T.r,hp:T.hp,maxHp:T.hp,spd:T.spd,ai:T.ai,dmg:T.dmg,look:T.look,draw:T.draw,heavy:T.heavy,shotKind:T.shotKind,curse:T.curse,cd:rand(.6,1.5),state:'idle',st:0,kbx:0,kby:0,facing:Math.PI/2,walk:0,flash:0,stun:0,burn:0,strafe:1,...extra};if(extra.hp&&!extra.maxHp)e.maxHp=extra.hp;st.enemies.push(e);puff(x,y,10,'rgba(200,200,210,.6)',100,.5,6);return e}
 function collideWalls(st,e){const r=e.r;e.x=clamp(e.x,r,st.w-r);e.y=clamp(e.y,r,st.h-r);
   for(const w of st.walls){const cx=clamp(e.x,w.x,w.x+w.w),cy=clamp(e.y,w.y,w.y+w.h),dx=e.x-cx,dy=e.y-cy,d2=dx*dx+dy*dy;if(d2<r*r){if(d2>1e-4){const d=Math.sqrt(d2);e.x=cx+dx/d*r;e.y=cy+dy/d*r}else{const l=e.x-w.x,rt=w.x+w.w-e.x,t=e.y-w.y,b=w.y+w.h-e.y,m=Math.min(l,rt,t,b);if(m===l)e.x=w.x-r;else if(m===rt)e.x=w.x+w.w+r;else if(m===t)e.y=w.y-r;else e.y=w.y+w.h+r}}}
   for(const k of st.rocks){const d=D(e,k);if(d<k.r+r&&d>0){e.x=k.x+(e.x-k.x)/d*(k.r+r);e.y=k.y+(e.y-k.y)/d*(k.r+r)}}}
@@ -672,7 +699,7 @@ function hz(st,o){o.t=0;o.act=o.act??.14;st.hz.push(o);return o}
 
 const BF_TIME=.6,BF_SWEET=.17;
 function updatePlayer(st,p,dt,wdt){
-  p.inv=Math.max(0,p.inv-dt);p.flash=Math.max(0,p.flash-dt);p.atkCd-=dt;p.atkAnim-=dt;p.dashCd-=dt;for(const k in p.cds)p.cds[k]-=dt;
+  p.inv=Math.max(0,p.inv-dt);p.flash=Math.max(0,p.flash-dt);p.spin=Math.max(0,(p.spin||0)-dt);p.atkCd-=dt;p.atkAnim-=dt;p.dashCd-=dt;for(const k in p.cds)p.cds[k]-=dt;
   let ax=(dn('d')||dn('arrowright'))-(dn('a')||dn('arrowleft')),ay=(dn('s')||dn('arrowdown'))-(dn('w')||dn('arrowup'));
   if(stick.id!==null&&Math.hypot(stick.x,stick.y)>.25){ax=stick.x;ay=stick.y}
   const mag=Math.hypot(ax,ay);if(mag){ax/=mag;ay/=mag;if(p.atkAnim<=0)p.facing=Math.atan2(ay,ax)}
@@ -694,19 +721,20 @@ function updatePlayer(st,p,dt,wdt){
   if(tp('j'))playerStrike(st,p);
   if(tp('k'))castJutsu(st,p,save.elements[0],'k');
   if(tp('l'))castJutsu(st,p,save.elements[1],'l');
-  if(tp('i')&&has('sword'))castJutsu(st,p,'flame','i')}
+  if(tp('i')&&has('cloud'))castJutsu(st,p,'cloud','i')}
 function playerStrike(st,p){
   if(p.atkCd>0)return;
-  const sword=has('sword');
+  // Playful Cloud (from Maki) reaches further, hits harder and hits cursed spirits half as hard again
+  const cloud=has('cloud'),reach=cloud?60:46;
   if(p.bf&&has('bf')){if(p.bf.t<=BF_SWEET&&!p.bf.e.dead){blackFlash(st,p,p.bf.e);p.bf=null;p.atkCd=.3;return}p.bf=null}
-  p.atkCd=sword?.24:.28;p.atkAnim=.16;const a=aimAt(st,p,90,1.2);p.atkA=a;p.facing=a;SND.swing();
+  p.atkCd=cloud?.24:.28;p.atkAnim=.16;const a=aimAt(st,p,90+reach-46,1.2);p.atkA=a;p.facing=a;SND.swing();
   let first=true;
-  for(const e of st.enemies){if(e.dead)continue;const d=D(p,e);if(d>e.r+46)continue;if(Math.abs(angDiff(a,A(p,e)))>1.2&&d>e.r+8)continue;
-    const landed=hurtEnemy(st,e,sword?15:10,{a,kb:180,burn:sword});if(landed&&first&&has('bf')&&!e.dead){p.bf={t:BF_TIME,e};first=false}}
-  if(sword)spark(p.x+Math.cos(a)*30,p.y-6+Math.sin(a)*30,6,'#ff8a3d',200,.25,8,a,1.4)}
+  for(const e of st.enemies){if(e.dead)continue;const d=D(p,e);if(d>e.r+reach)continue;if(Math.abs(angDiff(a,A(p,e)))>1.2&&d>e.r+8)continue;
+    const landed=hurtEnemy(st,e,cloud?(e.curse?22:15):10,{a,kb:cloud?260:180,melee:true});if(landed&&first&&has('bf')&&!e.dead){p.bf={t:BF_TIME,e};first=false}}
+  if(cloud)spark(p.x+Math.cos(a)*42,p.y-6+Math.sin(a)*42,6,'#ffd27a',200,.25,8,a,1.4)}
 function blackFlash(st,p,e){
-  const dmg=(has('sword')?15:10)*2.5+20;p.atkA=A(p,e);p.atkAnim=.16;
-  hurtEnemy(st,e,dmg,{a:p.atkA,kb:420,bf:true});
+  const dmg=(has('cloud')?15:10)*2.5+20;p.atkA=A(p,e);p.atkAnim=.16;
+  hurtEnemy(st,e,dmg,{a:p.atkA,kb:420,bf:true,melee:true});
   e.stun=e.dragon?1.6:e.boss?.9:1.4;
   st.hitstop=.09;shake=Math.max(shake,16);flashC='#000';flashA=.35;SND.bf();
   spark(e.x,e.y-8,26,'#ff2a3a',420,.35,22);spark(e.x,e.y-8,18,'#1a0006',380,.35,26);puff(e.x,e.y-8,14,'#2a0008',200,.5,7);
@@ -722,13 +750,15 @@ function castJutsu(st,p,el,key){
   else if(el==='lightning'){p.rush=.26;p.rushA=a;p.rushHit=new Set();p.inv=Math.max(p.inv,.34);SND.zap()}
   else if(el==='wind'){for(let i=-1;i<=1;i++)shot(st,{x:cx,y:cy,a:a+i*.16,spd:660,r:9,dmg:16,team:'p',kind:'wind',life:.7,pierce:true});SND.slash()}
   else if(el==='earth'){const bx=p.x+Math.cos(a)*62,by=p.y+Math.sin(a)*62;for(let i=-1;i<=1;i++)st.rocks.push({x:bx+Math.cos(a+Math.PI/2)*i*32,y:by+Math.sin(a+Math.PI/2)*i*32,r:16,life:4.5,rise:0});aoe(st,bx,by,80,22,'p');puff(bx,by,24,'#a8865a',180,.6,7);shake=Math.max(shake,7);SND.boom()}
-  else if(el==='flame'){shot(st,{x:cx,y:cy,a,spd:470,r:24,dmg:26,team:'p',kind:'flamewave',life:.6,pierce:true,burn:true});SND.fire()}
+  else if(el==='cloud'){p.spin=.32;for(const e of st.enemies)if(!e.dead&&D(p,e)<e.r+90)hurtEnemy(st,e,e.curse?34:24,{a:A(p,e),kb:380,melee:true});
+    spark(p.x,p.y-6,22,'#ffd27a',380,.28,14);shake=Math.max(shake,6);SND.slash()}
   floatText(p.x,p.y-42,J.name,J.col,13)}
 function hurtEnemy(st,e,dmg,o={}){
   if(e.dead)return false;
   if(e.intangible){floatText(e.x,e.y-40,'Phased through!','#c9b6ff',13);puff(e.x,e.y-10,6,'#6a4fb0',80,.4,4,0,true);e.phasedHits=(e.phasedHits||0)+1;return false}
   if(e.fake){e.dead=true;puff(e.x,e.y-10,22,'#cfc6ff',150,.6,5,0,true);floatText(e.x,e.y-40,'Just an illusion!','#cfc6ff',15);return false}
   if(e.invuln){if(Math.random()<.5)floatText(e.x,e.y-40,e.invText||'Blocked','#8fd8ff',13);return false}
+  if(e.nullify>0&&!o.melee){if(Math.random()<.5)floatText(e.x,e.y-40,'Nullified!','#c9b6ff',13);return false}
   e.hp-=dmg;e.flash=.12;floatText(e.x+rand(-8,8),e.y-30,String(Math.round(dmg)),o.bf?'#ff3344':'#fff',o.bf?24:14);
   const kb=(o.kb||120)*(e.heavy?.15:1);e.kbx+=Math.cos(o.a||0)*kb;e.kby+=Math.sin(o.a||0)*kb;
   if(o.burn)e.burn=2.5;
@@ -788,21 +818,22 @@ function updateAlly(st,a,dt){
         else{for(let i=0;i<7;i++)st.after(i*.07,()=>{if(!a.dead)shot(st,{x:a.x,y:a.y-6,a:ang+rand(-.25,.25),spd:620,r:9,dmg:7,team:'p',kind:'fist',life:.35,kb:120,from:a})});floatText(a.x,a.y-36,'Gum-Gum Gatling!','#ff5a4a',14)}}
       else if(a.ally==='Zoro'){if(d>220)a.sp=.5;else{const ex=tgt.x+Math.cos(ang)*50,ey=tgt.y+Math.sin(ang)*50;
         for(let k=0;k<8;k++)puff(lerp(a.x,ex,k/8),lerp(a.y,ey,k/8)-8,1,'rgba(200,255,210,.7)',20,.35,7,0,true);
-        for(const e of st.enemies)if(!e.dead&&!e.fake&&!e.invuln&&D(e,tgt)<60)hurtEnemy(st,e,e===tgt?26:14,{a:ang,kb:260});
+        for(const e of st.enemies)if(!e.dead&&!e.fake&&!e.invuln&&D(e,tgt)<60)hurtEnemy(st,e,e===tgt?26:14,{a:ang,kb:260,melee:true});
         a.x=ex;a.y=ey;spark(tgt.x,tgt.y-8,14,'#e8fff0',380,.3,16);floatText(a.x,a.y-36,'Oni Giri!','#7fd07a',14);SND.slash()}}
-      else if(a.ally==='Sanji'){if(d>90)a.sp=.5;else{for(const e of st.enemies)if(!e.dead&&!e.fake&&!e.invuln&&D(e,a)<90)hurtEnemy(st,e,18,{a:A(a,e),kb:300,burn:true});
+      else if(a.ally==='Sanji'){if(d>90)a.sp=.5;else{for(const e of st.enemies)if(!e.dead&&!e.fake&&!e.invuln&&D(e,a)<90)hurtEnemy(st,e,18,{a:A(a,e),kb:300,burn:true,melee:true});
         puff(a.x,a.y-6,26,'#ff7a2f',220,.5,6,0,true);floatText(a.x,a.y-36,'Diable Jambe!','#f2d24b',14);SND.fire()}}
-      else if(d<70){hurtEnemy(st,tgt,14,{a:ang,kb:120});st.after(.15,()=>{if(!tgt.dead){hurtEnemy(st,tgt,16,{a:ang,kb:320});spark(tgt.x,tgt.y-8,12,'#6fb8ff',300,.3,12)}});floatText(a.x,a.y-36,'Divergent Fist!','#ff9fb8',14)}
+      else if(a.ally==='Megumi'){if(d>360)a.sp=.5;else{for(const i of[-1,1])shot(st,{x:a.x,y:a.y-4,a:ang+i*.18,spd:430,r:12,dmg:18,team:'p',kind:'dog',white:i>0,life:.8,kb:300,pierce:true});floatText(a.x,a.y-36,'Divine Dogs!','#9fb6d9',14);SND.dash()}}
+      else if(d<70){hurtEnemy(st,tgt,14,{a:ang,kb:120,melee:true});st.after(.15,()=>{if(!tgt.dead){hurtEnemy(st,tgt,16,{a:ang,kb:320,melee:true});spark(tgt.x,tgt.y-8,12,'#6fb8ff',300,.3,12)}});floatText(a.x,a.y-36,'Divergent Fist!','#ff9fb8',14)}
       else a.sp=.5}
     if(d>tgt.r+26){a.x+=Math.cos(ang)*205*dt;a.y+=Math.sin(ang)*205*dt;a.walk+=dt*13}
-    else if(a.cd<=0){a.cd=.5;hurtEnemy(st,tgt,(a.ally==='clone'?5:8)*(tgt.boss?.4:1),{a:ang,kb:100});spark(a.x+Math.cos(ang)*16,a.y-6+Math.sin(ang)*16,4,'#fff',200,.15,8,ang,1)}}
+    else if(a.cd<=0){a.cd=.5;hurtEnemy(st,tgt,(a.ally==='clone'?5:8)*(tgt.boss?.4:1),{a:ang,kb:100,melee:true});spark(a.x+Math.cos(ang)*16,a.y-6+Math.sin(ang)*16,4,'#fff',200,.15,8,ang,1)}}
   else{const d=D(a,p);if(d>70){const ang=A(a,p);a.facing=ang;a.x+=Math.cos(ang)*215*dt;a.y+=Math.sin(ang)*215*dt;a.walk+=dt*13}}
   collideWalls(st,a)}
 function updateShots(st,dt){const p=st.player;
   for(const s of st.shots){if(s.dead)continue;s.t+=dt;
     if(s.home&&s.t<s.home){const cur=Math.atan2(s.vy,s.vx),na=cur+clamp(angDiff(cur,A(s,p)),-2.2*dt,2.2*dt);s.vx=Math.cos(na)*s.spd;s.vy=Math.sin(na)*s.spd}
     s.x+=s.vx*dt;s.y+=s.vy*dt;
-    if(s.kind==='fire'||s.kind==='flamewave'||s.kind==='fire2'){if(Math.random()<.7)puff(s.x,s.y,1,Math.random()<.5?'#ff7a2f':'#ffb347',30,.35,s.r*.5,-30,true)}
+    if(s.kind==='fire'||s.kind==='fire2'){if(Math.random()<.7)puff(s.x,s.y,1,Math.random()<.5?'#ff7a2f':'#ffb347',30,.35,s.r*.5,-30,true)}
     else if(s.kind==='water'&&Math.random()<.5)puff(s.x,s.y,1,'#9fdcff',20,.3,3,0,true);
     if(s.t>=s.life){s.dead=true;if(s.explode)boom(st,s);continue}
     if(hitsWall(st,s.x,s.y)){s.dead=true;if(s.explode)boom(st,s);else puff(s.x,s.y,4,'#ccc',60,.2,3);continue}
@@ -838,16 +869,21 @@ function stageUpdate(st,dt){
   updateParts(wdt);updateCam(st,dt)}
 
 /* ---------------- stage drawing ---------------- */
-function drawSword(x,y,a,k){g.save();g.translate(x,y);g.rotate(a);g.fillStyle='#3a2a20';g.fillRect(2,-1.5,8,3);g.fillStyle='#d8b04a';g.fillRect(9,-4,2.5,8);const gr=g.createLinearGradient(11,0,40,0);gr.addColorStop(0,'#ffe0a8');gr.addColorStop(1,'#ff5a1f');g.fillStyle=gr;g.beginPath();g.moveTo(11,-2.5);g.lineTo(37,-1);g.lineTo(41,0);g.lineTo(37,1);g.lineTo(11,2.5);g.fill();g.globalCompositeOperation='lighter';glow(28,0,14,`rgba(255,120,40,${.3+.15*k})`);g.restore()}
+// Playful Cloud: three red staff sections joined by gold rings, a little looser mid-swing
+function drawCloud(x,y,a,k){g.save();g.translate(x,y);g.rotate(a);g.lineCap='round';let px=4,py=0,ang=0;
+  for(let i=0;i<3;i++){const nx=px+Math.cos(ang)*12.5,ny=py+Math.sin(ang)*12.5;g.strokeStyle='#6a1414';g.lineWidth=4;g.beginPath();g.moveTo(px,py);g.lineTo(nx,ny);g.stroke();g.strokeStyle='#c8302a';g.lineWidth=2;g.stroke();
+    g.fillStyle='#e0b04a';circ(px,py,1.9);circ(nx,ny,1.9);px=nx+Math.cos(ang)*2;py=ny+Math.sin(ang)*2;ang+=(i?-1:1)*(k?.35:.14)}
+  if(k){g.globalCompositeOperation='lighter';glow(26,0,16,'rgba(255,200,90,.35)')}g.restore()}
 function drawPlayer(st,p){
   const blink=p.inv>0&&p.dash<=0&&p.rush<=0&&Math.floor(st.t*20)%2;
   if(p.healing){g.save();g.globalCompositeOperation='lighter';glow(p.x,p.y-4,40,'rgba(120,255,190,.35)');g.restore()}
   if(p.rush>0){g.save();g.globalCompositeOperation='lighter';glow(p.x,p.y-6,34,'rgba(180,230,255,.7)');g.restore()}
-  const sw=has('sword'),sa=p.atkAnim>0?p.atkA-1+2*(1-p.atkAnim/.16):p.facing+.6;
-  if(sw&&Math.sin(sa)<0)drawSword(p.x,p.y-2,sa,p.atkAnim>0?1:0);
+  const sw=has('cloud'),sa=p.spin>0?st.t*28:p.atkAnim>0?p.atkA-1+2*(1-p.atkAnim/.16):p.facing+.6,swing=p.atkAnim>0||p.spin>0?1:0;
+  if(p.spin>0){g.save();g.globalCompositeOperation='lighter';g.strokeStyle=`rgba(255,214,120,${p.spin*2.4})`;g.lineWidth=6;g.beginPath();g.arc(p.x,p.y-4,84*(1.2-p.spin),0,TAU);g.stroke();g.restore()}
+  if(sw&&Math.sin(sa)<0)drawCloud(p.x,p.y-2,sa,swing);
   drawPerson(p.x,p.y,{...playerLook({eyes:st.slow?'sharingan':null}),facing:p.facing,walk:p.walk,flash:p.flash,alpha:blink?.45:1});
-  if(sw&&Math.sin(sa)>=0)drawSword(p.x,p.y-2,sa,p.atkAnim>0?1:0);
-  if(p.atkAnim>0){const k=1-p.atkAnim/.16;g.save();g.translate(p.x,p.y-4);g.globalCompositeOperation='lighter';g.strokeStyle=sw?'rgba(255,140,60,.9)':'rgba(230,235,255,.85)';g.lineWidth=7*(1-k)+2;g.beginPath();g.arc(0,0,40,p.atkA-1,p.atkA-1+2*k);g.stroke();g.restore()}}
+  if(sw&&Math.sin(sa)>=0)drawCloud(p.x,p.y-2,sa,swing);
+  if(p.atkAnim>0){const k=1-p.atkAnim/.16;g.save();g.translate(p.x,p.y-4);g.globalCompositeOperation='lighter';g.strokeStyle=sw?'rgba(255,214,120,.9)':'rgba(230,235,255,.85)';g.lineWidth=7*(1-k)+2;g.beginPath();g.arc(0,0,40,p.atkA-1,p.atkA-1+2*k);g.stroke();g.restore()}}
 function drawEntity(st,e){
   if(e===st.player)return drawPlayer(st,e);
   if(e.ally)return drawPerson(e.x,e.y,{...e.look,facing:e.facing,walk:e.walk,alpha:e.ally==='clone'?.8:1});
@@ -855,16 +891,15 @@ function drawEntity(st,e){
   const fy=e.float?Math.sin(st.t*3+e.x*.01)*3-6:0;
   if(e.aura){g.save();g.globalCompositeOperation='lighter';glow(e.x,e.y-10+fy,44,'rgba(155,92,255,.32)');g.restore()}
   let alpha=e.alpha??1;if(e.fake&&st.slow)alpha=.3;if(e.intangible)alpha=.85;
-  if(e.look){if(e.holdSword)drawItem('sword',e.x+12,e.y-2+fy,0,.8);drawPerson(e.x,e.y+fy,{...e.look,facing:e.facing,walk:e.walk,flash:e.flash,alpha})}else drawSpirit(e,st.t);
+  if(e.look){if(e.holdSpear)drawItem('spear',e.x+12,e.y-2+fy,0,.8);drawPerson(e.x,e.y+fy,{...e.look,facing:e.facing,walk:e.walk,flash:e.flash,alpha})}else{if(e.curse&&has('contacts')){g.save();g.globalCompositeOperation='lighter';glow(e.x,e.y-8,e.r*2.4,'rgba(150,90,255,.45)');g.restore()}drawSpirit(e,st.t)}
   if(e.fake&&st.slow){g.font=`18px ${FD}`;g.fillStyle='#ff3344';g.textAlign='center';g.fillText('?',e.x,e.y-44+fy);g.textAlign='left'}
   if(e.state==='wind'){g.font=`16px ${FD}`;g.fillStyle='#ff3b4a';g.textAlign='center';g.fillText('!',e.x,e.y-40-e.r*.5);g.textAlign='left'}
   if(e.state==='aim'){g.save();g.translate(e.x,e.y);g.rotate(e.ca);g.fillStyle='rgba(255,59,74,.28)';g.fillRect(0,-e.r,240,e.r*2);g.restore()}
   if(e.stun>0){g.fillStyle='#ffc94a';for(let i=0;i<3;i++){const a=st.t*6+i*TAU/3;circ(e.x+Math.cos(a)*12,e.y-40+fy+Math.sin(a)*4,2.5)}}
-  if(!e.boss&&e.hp<e.maxHp&&e.hp>0){g.fillStyle='rgba(0,0,0,.6)';g.fillRect(e.x-15,e.y-e.r-30,30,4);g.fillStyle='#e2343a';g.fillRect(e.x-15,e.y-e.r-30,30*e.hp/e.maxHp,4)}}
+  if(!e.boss&&e.hp>0&&(e.hp<e.maxHp||(e.curse&&has('contacts')))){g.fillStyle='rgba(0,0,0,.6)';g.fillRect(e.x-15,e.y-e.r-30,30,4);g.fillStyle='#e2343a';g.fillRect(e.x-15,e.y-e.r-30,30*e.hp/e.maxHp,4)}}
 function drawShots(st){g.save();for(const s of st.shots){const a=Math.atan2(s.vy,s.vx);g.globalCompositeOperation='lighter';
   switch(s.kind){
     case'fire':case'fire2':glow(s.x,s.y,s.r*2.2,'rgba(255,120,40,.8)');g.fillStyle='#ffe08a';circ(s.x,s.y,s.r*.55);break;
-    case'flamewave':g.strokeStyle='rgba(255,120,40,.9)';g.lineWidth=8;g.beginPath();g.arc(s.x-Math.cos(a)*14,s.y-Math.sin(a)*14,s.r,a-1,a+1);g.stroke();g.strokeStyle='#ffe08a';g.lineWidth=3;g.stroke();break;
     case'water':glow(s.x,s.y,s.r*1.8,'rgba(80,180,255,.7)');g.fillStyle='#dff4ff';circ(s.x,s.y,s.r*.45);break;
     case'wind':g.strokeStyle='rgba(160,255,200,.9)';g.lineWidth=3;g.beginPath();g.arc(s.x-Math.cos(a)*10,s.y-Math.sin(a)*10,14,a-.9,a+.9);g.stroke();break;
     case'rasengan':glow(s.x,s.y,s.r*2.2,'rgba(90,170,255,.85)');g.strokeStyle='#e6f6ff';g.lineWidth=1.5;for(let i=0;i<3;i++){g.beginPath();g.arc(s.x,s.y,s.r*.7,s.t*14+i*2,s.t*14+i*2+1.5);g.stroke()}break;
@@ -872,7 +907,10 @@ function drawShots(st){g.save();for(const s of st.shots){const a=Math.atan2(s.vy
     case'orb':glow(s.x,s.y,s.r*2,'rgba(170,70,230,.8)');g.fillStyle='#f2d8ff';circ(s.x,s.y,s.r*.4);break;
     case'rod':g.globalCompositeOperation='source-over';g.strokeStyle='#15121c';g.lineWidth=4;g.beginPath();g.moveTo(s.x,s.y);g.lineTo(s.x-Math.cos(a)*22,s.y-Math.sin(a)*22);g.stroke();g.strokeStyle='#b9a3e8';g.lineWidth=1;g.stroke();break;
     case'blue':glow(s.x,s.y,s.r*2.4,'rgba(60,120,255,.85)');g.globalCompositeOperation='source-over';g.fillStyle='#0a0a30';circ(s.x,s.y,s.r*.45);break;
-    case'swordwave':g.strokeStyle='rgba(170,110,255,.9)';g.lineWidth=6;g.beginPath();g.arc(s.x-Math.cos(a)*12,s.y-Math.sin(a)*12,s.r,a-1.1,a+1.1);g.stroke();break;
+    case'spear':g.globalCompositeOperation='source-over';g.save();g.translate(s.x,s.y);g.rotate(a+Math.PI/2+.7);drawItem('spear',0,0,0,.75);g.restore();break;
+    case'dog':{g.globalCompositeOperation='source-over';const run=Math.sin(s.t*30)*2,c=s.white?'#e8e6f0':'#1a1a22';g.save();g.translate(s.x,s.y);g.rotate(a);g.fillStyle=c;ell(-2,0,12,6.5);ell(10,0,6.5,5);
+      g.beginPath();g.moveTo(9,-4);g.lineTo(12,-9);g.lineTo(13,-3);g.moveTo(9,4);g.lineTo(12,9);g.lineTo(13,3);g.fill();g.fillRect(-10+run,-8,3,3);g.fillRect(-10-run,5,3,3);g.fillRect(4-run,-8,3,3);g.fillRect(4+run,5,3,3);
+      g.strokeStyle=c;g.lineWidth=3;g.beginPath();g.moveTo(-12,0);g.lineTo(-19,run);g.stroke();g.fillStyle=s.white?'#3a3a48':'#e8e6f0';circ(13,-2,1.1);circ(13,2,1.1);g.restore();break}
     case'airblade':g.strokeStyle='rgba(215,232,255,.9)';g.lineWidth=5;g.beginPath();g.arc(s.x-Math.cos(a)*12,s.y-Math.sin(a)*12,s.r,a-1.1,a+1.1);g.stroke();break;
     case'bullet':g.globalCompositeOperation='source-over';g.strokeStyle='#ffe08a';g.lineWidth=3;g.beginPath();g.moveTo(s.x,s.y);g.lineTo(s.x-Math.cos(a)*10,s.y-Math.sin(a)*10);g.stroke();break;
     // Luffy's rubber arm stretches from wherever he is now to the fist
@@ -898,8 +936,8 @@ function drawHud(st){
   const bar=(x,y,w,h,k,c,bg)=>{g.fillStyle=bg;rr(x,y,w,h,h/2);g.fill();if(k>0){g.fillStyle=c;rr(x,y,Math.max(h,w*clamp(k,0,1)),h,h/2);g.fill()}};
   bar(26,45,240,11,p.hp/p.maxHp,'#e2343a','#3a1418');bar(26,63,240,8,p.ch/p.maxCh,'#47b2ff','#132a40');
   g.font=`700 9px ${FB}`;g.fillStyle='rgba(255,255,255,.8)';g.fillText(`${Math.ceil(p.hp)} HP`,30,54);
-  const els=save.elements,S=[{k:'J',n:has('sword')?'Flame Strike':'Strike',c:'#e9e4ff'},{k:'K',n:JUTSU[els[0]].name,c:JUTSU[els[0]].col,cd:'k'},{k:'L',n:JUTSU[els[1]].name,c:JUTSU[els[1]].col,cd:'l'}];
-  if(has('sword'))S.push({k:'I',n:'Flame Wave',c:JUTSU.flame.col,cd:'i'});
+  const els=save.elements,S=[{k:'J',n:has('cloud')?'Cloud Strike':'Strike',c:'#e9e4ff'},{k:'K',n:JUTSU[els[0]].name,c:JUTSU[els[0]].col,cd:'k'},{k:'L',n:JUTSU[els[1]].name,c:JUTSU[els[1]].col,cd:'l'}];
+  if(has('cloud'))S.push({k:'I',n:'Cloud Sweep',c:JUTSU.cloud.col,cd:'i'});
   S.push({k:'SPACE',n:'Dash',c:'#cfd6ff'});
   if(has('sharingan'))S.push({k:'SHIFT',n:'Sharingan',c:'#ff3344',on:st.slow});
   if(has('rct'))S.push({k:'R',n:'Heal (RCT)',c:'#9df7c9',on:p.healing});
@@ -1121,9 +1159,30 @@ function trainingScene(){
   st.dlg=Dialogue([['Gojo',"Dodge my attacks. If I knock you down, we start over."],['',"Hold SHIFT to use the Sharingan. Time slows down and his attacks get easy to read."]]);
   st.onTick=dt=>{if(st.passed)return;st.surv-=dt;st.obj=`Survive Gojo's training · ${Math.ceil(Math.max(0,st.surv))}s left`;
     if(st.surv<=0){st.passed=true;st.shots=[];st.hz=[];gj.think=(s,e)=>{e.facing=A(e,p)};st.obj='';
-      st.dlg=Dialogue([['Gojo',"Not bad at all! You read my attacks with those eyes."],['Gojo',"Cursed spirits are swarming Shibuya tonight. Way too many to be a coincidence. Your Obito is stirring things up."],['Gojo',"Yuji, go with our new friend."],['Yuji',"On it, sensei! Let's go, {name}!"]],()=>startChapter('spirits'))}};
+      st.dlg=Dialogue([['Gojo',"Not bad at all! You read my attacks with those eyes."],['Gojo',"Hang on. One of my students wants to meet you."]],()=>startChapter('maki'))}};
   st.onDown=()=>{p.hp=p.maxHp;p.inv=2;st.shots=[];st.hz=[];st.surv=25;st.dlg=Dialogue([['Gojo',"Again. Use those eyes this time."]])};
   return stageScene(st)}
+
+/* ---------------- chapter: Maki ---------------- */
+function makiScene(){return cutscene({map:'courtyard',cam:{x:20,y:60},
+  actors:{gj:{x:500,y:220,look:LOOK.Gojo,bob:true},yu:{x:400,y:340,look:LOOK.Yuji,facing:0},p:{x:500,y:400,look:playerLook(),facing:-Math.PI/2},mk:{x:1000,y:385,look:LOOK.Maki,facing:Math.PI,hidden:true},
+    cl:{x:640,y:370,hidden:true,draw:(a,t)=>drawItem('cloud',a.x,a.y,t,1.3)}},
+  steps:[['do',cs=>{const m=cs.actors.mk;m.hidden=false;m.to=[610,385];m.spd=220}],['wait',1.7],
+    ['do',cs=>{const a=cs.actors;a.p.facing=A(a.p,a.mk);a.yu.facing=A(a.yu,a.mk)}],
+    ['say','Maki',"So this is the ninja everyone's talking about. Good eyes. But eyes like that won't help much against curses you can't even see."],
+    ['say','{name}',"Curses I can't see?"],
+    ['say','Maki',"I don't have any cursed energy either, so I cheat. Here. Cursed contacts. Put them in."],
+    ['do',cs=>{save.powers.contacts=true;writeSave();const p=cs.actors.p;flashC='#9b5cff';flashA=.45;puff(p.x,p.y-14,20,'#b9a3ff',100,.7,3,0,true);SND.get()}],
+    ['say','Maki',"And take this. Playful Cloud, a three-section staff. No cursed technique in it, just raw power. The harder you swing it, the harder it hits."],
+    ['do',cs=>{const c=cs.actors.cl,p=cs.actors.p;c.hidden=false;c.to=[p.x+16,p.y-10];c.spd=180;SND.dash()}],['wait',.9],
+    ['do',cs=>{save.powers.cloud=true;writeSave();const a=cs.actors;a.cl.hidden=true;flashC='#e0b04a';flashA=.45;puff(a.p.x,a.p.y-10,26,'#ffd27a',130,.8,5,0,true);SND.get()}],
+    ['say','Maki',"I gave you these two objects to help you see and damage cursed spirits more. Don't you dare break my staff."],
+    ['say','',"Playful Cloud equipped! Your strikes reach further, hit harder, and hit cursed spirits extra hard. Press I for Cloud Sweep, a spin that hits everything around you."],
+    ['say','',"Cursed contacts in! Cursed spirits now glow, and you can see how much health each one has left."],
+    ['say','Gojo',"Cursed spirits are swarming Shibuya tonight. Way too many to be a coincidence. Your Obito is stirring things up."],
+    ['say','Gojo',"Yuji, go with our new friend."],
+    ['say','Yuji',"On it, sensei! Let's go, {name}!"]],
+  then:()=>startChapter('spirits')})}
 
 /* ---------------- chapter: Shibuya ---------------- */
 function wombThink(st,e,dt){if(chargeStep(st,e,dt,420))return;const p=st.player,d=D(e,p);e.facing=A(e,p);e.cd-=dt;
@@ -1141,22 +1200,123 @@ function spiritsScene(){
     if(n===1){for(const t of['blob','blob','blob','eye'])spawn(st,t,...freeSpot(st,450,820,230,880))}
     if(n===2){for(const t of['hand','hand','eye','eye','blob'])spawn(st,t,...freeSpot(st,1050,1450,230,880))}
     if(n===3){st.womb=spawn(st,'womb',1850,550,{think:wombThink,cd:2});for(let i=0;i<2;i++)spawn(st,'blob',...freeSpot(st,1700,2000,300,800));banner('Cursed Womb','Grade 1 cursed spirit','#ff5a8a',2.6);st.obj='Exorcise the Cursed Womb'}}
-  st.after(1,()=>{st.dlg=Dialogue([['Yuji',"Ugh, this whole street reeks of curses. Stay close!"],['Yuji',"Normally only cursed energy can hurt these things... but your chakra seems to work just fine. Let's go!"]],()=>spawnWave(1))});
+  st.after(1,()=>{st.dlg=Dialogue([['Yuji',"Ugh, this whole street reeks of curses. Stay close!"],['Yuji',"With Maki's contacts you can see them, and her staff hits curses hard. Let's go!"]],()=>spawnWave(1))});
   st.onTick=()=>{const clear=st.enemies.every(e=>e.dead);
     if(st.wave===1&&clear){st.wave=1.5;st.obj='Head east down the street';st.marker={x:1000,y:720}}
     else if(st.wave===1.5&&p.x>900)spawnWave(2);
     else if(st.wave===2&&clear){st.wave=2.5;st.obj='Something big is up ahead';st.marker={x:1600,y:560};st.dlg=Dialogue([['Yuji',"That's a lot of curses for one street. Something big is drawing them in up ahead."]])}
     else if(st.wave===2.5&&p.x>1500)spawnWave(3);
-    else if(st.wave===3&&clear&&!st.drop){st.drop=true;const w=st.womb;st.obj='Grab the sword the curse dropped';st.marker={x:w.x,y:w.y};
-      st.pickups.push({x:w.x,y:w.y,kind:'flame',take:()=>{save.powers.sword=true;writeSave();SND.get();flashC='#ff8a3d';flashA=.5;st.marker=null;
-        st.dlg=Dialogue([['',"You found the Flame Sword! Your strikes now set enemies on fire. Press I to swing out a Flame Wave."],['Yuji',"Whoa, that blade is packed with cursed energy... Wait. Do you feel that? Something huge just woke up to the east."]],()=>{st.wave=4;st.obj='Follow the cursed energy east';st.marker={x:2150,y:560}})}})}
-    else if(st.wave===4&&p.x>2120)startChapter('fingers')};
+    else if(st.wave===3&&clear&&!st.done){st.done=true;st.obj='';st.dlg=Dialogue([['Yuji',"That's the last of them! Maki's staff really works on curses, huh?"],['Yuji',"...Wait. Do you feel that? Way up ahead, two people. And one of them is that masked guy!"]],()=>startChapter('ogami'))}};
   return stageScene(st)}
 
+/* ---------------- chapter: the seance, Shibuya Station and Toji ---------------- */
+function ogamiScene(){return cutscene({map:'shibuya',cam:{x:1240,y:300},
+  actors:{o:{x:1760,y:520,look:LOOK.Obito,facing:Math.PI,bob:true},og:{x:1610,y:560,look:LOOK['Granny Ogami'],facing:0},sp:{x:1624,y:556,draw:(a,t)=>drawItem('spear',a.x,a.y,t,.9)},tj:{x:1500,y:540,look:LOOK.Toji,facing:0,hidden:true}},
+  steps:[['title','Chapter 4','The Seance'],
+    ['say','Obito',"The Leaf ninja and Itadori's brat tore through every curse I sent. Annoying."],
+    ['say','Granny Ogami',"Leave them to me. My Seance Technique can call back any sorcerer who ever lived, and the spear you gave me will make them unstoppable."],
+    ['say','Obito',"Then do it. Get rid of those brats before I get rid of you."],
+    ['do',cs=>{const o=cs.actors.o;puff(o.x,o.y-10,30,'#7a5ad0',140,.7,6,0,true);o.hidden=true;SND.zap()}],
+    ['wait',.6],
+    ['say','Granny Ogami',"Hmph. Arrogant boy... Seance Technique!"],
+    ['do',cs=>{const t=cs.actors.tj;t.hidden=false;puff(t.x,t.y-10,40,'#cfc6b8',160,1,8);flashC='#fff';flashA=.7;shake=14;SND.bf()}],
+    ['say','Toji',"...Huh. Where am I?"],
+    ['say','Granny Ogami',"You belong to me now, Toji Fushiguro! Find the Leaf ninja and the Itadori boy, and kill them both!"],
+    ['say','Toji',"Nobody gives me orders, lady."],
+    ['do',cs=>{const t=cs.actors.tj;t.to=[1585,555];t.spd=900}],['wait',.15],
+    ['do',cs=>{const og=cs.actors.og;og.to=[1720,610];og.spd=700;og.noTurn=true;og.rot=-Math.PI/2;flashC='#fff';flashA=.8;shake=22;spark(1600,545,20,'#fff',420,.3,18);SND.bf()}],
+    ['wait',.5],
+    ['say','',"One punch sends the old woman flying. She doesn't get up again."],
+    ['do',cs=>{const a=cs.actors;a.sp.to=[a.tj.x+14,a.tj.y-6];a.sp.spd=260;a.tj.facing=A(a.tj,a.og)}],['wait',.6],
+    ['say','Toji',"I'll take this, though. The Inverted Spear of Heaven. It cuts through any technique."],
+    ['say','Toji',"A ninja from another world, huh? Might actually be fun."],
+    ['fade',1,.8,'0,0,0']],
+  then:()=>startChapter('station')})}
+function stationScene(){return cutscene({map:'station',cam:{x:120,y:20},fadeIn:true,
+  actors:{tr:{x:1500,y:0,open:false,draw:a=>drawTrain(a.x,a.open)},p:{x:560,y:640,look:playerLook(),facing:-Math.PI/2},yu:{x:640,y:660,look:LOOK.Yuji,facing:-Math.PI/2},
+    mg:{x:760,y:300,look:LOOK.Megumi,facing:Math.PI*.75},tj:{x:606,y:320,look:LOOK.Toji,facing:-Math.PI/2,hidden:true}},
+  steps:[['fade',0,.6],['title','Chapter 5','Shibuya Station'],
+    ['do',cs=>{const a=cs.actors;a.p.to=[560,380];a.p.spd=220;a.yu.to=[640,400];a.yu.spd=220}],['wait',1.4],
+    ['say','Yuji',"The cursed energy leads all the way down here, to the lowest platform of Shibuya Station."],
+    ['do',cs=>{const a=cs.actors;a.p.facing=A(a.p,a.mg);a.yu.facing=A(a.yu,a.mg)}],
+    ['say','Megumi',"Took you two long enough."],
+    ['say','Yuji',"Megumi! What are you doing down here?"],
+    ['say','Megumi',"Gojo-sensei sent me. Something just tore through a group of sorcerers further down the line, and it doesn't give off any cursed energy at all."],
+    ['say','{name}',"No cursed energy? Then how do we track it?"],
+    ['say','Megumi',"We follow the trail it left. The next train heads straight there."],
+    ['do',cs=>{const t=cs.actors.tr;t.to=[100,0];t.spd=700;shake=6;SND.boom()}],['wait',2],
+    ['do',cs=>{cs.actors.tr.open=true;SND.dash()}],
+    ['say','Yuji',"Alright, all aboard!"],
+    ['do',cs=>{const a=cs.actors;[['p',590],['yu',606],['mg',622]].forEach(([k,x])=>{a[k].to=[x,175];a[k].spd=240})}],['wait',1.4],
+    ['do',cs=>{const a=cs.actors;for(const k of['p','yu','mg']){a[k].hidden=true;a[k].to=null}a.tr.open=false;SND.dash()}],
+    ['fade',1,.6,'0,0,0'],
+    ['title','Shibuya Station · B5F','The Last Stop'],
+    ['do',cs=>{const a=cs.actors;a.tj.hidden=false;[['p',600],['yu',560],['mg',650]].forEach(([k,x])=>{a[k].x=x;a[k].y=172})}],
+    ['fade',0,.6],['wait',.4],
+    ['do',cs=>{const a=cs.actors;a.tr.open=true;SND.dash();for(const k of['p','yu','mg']){a[k].hidden=false;a[k].to=[a[k].x,220];a[k].spd=120}}],
+    ['wait',.6],
+    ['do',cs=>{const a=cs.actors;for(const k of['p','yu','mg'])a[k].facing=Math.PI/2;shake=8;SND.boom()}],
+    ['say','Toji',"So you're the brats they warned me about."],
+    ['say','Yuji',"Who the heck is this guy?! I can't feel a single drop of cursed energy coming off him!"],
+    ['say','Megumi',"No cursed energy at all... That's him. Get ready!"],
+    ['say','Toji',"Let's see what you're made of."]],
+  then:()=>startChapter('toji')})}
+const TPAT={
+  lunge(st,b,again){const p=st.player,a=A(b,p),len=Math.min(D(b,p)+140,620);b.busy=.7;
+    hz(st,{shape:'line',x:b.x,y:b.y,a,len,w:30,warn:b.phase>1?.32:.42,dmg:16,col:'#e8e4f0',onFire:()=>{const ex=clamp(b.x+Math.cos(a)*len,70,st.w-70),ey=clamp(b.y+Math.sin(a)*len,210,st.h-90);for(let k=0;k<10;k++)puff(lerp(b.x,ex,k/10),lerp(b.y,ey,k/10)-10,1,'rgba(230,230,240,.6)',20,.4,9,0,true);b.x=ex;b.y=ey;shake=Math.max(shake,7);SND.dash()}});
+    if(b.phase>1&&!again)st.after(.55,()=>{if(!b.dead&&b.stun<=0&&!st.won)TPAT.lunge(st,b,true)})},
+  knives(st,b){const n=b.phase>1?7:5,a=A(b,st.player);floatText(b.x,b.y-50,'Throwing Knives','#e8e4f0',14);for(let i=0;i<n;i++)shot(st,{x:b.x,y:b.y-8,a:a+(i-(n-1)/2)*.13,spd:440,r:6,dmg:9,team:'e',kind:'kunai',life:2});SND.swing()},
+  spear(st,b){if(b.nullify>0)return TPAT.lunge(st,b);b.nullify=4;b.busy=.5;floatText(b.x,b.y-50,'Inverted Spear of Heaven','#c9b6ff',16);SND.zap();
+    if(!st.spearHint){st.spearHint=true;banner('Inverted Spear of Heaven','It cancels your jutsu. Hit Toji with Playful Cloud!','#c9b6ff',3)}},
+  chain(st,b){floatText(b.x,b.y-50,'Chain of a Thousand Miles','#c9b6ff',15);b.busy=1;const a0=rand(0,TAU);for(let i=0;i<5;i++)hz(st,{shape:'line',x:b.x,y:b.y,a:a0+i*TAU/5,len:560,w:20,warn:.75,dmg:14,col:'#c9b6ff'})}};
+// Toji has no cursed energy and moves faster than anyone. While his spear glows (b.nullify), jutsu do nothing:
+// only strikes and other physical hits (hurtEnemy's o.melee) land.
+function tojiThink(st,b,dt){
+  const p=st.player,ph=b.hp/b.maxHp>.5?1:2;
+  if(ph!==b.phase){b.phase=ph;b.timer=.8;banner('Toji gets serious','Faster. Much faster.','#e8e4f0',2)}
+  if(b.nullify>0)b.nullify-=dt;
+  if(b.busy>0)b.busy-=dt;else{const d=D(b,p),a=A(b,p);b.facing=a;const mv=d>200?1:d<120?-1:0,sp=ph>1?230:190;if(Math.random()<dt*.6)b.strafe*=-1;b.x+=(Math.cos(a)*mv+Math.cos(a+Math.PI/2)*b.strafe*.7)*sp*dt;b.y+=(Math.sin(a)*mv+Math.sin(a+Math.PI/2)*b.strafe*.7)*sp*dt;b.walk+=dt*14}
+  b.swipeCd-=dt;if(D(b,p)<80&&b.swipeCd<=0){b.swipeCd=1.3;hz(st,{shape:'circle',x:b.x,y:b.y,r:82,warn:.36,dmg:15,col:'#e8e4f0'})}
+  b.timer-=dt;if(b.timer>0||b.busy>0)return;
+  TPAT[pick(ph===1?['lunge','knives','spear','lunge']:['lunge','chain','spear','knives','lunge'])](st,b);b.timer=ph===1?1.4:1.05}
+function tojiFight(){
+  const st=makeStage('station',{start:[600,260]});
+  st.allies.push(makeAlly('Yuji',530,250),makeAlly('Megumi',680,250));
+  const b=spawn(st,'boss',606,470,{name:'Toji',sub:'Sorcerer Killer · Heavenly Restriction',hp:950,maxHp:950,look:LOOK.Toji,think:tojiThink,timer:1.4,phase:1,swipeCd:0,boss:true,holdSpear:true,onDie:bossDie});
+  st.boss=b;banner('Toji Fushiguro','The Sorcerer Killer','#e8e4f0',2.6);
+  st.drawUnder=()=>drawTrain(100,true);
+  st.drawOver=()=>{if(b.nullify>0&&!b.dead){g.save();g.globalCompositeOperation='lighter';g.strokeStyle=`rgba(200,185,255,${.45+.25*Math.sin(st.t*12)})`;g.lineWidth=3;g.beginPath();g.arc(b.x,b.y-8,30,0,TAU);g.stroke();glow(b.x,b.y-8,40,'rgba(200,185,255,.25)');g.restore()}};
+  st.retry=()=>startChapter('toji');st.next=()=>go(spearScene());
+  return stageScene(st)}
+function spearScene(){return cutscene({map:'station',cam:{x:120,y:20},
+  actors:{tr:{x:100,y:0,draw:()=>drawTrain(100,true)},p:{x:606,y:225,look:playerLook(),facing:Math.PI/2},yu:{x:530,y:235,look:LOOK.Yuji,facing:Math.PI/2},mg:{x:690,y:235,look:LOOK.Megumi,facing:Math.PI/2},
+    tj:{x:606,y:340,look:LOOK.Toji,facing:-Math.PI/2},sp:{x:640,y:352,draw:(a,t)=>drawItem('spear',a.x,a.y,t,1)},ob:{x:780,y:340,look:LOOK.Obito,facing:Math.PI,hidden:true,bob:true}},
+  steps:[['say','Toji',"Heh... Not bad, brats. Not bad at all."],
+    ['do',cs=>{const a=cs.actors;a.tj.facing=A(a.tj,a.mg);a.mg.facing=A(a.mg,a.tj)}],
+    ['say','Toji',"Hey. You, with the dogs. What's your last name?"],
+    ['say','Megumi',"...Fushiguro."],
+    ['say','Toji',"You're not a Zenin? ...That makes me glad."],
+    ['do',cs=>{const a=cs.actors;a.sp.to=[a.tj.x+12,a.tj.y-8];a.sp.spd=160}],['wait',.5],
+    ['do',cs=>{const a=cs.actors;flashC='#fff';flashA=.85;shake=16;spark(a.tj.x,a.tj.y-10,18,'#c9b6ff',300,.35,14);a.tj.rot=-Math.PI/2;a.tj.y+=6;a.sp.to=[a.tj.x+30,a.tj.y+10];a.sp.spd=120;SND.bf()}],
+    ['wait',.6],
+    ['say','',"Toji turns the Inverted Spear of Heaven on himself. He falls, and doesn't get up again."],
+    ['do',cs=>{const t=cs.actors.tj;puff(t.x,t.y-6,40,'#cfc6b8',120,1.2,8,-20);t.hidden=true}],
+    ['say','Megumi',"...Why would he care what my name is?"],
+    ['do',cs=>{const o=cs.actors.ob;o.hidden=false;puff(o.x,o.y-10,30,'#7a5ad0',150,.7,6,0,true);SND.zap()}],
+    ['say','Obito',"How fitting. He held on to that spear just long enough for me to come and collect it."],
+    ['do',cs=>{const a=cs.actors;a.sp.to=[a.ob.x-16,a.ob.y-30];a.sp.spd=320;floatText(a.ob.x,a.ob.y-50,'Kamui!','#c9a3ff',18);SND.zap()}],['wait',.6],
+    ['do',cs=>{cs.actors.sp.hidden=true;flashC='#9b5cff';flashA=.5}],
+    ['say','Obito',"The Inverted Spear of Heaven. A blade that cancels any technique. It will be very useful."],
+    ['say','{name}',"Obito! Give that back!"],
+    ['do',cs=>{const o=cs.actors.ob;puff(o.x,o.y-10,30,'#7a5ad0',140,.7,6,0,true);o.hidden=true;SND.zap()}],
+    ['say','Yuji',"He's heading for the surface! Come on, I've got a really bad feeling about this..."],
+    ['fade',1,.8,'0,0,0']],
+  then:()=>startChapter('fingers')})}
+
 /* ---------------- chapter: Sukuna ---------------- */
-function fingersScene(){return cutscene({map:'arena',cam:{x:70,y:80},
-  actors:{o:{x:560,y:330,look:LOOK.Obito,facing:Math.PI/2},bx:{x:560,y:372,draw:(a,t)=>drawItem('fingers',a.x,a.y,t,1.2)},sg:{x:1000,y:360,look:LOOK.Stranger,facing:Math.PI},p:{x:90,y:380,look:playerLook(),hidden:true,facing:0},yu:{x:70,y:430,look:LOOK.Yuji,hidden:true,facing:0}},
-  steps:[['title','Chapter 5','The King of Curses'],
+function fingersScene(){return cutscene({map:'arena',cam:{x:70,y:80},fadeIn:true,
+  actors:{o:{x:560,y:330,look:LOOK.Obito,facing:Math.PI/2},bx:{x:560,y:372,draw:(a,t)=>drawItem('fingers',a.x,a.y,t,1.2)},sg:{x:1000,y:360,look:LOOK.Stranger,facing:Math.PI},p:{x:90,y:380,look:playerLook(),hidden:true,facing:0},yu:{x:70,y:430,look:LOOK.Yuji,hidden:true,facing:0},mg:{x:60,y:330,look:LOOK.Megumi,hidden:true,facing:0}},
+  steps:[['fade',0,.6],['title','Chapter 6','The King of Curses'],
     ['say','Obito',"Ten fingers of the King of Curses. Each one holds a piece of a demon."],
     ['say','Obito',"I can't gather power and hold off those sorcerers at the same time. I need a distraction..."],
     ['say','Obito',"We need a Sukuna."],
@@ -1169,11 +1329,12 @@ function fingersScene(){return cutscene({map:'arena',cam:{x:70,y:80},
     ['say','Sukuna',"Heh. A fresh body, and ten fingers' worth of my power. Who woke me up?"],
     ['say','Obito',"Think of it as a gift. Now keep the Leaf ninja busy."],
     ['do',cs=>{const o=cs.actors.o;puff(o.x,o.y-10,30,'#7a5ad0',140,.8,6,0,true);o.hidden=true;SND.zap()}],
-    ['do',cs=>{const a=cs.actors;a.p.hidden=false;a.yu.hidden=false;a.p.to=[400,360];a.p.spd=260;a.yu.to=[350,410];a.yu.spd=260;a.sg.facing=Math.PI}],
+    ['do',cs=>{const a=cs.actors;a.p.hidden=false;a.yu.hidden=false;a.mg.hidden=false;a.p.to=[400,360];a.p.spd=260;a.yu.to=[350,410];a.yu.spd=260;a.mg.to=[360,310];a.mg.spd=260;a.sg.facing=Math.PI}],
     ['wait',1.3],
     ['say','Yuji',"Sukuna?! How? He's supposed to be locked up inside me!"],
     ['say','Sukuna',"Only a sliver of me, brat. Ten fingers is plenty to carve you both into pieces."],
     ['say','Yuji',"{name}, if I fight him, he might take over my body too. It's on you! I'll get the civilians out!"],
+    ['say','Megumi',"I'll go with him. Don't you dare lose, {name}."],
     ['say','{name}',"Got it. I'll handle him!"]],
   then:()=>startChapter('sukuna')})}
 const SPAT={
@@ -1202,11 +1363,11 @@ function sukunaFight(){
   st.retry=()=>startChapter('sukuna');st.next=()=>startChapter('rewards');
   return stageScene(st)}
 function rewardsScene(){return cutscene({map:'arena',cam:{x:70,y:80},
-  actors:{sk:{x:560,y:300,look:LOOK.Sukuna,facing:Math.PI/2},p:{x:560,y:430,look:playerLook(),facing:-Math.PI/2},gj:{x:420,y:330,look:LOOK.Gojo,hidden:true},yu:{x:700,y:390,look:LOOK.Yuji,hidden:true,facing:Math.PI},mg:{x:400,y:440,look:LOOK.Megumi,hidden:true,facing:0},nb:{x:730,y:470,look:LOOK.Nobara,hidden:true,facing:Math.PI}},
+  actors:{sk:{x:560,y:300,look:LOOK.Sukuna,facing:Math.PI/2},p:{x:560,y:430,look:playerLook(),facing:-Math.PI/2},gj:{x:420,y:330,look:LOOK.Gojo,hidden:true},yu:{x:700,y:390,look:LOOK.Yuji,hidden:true,facing:Math.PI},mg:{x:400,y:440,look:LOOK.Megumi,hidden:true,facing:0},nb:{x:730,y:470,look:LOOK.Nobara,hidden:true,facing:Math.PI},mk:{x:390,y:360,look:LOOK.Maki,hidden:true,facing:0}},
   steps:[['say','Sukuna',"Tch... Not bad, for an outsider. This body can't hold me any longer..."],
     ['do',cs=>{const s=cs.actors.sk;puff(s.x,s.y-10,40,'#1a0a10',160,1,8);s.look=LOOK.Stranger;flashC='#fff';flashA=.5;SND.boom()}],
     ['say','Stranger',"Ugh... my head. Why am I lying in the middle of the road?"],
-    ['show','gj'],['show','yu'],['show','mg'],['show','nb'],
+    ['show','gj'],['show','yu'],['show','mg'],['show','nb'],['show','mk'],
     ['say','Gojo',"You took down ten fingers' worth of Sukuna? Okay, I'm officially impressed."],
     ['say','Gojo',"You were taking a beating out there, though. Here's a trick: flip your energy around and pour it into your wounds. Reverse Cursed Technique."],
     ['do',cs=>{save.powers.rct=true;writeSave();const p=cs.actors.p;puff(p.x,p.y-10,30,'#9df7c9',120,.9,5,-40,true);SND.get()}],
@@ -1218,6 +1379,7 @@ function rewardsScene(){return cutscene({map:'arena',cam:{x:70,y:80},
     ['say','Nobara',"Before you go, take this. One of my straw dolls, packed with my cursed energy. It'll keep you on your feet a lot longer."],
     ['do',cs=>{save.powers.vit=true;writeSave();const p=cs.actors.p;puff(p.x,p.y-10,30,'#ff9a5a',130,.9,5,-30,true);flashC='#ffb36b';flashA=.4;SND.get()}],
     ['say','',"Health upgrade! Your max health went up from 100 to 150."],
+    ['say','Maki',"Told you that staff would come in handy. Keep it. Just don't let that masked creep get his hands on it."],
     ['do',cs=>{cs.fx.push(portalFx(560,170));shake=8;SND.zap()}],
     ['say','Megumi',"Look up. That's the same energy as the hole you fell out of."],
     ['say','Nobara',"So that's where the masked creep went. Go get him, and come visit sometime, alright?"],
@@ -1245,7 +1407,7 @@ function shipScene(){
       na:{x:400,y:370,look:LOOK.Nami,facing:toP(400,370)},sj:{x:560,y:365,look:LOOK.Sanji,facing:toP(560,365)},
       zo:{x:745,y:305,look:LOOK.Zoro,facing:Math.PI},dd:{x:300,y:330,draw:(a,t)=>drawSnail(a.x,a.y,t,a.ring)}},
     steps:[['fade',0,.8],
-      ['title','Chapter 6','The Grand Line'],
+      ['title','Chapter 7','The Grand Line'],
       ['say','Luffy',"Hey. Hey! Are you alive? You fell right out of the sky and landed on the Sunny!"],
       ['say','Usopp',"Careful, Luffy! It could be a sky monster! The kind that eats brave sharpshooters like me!"],
       ['do',cs=>{const p=cs.actors.p;p.rot=0;puff(p.x,p.y,12,'rgba(255,255,255,.7)',70,.4,5);SND.dash()}],
@@ -1387,7 +1549,7 @@ function kaidoScene(){
     g.strokeStyle='#d8262f';g.lineWidth=7;g.beginPath();g.moveTo(l.x,l.y-2);g.lineTo(sx,sy);g.stroke();g.fillStyle='#f0c9a2';circ(p.x-Math.cos(a)*4,p.y-6,6);g.restore()};
   const beat=k=>[['do',cs=>{const e=cs.actors[k],o=cs.actors.ob;o.facing=A(o,e);spark(e.x,e.y-10,16,'#c9a3ff',380,.3,16);puff(e.x,e.y-10,24,'#7a5ad0',160,.6,7,0,true);floatText(e.x,e.y-44,'Kamui!','#c9a3ff',16);e.hidden=true;shake=12;SND.bf()}],['wait',.35]];
   return cutscene({map:'cove',cam:{x:300,y:150},actors:ac,
-    steps:[['title','Chapter 7','The Strongest Creature'],
+    steps:[['title','Chapter 8','The Strongest Creature'],
       ['say','Kabuto',"Hm. You've grown, {name}. No matter. I already have what I came for: data."],
       ['do',cs=>{const k=cs.actors.kb;puff(k.x,k.y-8,30,'#efedf6',150,.8,7);k.hidden=true;SND.zap()}],
       ['say','Luffy',"Hey, he ran off! ...Oh! The snakes let go of us!"],
@@ -1438,18 +1600,18 @@ function finalIntro(){
   const item=(k,x,y)=>({x,y,draw:(a,t)=>drawItem(k,a.x,a.y,t,1.4)});
   const absorb=k=>[['move',k,600,320,240],['do',cs=>{const it=cs.actors[k];it.hidden=true;puff(it.x,it.y,26,'#9b5cff',150,.7,6,0,true);flashC='#1a0a2a';flashA=.5;shake=10;SND.bf()}]];
   return cutscene({map:'void',cam:{x:120,y:130},fadeIn:true,fadeColor:'255,255,255',
-    actors:{o:{x:600,y:330,look:LOOK.Obito,facing:Math.PI/2,bob:true},dn:item('deathnote',500,280),sw:item('sword',600,230),fr:item('fruit',700,280),p:{x:600,y:560,look:playerLook(),facing:-Math.PI/2}},
+    actors:{o:{x:600,y:330,look:LOOK.Obito,facing:Math.PI/2,bob:true},dn:item('deathnote',500,280),sp:item('spear',600,230),fr:item('fruit',700,280),p:{x:600,y:560,look:playerLook(),facing:-Math.PI/2}},
     steps:[['fade',0,.8],
       ['title','Final Chapter','The Perfect Villain'],
       ['say','Obito',"A rubber pirate threw you through my portal? Persistent. Fine. You'll get a front-row seat."],
       ['say','Obito',"From one world, a notebook of death. Write a name in it, and that person dies."],
       ...absorb('dn'),
-      ['say','Obito',"From another, a cursed blade soaked in centuries of hatred."],
-      ...absorb('sw'),
+      ['say','Obito',"From another, the Inverted Spear of Heaven. Its blade cuts through any technique."],
+      ...absorb('sp'),
       ['say','Obito',"And from a sea of pirates, the dragon you watched me tear out of Kaido himself: the Fish-Fish Fruit, Model: Azure Dragon."],
       ...absorb('fr'),
       ['do',cs=>{flashC='#9b5cff';flashA=.9;shake=22;SND.boom();const o=cs.actors.o;o.look=LOOK.ObitoFinal;puff(o.x,o.y-10,50,'#9b5cff',220,1,6,0,true)}],
-      ['say','Obito',"The Rinnegan. The Death Note. Cursed steel. A dragon's body. I am the perfect villain."],
+      ['say','Obito',"The Rinnegan. The Death Note. A spear that cancels any technique. A dragon's body. I am the perfect villain."],
       ['say','{name}',"Then I'm the one who stops you. For Naruto, for Jujutsu High, for Luffy's crew, and for everyone you used."]],
     then:()=>startChapter('obito')})}
 function kamuiTo(st,b){puff(b.x,b.y-10,22,'#7a5ad0',140,.6,6,0,true);const p=st.player;for(let i=0;i<12;i++){b.x=rand(140,st.w-140);b.y=rand(140,st.h-140);if(D(b,p)>230)break}puff(b.x,b.y-10,22,'#7a5ad0',140,.6,6,0,true);SND.zap()}
@@ -1458,12 +1620,12 @@ const OPAT={
   push(st,b){b.busy=1;floatText(b.x,b.y-50,'Almighty Push','#d9ccff',18);hz(st,{shape:'circle',x:b.x,y:b.y,r:70,warn:.6,dmg:0,col:'#b9a3e8',onFire:()=>{st.hz.push({shape:'ring',x:b.x,y:b.y,r0:20,spd:440,max:950,dmg:16,t:0,kb:520});shake=Math.max(shake,12);SND.boom()}})},
   pull(st,b){b.busy=1.7;floatText(b.x,b.y-50,'Universal Pull','#d9ccff',18);st.pull={x:b.x,y:b.y,f:175};st.after(1.4,()=>{st.pull=null});hz(st,{shape:'circle',x:b.x,y:b.y,r:115,warn:1.4,dmg:22,col:'#b9a3e8',onFire:()=>{shake=Math.max(shake,10);SND.boom()}})},
   rods(st,b){const n=b.phase>=2?9:7,a=A(b,st.player);for(let i=0;i<n;i++)shot(st,{x:b.x,y:b.y-8,a:a+(i-(n-1)/2)*.12,spd:350,r:6,dmg:10,team:'e',kind:'rod',life:2.6});SND.zap()},
-  swordDash(st,b){b.busy=2.4;floatText(b.x,b.y-50,'Cursed Blade','#c9a3ff',16);for(let i=0;i<3;i++)st.after(i*.7,()=>{if(b.dead||b.phase!==3||b.stun>0)return;dashAttack(st,b,15,'#9b5cff')})},
-  swordWave(st,b){const a=A(b,st.player);for(let i=-1;i<=1;i++)shot(st,{x:b.x,y:b.y-6,a:a+i*.28,spd:300,r:16,dmg:13,team:'e',kind:'swordwave',life:2.4,pierce:true});SND.slash()}};
+  spearDash(st,b){b.busy=2.4;floatText(b.x,b.y-50,'Inverted Spear','#c9a3ff',16);for(let i=0;i<3;i++)st.after(i*.7,()=>{if(b.dead||b.phase!==3||b.stun>0)return;dashAttack(st,b,15,'#9b5cff')})},
+  spearThrow(st,b){const a=A(b,st.player);floatText(b.x,b.y-50,'Spear Throw','#c9a3ff',16);for(let i=-1;i<=1;i++)shot(st,{x:b.x,y:b.y-6,a:a+i*.22,spd:380,r:9,dmg:13,team:'e',kind:'spear',life:2.2,pierce:true});SND.slash()}};
 function cloneThink(st,e,dt){const p=st.player,d=D(e,p),a=A(e,p);e.facing=a;const mv=d>260?1:d<180?-1:0;if(Math.random()<dt*.5)e.strafe*=-1;e.x+=(Math.cos(a)*mv+Math.cos(a+Math.PI/2)*e.strafe*.6)*120*dt;e.y+=(Math.sin(a)*mv+Math.sin(a+Math.PI/2)*e.strafe*.6)*120*dt;e.cd-=dt;if(e.cd<=0){e.cd=rand(2.4,3.4);dashAttack(st,e,12,'#9b5cff')}}
 function spawnClones(st,b){const p=st.player,base=rand(0,TAU),spots=[0,1,2].map(i=>[clamp(p.x+Math.cos(base+i*TAU/3)*250,120,st.w-120),clamp(p.y+Math.sin(base+i*TAU/3)*220,120,st.h-120)]);
   const order=[0,1,2].sort(()=>Math.random()-.5);puff(b.x,b.y-10,22,'#7a5ad0',140,.6,6,0,true);b.x=spots[order[0]][0];b.y=spots[order[0]][1];
-  for(let i=1;i<3;i++)spawn(st,'boss',spots[order[i]][0],spots[order[i]][1],{name:'Obito',look:LOOK.ObitoFinal,fake:true,hp:1,maxHp:1,think:cloneThink,float:true,aura:true,holdSword:true,cd:rand(1.2,2.2),life:12});
+  for(let i=1;i<3;i++)spawn(st,'boss',spots[order[i]][0],spots[order[i]][1],{name:'Obito',look:LOOK.ObitoFinal,fake:true,hp:1,maxHp:1,think:cloneThink,float:true,aura:true,holdSpear:true,cd:rand(1.2,2.2),life:12});
   floatText(b.x,b.y-50,'Kamui Clones','#c9a3ff',16);SND.zap()}
 function startDragon(st,b){b.transforming=true;b.invuln=true;b.invText='Transforming';st.hz=[];st.pull=null;st.note=null;for(const e of st.enemies)if(e.fake)e.dead=true;
   banner('Azure Dragon','Strike the head. Black Flash staggers it!','#5fb0ff',3);flashC='#5fb0ff';flashA=.8;shake=24;SND.boom();puff(b.x,b.y,60,'#5fb0ff',300,1.2,8,0,true);
@@ -1488,7 +1650,7 @@ function obitoThink(st,b,dt){
   const p=st.player,hpf=b.hp/b.maxHp,ph=hpf>.75?1:hpf>.5?2:hpf>.25?3:4;
   if(ph!==b.phase&&!b.transforming&&!b.dragon){b.phase=ph;st.note=null;b.timer=1.2;
     if(ph===2){banner('The Death Note','Hit Obito 3 times to tear out the page','#e8e2d4',3);b.noteCd=1.2}
-    if(ph===3){banner('The Cursed Blade','Hold SHIFT: the Sharingan shows the real Obito','#c9a3ff',3);b.holdSword=true;b.cloneCd=1}
+    if(ph===3){banner('Inverted Spear of Heaven','Hold SHIFT: the Sharingan shows the real Obito','#c9a3ff',3);b.holdSpear=true;b.cloneCd=1}
     if(ph===4){startDragon(st,b);return}}
   if(b.dragon)return dragonThink(st,b,dt);
   if(b.transforming)return;
@@ -1497,7 +1659,7 @@ function obitoThink(st,b,dt){
     else{b.noteCd-=dt;if(b.noteCd<=0){st.note={t:10,hits:0};floatText(b.x,b.y-50,'Death Note!','#e8e2d4',20);SND.zap()}}}
   if(ph===3){b.cloneCd-=dt;if(b.cloneCd<=0&&!st.enemies.some(e=>e.fake&&!e.dead)){b.cloneCd=11;spawnClones(st,b)}}
   b.timer-=dt;if(b.timer>0||b.busy>0)return;
-  const pats=ph===1?['push','pull','rods','rods']:ph===2?['rods','push','rods']:['swordDash','swordWave','rods'];
+  const pats=ph===1?['push','pull','rods','rods']:ph===2?['rods','push','rods']:['spearDash','spearThrow','rods'];
   OPAT[pick(pats)](st,b);b.timer=ph===1?1.5:ph===2?1.6:1.3}
 function obitoFight(){
   const st=makeStage('void',{start:[600,620]});
@@ -1513,11 +1675,11 @@ function obitoFight(){
 function obitoDownScene(){
   const item=(k,x,y)=>({x,y,hidden:true,draw:(a,t)=>drawItem(k,a.x,a.y,t,1.4)});
   return cutscene({map:'void',cam:{x:120,y:130},
-    actors:{o:{x:600,y:330,look:LOOK.ObitoFinal,facing:Math.PI/2},p:{x:600,y:520,look:playerLook(),facing:-Math.PI/2},dn:item('deathnote',600,320),sw:item('sword',600,320),fr:item('fruit',600,320),nk:item('necklace',600,270)},
+    actors:{o:{x:600,y:330,look:LOOK.ObitoFinal,facing:Math.PI/2},p:{x:600,y:520,look:playerLook(),facing:-Math.PI/2},dn:item('deathnote',600,320),sp:item('spear',600,320),fr:item('fruit',600,320),nk:item('necklace',600,270)},
     steps:[['say','Obito',"Impossible... beaten by a nobody from the Leaf..."],
-      ['do',cs=>{const a=cs.actors;for(const k of['dn','sw','fr'])a[k].hidden=false;a.dn.to=[420,250];a.sw.to=[600,180];a.fr.to=[780,250];for(const k of['dn','sw','fr'])a[k].spd=200;a.o.look=LOOK.Obito;puff(600,320,40,'#9b5cff',200,.8,6,0,true);SND.boom()}],
+      ['do',cs=>{const a=cs.actors;for(const k of['dn','sp','fr'])a[k].hidden=false;a.dn.to=[420,250];a.sp.to=[600,180];a.fr.to=[780,250];for(const k of['dn','sp','fr'])a[k].spd=200;a.o.look=LOOK.Obito;puff(600,320,40,'#9b5cff',200,.8,6,0,true);SND.boom()}],
       ['wait',1],
-      ['do',cs=>{for(const k of['dn','sw','fr']){const it=cs.actors[k];it.hidden=true;puff(it.x,it.y,20,'#fff',120,.6,5,0,true)}cs.actors.nk.hidden=false;SND.get()}],
+      ['do',cs=>{for(const k of['dn','sp','fr']){const it=cs.actors[k];it.hidden=true;puff(it.x,it.y,20,'#fff',120,.6,5,0,true)}cs.actors.nk.hidden=false;SND.get()}],
       ['say','Obito',"No... the necklace... it's cracking!"],
       ['do',cs=>{const k=cs.actors.nk;k.hidden=true;spark(k.x,k.y,30,'#ffc94a',400,.5,16);flashC='#fff';flashA=.8;shake=20;SND.boom()}],
       ['say','',"The Time Necklace shatters. Every stolen power flies back to the world it came from."],
@@ -1540,7 +1702,7 @@ function endingScene(){
       ['say','{name}',"Thank you, everyone. I couldn't have done any of it alone."],
       ['fade',1,1.2,'0,0,0']],
     then:()=>go(creditsScene())})}
-function creditsScene(){let t=0;const lines=[["OBITO'S MULTIVERSE",'h'],['',''],['Starring','k'],[save.name,'n'],['',''],['With','k'],['Naruto Uzumaki'],['Sasuke Uchiha'],['Satoru Gojo'],['Yuji Itadori'],['Megumi Fushiguro'],['Nobara Kugisaki'],['Monkey D. Luffy'],['Roronoa Zoro'],['Nami'],['Sanji'],['Usopp'],['',''],['Villains','k'],['Obito Uchiha'],['Ryomen Sukuna'],['Kabuto Yakushi'],['Kaido of the Beasts'],['',''],['A fan game made for fun.'],['Naruto, Jujutsu Kaisen, Death Note and One Piece','s'],['belong to their creators.','s'],['',''],['Thanks for playing!','h']];
+function creditsScene(){let t=0;const lines=[["OBITO'S MULTIVERSE",'h'],['',''],['Starring','k'],[save.name,'n'],['',''],['With','k'],['Naruto Uzumaki'],['Sasuke Uchiha'],['Satoru Gojo'],['Yuji Itadori'],['Megumi Fushiguro'],['Nobara Kugisaki'],['Maki Zenin'],['Monkey D. Luffy'],['Roronoa Zoro'],['Nami'],['Sanji'],['Usopp'],['',''],['Villains','k'],['Obito Uchiha'],['Ryomen Sukuna'],['Toji Fushiguro'],['Kabuto Yakushi'],['Kaido of the Beasts'],['',''],['A fan game made for fun.'],['Naruto, Jujutsu Kaisen, Death Note and One Piece','s'],['belong to their creators.','s'],['',''],['Thanks for playing!','h']];
   return{update(dt){t+=dt;if(t>3&&(tp('space')||tp('enter')))go(TitleScene)},
     draw(){paintTunnel(t*.4,W/2,H/2,280);g.fillStyle='rgba(5,3,10,.55)';g.fillRect(0,0,W,H);const top=Math.max(H-t*45,-lines.length*34+H/2+40);g.textAlign='center';
       lines.forEach(([s,k],i)=>{const y=top+i*34;if(y<-20||y>H+20)return;g.font=k==='h'?`30px ${FD}`:k==='n'?`26px ${FD}`:k==='k'?`700 13px ${FB}`:k==='s'?`500 14px ${FB}`:`700 18px ${FB}`;g.fillStyle=k==='k'?'#ffc94a':k==='h'?'#d8262f':k==='s'?'#a99fc4':'#f1ecff';g.fillText(k==='k'?s.toUpperCase():s,W/2,y)});
@@ -1552,7 +1714,7 @@ const TitleScene={t:0,
   enter(){showUI('title');const s=readSave();$('contBtn').hidden=!s;if(s)$('contBtn').textContent='Continue · '+CHNAME[s.chapter]+(s.easy?' · Easy':'');setTimeout(()=>$('newBtn').focus({preventScroll:true}),0)},
   update(dt){this.t+=dt},
   draw(){const t=this.t;paintTunnel(t*.6,W*.72,H*.5,280);drawPortal(W*.72,H*.5,120,t);
-    ['deathnote','sword','fruit','necklace'].forEach((k,i)=>{const a=t*.5+i/4*TAU;drawItem(k,W*.72+Math.cos(a)*200,H*.5+Math.sin(a)*90,t,1.7)});
+    ['deathnote','spear','fruit','necklace'].forEach((k,i)=>{const a=t*.5+i/4*TAU;drawItem(k,W*.72+Math.cos(a)*200,H*.5+Math.sin(a)*90,t,1.7)});
     drawPerson(W*.74,H*.68+Math.sin(t*1.5)*6,{...LOOK.ObitoFinal,s:5.2,facing:Math.PI/2});postFx()}};
 const creatorEls=[];
 const CreatorScene={t:0,
@@ -1589,14 +1751,15 @@ $('startBtn').onclick=()=>{if(creatorEls.length!==2)return;save.name=($('nameIn'
 /* ---------------- flow ---------------- */
 function startChapter(ch){
   save.chapter=ch;grantFor(ch);writeSave();parts=[];texts=[];ban=null;
-  ({village:()=>go(houseScene()),clash:()=>go(clashIntro()),portal:()=>go(portalScene()),jjk:()=>go(jjkArrival()),spirits:()=>go(spiritsScene()),fingers:()=>go(fingersScene()),sukuna:()=>go(sukunaFight()),rewards:()=>go(rewardsScene()),
+  ({village:()=>go(houseScene()),clash:()=>go(clashIntro()),portal:()=>go(portalScene()),jjk:()=>go(jjkArrival()),maki:()=>go(makiScene()),spirits:()=>go(spiritsScene()),ogami:()=>go(ogamiScene()),station:()=>go(stationScene()),toji:()=>go(tojiFight()),fingers:()=>go(fingersScene()),sukuna:()=>go(sukunaFight()),rewards:()=>go(rewardsScene()),
     sea:()=>go(seaScene()),marines:()=>go(marinesScene()),kabuto:()=>go(kabutoIntro()),sage:()=>go(kabutoFight()),kaido:()=>go(kaidoScene()),final:()=>go(finalIntro()),obito:()=>go(obitoFight()),ending:()=>go(endingScene())})[ch]()}
 let scene=null,last=performance.now();
 function go(s){scene=s;if(s!==TitleScene&&s!==CreatorScene)showUI(null);const a=document.activeElement;if(a&&a!==document.body&&a.blur)a.blur();s.enter&&s.enter()}
 let DEBUG=location.hash==='#debug',godMode=false;
 function debugKeys(){if(tp('h')&&scene&&scene.st){const p=scene.st.player;p.hp=p.maxHp;p.ch=p.maxCh}if(tp('g'))godMode=!godMode;for(let i=0;i<DBG.length;i++)if(tp(DBG[i][0].toLowerCase())){startChapter(ORDER[i]);return}
   if(tp('=')&&scene&&scene.st){const st=scene.st;for(const e of st.enemies)if(!e.dead&&!e.invuln&&!e.intangible)hurtEnemy(st,e,e.boss?e.maxHp*.24:9999,{})}}
-const DBG=[['1','Ch. 1 · Leaf Village'],['2','Ch. 1 · Obito at the cliffs'],['3','Ch. 2 · The portal'],['4','Ch. 3 · Jujutsu High'],['5','Ch. 4 · Shibuya'],['6',"Ch. 5 · Sukuna's fingers"],['7','Boss · Sukuna'],['8','Ch. 5 · Lessons'],['9','Ch. 6 · The Grand Line'],['0','Ch. 6 · Rendezvous Island'],['-','Ch. 6 · Kabuto arrives'],['Z','Boss · Kabuto'],['X','Ch. 7 · Kaido'],['C','Final chapter'],['V','Final boss · Obito'],['B','Epilogue']]; // one row per ORDER entry
+const DBG=[['1','Ch. 1 · Leaf Village'],['2','Ch. 1 · Obito at the cliffs'],['3','Ch. 2 · The portal'],['4','Ch. 3 · Jujutsu High'],['5',"Ch. 3 · Maki's gifts"],['6','Ch. 4 · Shibuya'],['7','Ch. 4 · The seance'],['8','Ch. 5 · Shibuya Station'],['9','Boss · Toji'],['0',"Ch. 6 · Sukuna's fingers"],['-','Boss · Sukuna'],
+  ['Z','Ch. 6 · Lessons'],['X','Ch. 7 · The Grand Line'],['C','Ch. 7 · Rendezvous Island'],['V','Ch. 7 · Kabuto arrives'],['B','Boss · Kabuto'],['N','Ch. 8 · Kaido'],['Q','Final chapter'],['E','Final boss · Obito'],['T','Epilogue']]; // one row per ORDER entry
 function drawDebug(){const x=W-262,y=12,w=248,h=105+DBG.length*17;g.fillStyle='rgba(10,8,16,.92)';rr(x,y,w,h,10);g.fill();g.strokeStyle='#ff3344';g.lineWidth=1.5;g.stroke();
   g.font=`14px ${FD}`;g.fillStyle='#ff3344';g.fillText('Debug menu',x+14,y+24);g.font=`700 10px ${FB}`;g.fillStyle='#a99fc4';g.textAlign='right';g.fillText('Press ] to close',x+w-14,y+24);g.textAlign='left';
   const inGame=scene!==TitleScene&&scene!==CreatorScene;
@@ -1607,13 +1770,13 @@ function syncPad(){
   const menu=!scene||scene===TitleScene||scene===CreatorScene,st=scene&&scene.st,p=st&&st.player;
   const move=!!(st&&!st.dlg&&!st.lost),fight=move&&!st.noAttack;
   padTap=!menu&&!move;
-  const els=save.elements,sig=[menu,move,fight,!!(scene&&scene.skip),has('sword'),has('sharingan'),has('rct'),els[0],els[1],sfx.muted].join();
+  const els=save.elements,sig=[menu,move,fight,!!(scene&&scene.skip),has('cloud'),has('sharingan'),has('rct'),els[0],els[1],sfx.muted].join();
   if(sig!==padSig){padSig=sig;$('pad').classList.toggle('on',!menu);
     if(!move)releaseTouch();
     $('zone').hidden=!move;$('acts').hidden=!fight;$('skipBtn').hidden=!(scene&&scene.skip);
     const set=(k,show,txt,col)=>{const b=document.querySelector(`#acts [data-k="${k}"]`);b.hidden=!show;if(txt)b.textContent=txt;if(col)b.style.setProperty('--c',col)};
-    set('j',true,has('sword')?'Flame Strike':'Strike');set('k',true,JUTSU[els[0]].name,JUTSU[els[0]].col);set('l',true,JUTSU[els[1]].name,JUTSU[els[1]].col);
-    set('i',has('sword'));set('shift',has('sharingan'));set('r',has('rct'));
+    set('j',true,has('cloud')?'Cloud Strike':'Strike');set('k',true,JUTSU[els[0]].name,JUTSU[els[0]].col);set('l',true,JUTSU[els[1]].name,JUTSU[els[1]].col);
+    set('i',has('cloud'));set('shift',has('sharingan'));set('r',has('rct'));
     $('muteBtn').innerHTML=sfx.muted?'&#128263;':'&#128266;'}
   if(fight)for(const k of['k','l','i']){const b=document.querySelector(`#acts [data-k="${k}"]`),v=p.cds[k]>0&&p.cdMax[k]?clamp(p.cds[k]/p.cdMax[k],0,1):0,r=String(Math.ceil(v*20)/20);if(b.dataset.cd!==r){b.dataset.cd=r;b.style.setProperty('--cd',r)}}
   if(fight){document.querySelector('#acts [data-k="shift"]').classList.toggle('on',!!st.slow);document.querySelector('#acts [data-k="r"]').classList.toggle('on',!!p.healing)}}

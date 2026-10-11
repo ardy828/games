@@ -30,7 +30,12 @@ larger than plain ones, and the HUD shows a big one beside the SHARINGAN label w
 in the creator; `easy(k)` returns the `EASY` multiplier or 1, applied in `makePlayer()` (health and
 chakra), the chakra regen line in `updatePlayer()` and `hurtPlayer()` (damage taken).
 The story is the `ORDER` list (one `startChapter()` entry and one debug-menu `DBG` row per chapter, in
-the same order; `grantFor()` unlocks powers by index). Between Sukuna and the final chapter is a One
+the same order; `grantFor()` unlocks powers by the chapter that grants them). In the Jujutsu arc, Maki
+gives Playful Cloud (`has('cloud')`: longer, harder strikes, I is Cloud Sweep) and cursed contacts (enemy
+types flagged `curse` glow and always show health; Playful Cloud hits them harder). Toji's Inverted
+Spear of Heaven sets `nullify`, and while it is up `hurtEnemy()` ignores any hit without `o.melee`
+(strikes, Black Flash, Cloud Sweep and allies' punches pass it). Obito takes the spear, which he uses in
+the final fight's third phase. Between Sukuna and the final chapter is a One
 Piece arc: the Sunny (`ship` map), a Marine ambush on the `cove` map with Luffy, Zoro and Sanji as allies
 (their specials are in `updateAlly()`), the Kabuto boss (`kabutoThink`; hitting him mid-heal stops the
 Mystical Palm) and the Kaido cutscene that ends in Luffy's throw. A cutscene actor with `rot` is drawn
