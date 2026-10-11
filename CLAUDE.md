@@ -34,7 +34,9 @@ the same order; `grantFor()` unlocks powers by the chapter that grants them). In
 gives Playful Cloud (`has('cloud')`: longer, harder strikes, I is Cloud Sweep) and cursed contacts (enemy
 types flagged `curse` glow and always show health; Playful Cloud hits them harder). Toji's Inverted
 Spear of Heaven sets `nullify`, and while it is up `hurtEnemy()` ignores any hit without `o.melee`
-(strikes, Black Flash, Cloud Sweep and allies' punches pass it). Obito takes the spear, which he uses in
+(strikes, Black Flash, Cloud Sweep and allies' punches pass it). Megumi is the one ranged ally: he holds 220-300 away
+and cycles Nue, Rabbit Escape (staggers) and Max Elephant (a telegraphed splash), all physical, and
+`spreadAllies()` keeps allies from stacking. Toji has no close-range swipe and never backs off. Obito takes the spear, which he uses in
 the final fight's third phase. Between Sukuna and the final chapter is a One
 Piece arc: the Sunny (`ship` map), a Marine ambush on the `cove` map with Luffy, Zoro and Sanji as allies
 (their specials are in `updateAlly()`), the Kabuto boss (`kabutoThink`; hitting him mid-heal stops the

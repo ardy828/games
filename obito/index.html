@@ -274,8 +274,8 @@ const LOOK={
   Sukuna:{skin:'#f0c9a2',hair:'#f29bb0',outfit:'#e8e2d4',accent:'#2a2a2a',style:'spiky',eyes:'sukuna'},
   Ninja:{skin:'#e0b896',hair:'#2a2a2a',outfit:'#4a4f5a',band:'#5b5f6a',style:'flat',mask:'cloth',slash:true},
   Thrower:{skin:'#d8ae88',hair:'#3a2a1a',outfit:'#5a4a3a',band:'#5b5f6a',style:'messy',mask:'cloth',slash:true},
-  Maki:{skin:'#efd2b8',hair:'#2f4a36',outfit:'#1b1e2c',accent:'#3a3a48',style:'flat',glasses:true},
-  Toji:{skin:'#e8c4a0',hair:'#16141c',outfit:'#22222a',accent:'#e8e2d4',style:'messy',mouthScar:true},
+  Maki:{skin:'#efd2b8',hair:'#2f4a36',outfit:'#1b1e2c',accent:'#3a3a48',style:'flat',glasses:true,pony:true},
+  Toji:{skin:'#e8c4a0',hair:'#16141c',outfit:'#22222a',accent:'#e8e2d4',style:'bangs',mouthScar:true},
   'Granny Ogami':{skin:'#e6c6a6',hair:'#d4d4da',outfit:'#6a5a7a',accent:'#a89060',style:'bob'},
   Luffy:{skin:'#f0c9a2',hair:'#16141c',outfit:'#d8262f',accent:'#e8c040',style:'messy',hat:'straw',scar:true},
   Zoro:{skin:'#e2b892',hair:'#4fa456',outfit:'#ecebe4',accent:'#3d8a57',style:'flat'},
@@ -379,11 +379,15 @@ function drawFace(o,fx){
   if(o.eyes==='sukuna'){eye(-4+fx,-7,'sukuna',1.1);eye(4+fx,-7,'sukuna',1.1);g.strokeStyle='#2b1414';g.lineWidth=1.1;g.beginPath();g.moveTo(-9+fx,-9);g.lineTo(-6+fx,-5);g.moveTo(9+fx,-9);g.lineTo(6+fx,-5);g.moveTo(-3+fx,-19);g.lineTo(3+fx,-19);g.stroke()}
   if(o.whiskers){g.strokeStyle='rgba(70,35,15,.55)';g.lineWidth=.8;g.beginPath();for(const s of[-1,1])for(let i=0;i<3;i++){g.moveTo(s*5+fx,-7+i*1.6);g.lineTo(s*9+fx,-7.5+i*1.8)}g.stroke()}
   if(o.mask==='cloth'){g.fillStyle='#2b2d36';g.fillRect(-10,-9,20,7)}}
-function drawHair(o,back){
+function drawHair(o,back,fx=0){
   const s=o.style||'spiky';g.fillStyle=o.hair;
   if(back)circ(0,-15,11.6);else{g.beginPath();g.arc(0,-15,11.8,Math.PI*1.03,Math.PI*1.97);g.closePath();g.fill()}
   if(s==='spiky'||s==='white'||s==='messy'){const n=s==='white'?8:7,L=s==='white'?21:18,v=[0,3,-2,4,-1,3,-3,2];
     for(let i=0;i<n;i++){const a=Math.PI*1.04+i/(n-1)*Math.PI*.92,len=L+(s==='messy'?v[i]:0);g.beginPath();g.moveTo(Math.cos(a-.3)*10,-15+Math.sin(a-.3)*10);g.lineTo(Math.cos(a)*len,-15+Math.sin(a)*len);g.lineTo(Math.cos(a+.3)*10,-15+Math.sin(a+.3)*10);g.fill()}}
+  if(s==='bangs'){for(let i=0;i<5;i++){const a=Math.PI*1.12+i/4*Math.PI*.76;g.beginPath();g.moveTo(Math.cos(a-.3)*10,-15+Math.sin(a-.3)*10);g.lineTo(Math.cos(a)*15.5,-15+Math.sin(a)*15.5);g.lineTo(Math.cos(a+.3)*10,-15+Math.sin(a+.3)*10);g.fill()}
+    if(back){for(let x=-8;x<=8;x+=4){g.beginPath();g.moveTo(x-2.6,-7);g.lineTo(x,-1.5);g.lineTo(x+2.6,-7);g.fill()}}
+    else{const o2=fx*.5;for(const x of[-8.5,-5,-1.5,2,5.5,9]){g.beginPath();g.moveTo(x+o2-3,-21);g.lineTo(x+o2+.5,-13.6);g.lineTo(x+o2+3,-21);g.fill()}
+      for(const d of[-1,1]){g.beginPath();g.moveTo(d*8.5,-19);g.lineTo(d*11.6,-8.5);g.lineTo(d*12,-18);g.fill()}}}
   if(back&&s==='bob'){ell(-9.5,-11,4,8);ell(9.5,-11,4,8)}
   if(back&&s==='long'){ell(-9.5,-6,4,13);ell(9.5,-6,4,13);ell(0,-4,10,12)}}
 // Side locks for the bob and long styles, seen from the front. They turn with the head: the lock on the
@@ -405,12 +409,14 @@ function drawPerson(x,y,o){
   if(o.accent){g.fillStyle=o.accent;g.fillRect(-10,3,20,3)}
   g.fillStyle=body;ell(-11,2+step*.3,4,6);ell(11,2-step*.3,4,6);
   g.fillStyle=o.skin;circ(-11,7+step*.3,3);circ(11,7-step*.3,3);
+  if(o.pony&&Math.sin(f)>=-.5){const px=-clamp(Math.cos(f),-1,1)*3.5;g.fillStyle=o.hair;ell(-px*.6,-26.5,4.4,3.8);ell(-px*2.6,-15,3.6,9.5)}
   g.fillStyle=o.skin;circ(0,-14,11);
   const back=Math.sin(f)<-.5,fx=clamp(Math.cos(f),-1,1)*3.5;
   const late=o.mask==='spiral'; // the spiral mask sits over the hair, the rest under it
   if(!back)drawLocks(o,fx);
   if(!back&&!late)drawFace(o,fx);
-  drawHair(o,back);
+  drawHair(o,back,fx);
+  if(o.pony&&back){g.fillStyle=o.hair;ell(0,-10,4,10.5);ell(0,-26,4.4,3.8);g.fillStyle='#c8303a';g.fillRect(-3,-23,6,2.4)}
   if(!back&&late)drawFace(o,fx);
   if(o.band){g.fillStyle=o.band;g.fillRect(-11,-21,22,4.5);
     if(back){g.fillRect(-2,-19,4,9)}
@@ -686,7 +692,7 @@ function makeStage(mapId,opts={}){
   st.after=(t,fn)=>st.timers.push({t,fn});
   return st}
 function makePlayer(x,y){const mh=(has('vit')?150:100)*easy('hp'),mc=100*easy('ch');return{x,y,r:12,hp:mh,maxHp:mh,ch:mc,maxCh:mc,facing:-Math.PI/2,walk:0,atkCd:0,atkAnim:0,atkA:0,dash:0,dashA:0,dashCd:0,rush:0,rushA:0,rushHit:null,inv:0,flash:0,kbx:0,kby:0,cds:{k:0,l:0,i:0},cdMax:{k:1,l:1,i:1},bf:null,healing:false}}
-function makeAlly(kind,x,y){return{ally:kind,x,y,r:12,look:LOOK[kind==='clone'?'Naruto':kind],facing:Math.PI/2,walk:0,cd:0,sp:3,life:kind==='clone'?6:Infinity,kbx:0,kby:0}}
+function makeAlly(kind,x,y){return{ally:kind,x,y,r:12,strafe:1,look:LOOK[kind==='clone'?'Naruto':kind],facing:Math.PI/2,walk:0,cd:0,sp:3,life:kind==='clone'?6:Infinity,kbx:0,kby:0}}
 function freeSpot(st,x0,x1,y0,y1,r=16){for(let i=0;i<30;i++){const x=rand(x0,x1),y=rand(y0,y1);if(!st.walls.some(w=>x>w.x-r&&x<w.x+w.w+r&&y>w.y-r&&y<w.y+w.h+r))return[x,y]}return[(x0+x1)/2,(y0+y1)/2]}
 function spawn(st,type,x,y,extra={}){const T=ETYPES[type];const e={type,x,y,r:T.r,hp:T.hp,maxHp:T.hp,spd:T.spd,ai:T.ai,dmg:T.dmg,look:T.look,draw:T.draw,heavy:T.heavy,shotKind:T.shotKind,curse:T.curse,cd:rand(.6,1.5),state:'idle',st:0,kbx:0,kby:0,facing:Math.PI/2,walk:0,flash:0,stun:0,burn:0,strafe:1,...extra};if(extra.hp&&!extra.maxHp)e.maxHp=extra.hp;st.enemies.push(e);puff(x,y,10,'rgba(200,200,210,.6)',100,.5,6);return e}
 function collideWalls(st,e){const r=e.r;e.x=clamp(e.x,r,st.w-r);e.y=clamp(e.y,r,st.h-r);
@@ -805,6 +811,8 @@ function updateEnemy(st,e,dt){
   if(e.think)e.think(st,e,dt);else AI[e.ai](st,e,dt);
   if(!e.fly)collideWalls(st,e)}
 function separate(st){const L=st.enemies.filter(e=>!e.dead&&!e.fly);for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const a=L[i],b=L[j],d=D(a,b),m=a.r+b.r;if(d<m&&d>0){const push=(m-d)/2,ux=(b.x-a.x)/d,uy=(b.y-a.y)/d;if(!a.boss){a.x-=ux*push;a.y-=uy*push}if(!b.boss){b.x+=ux*push;b.y+=uy*push}}}}
+// Allies push apart so two of them chasing one target never stand in the same spot.
+function spreadAllies(st){const L=st.allies;for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const a=L[i],b=L[j],d=D(a,b),m=30;if(d<m){const ux=d>0?(b.x-a.x)/d:1,uy=d>0?(b.y-a.y)/d:0,push=(m-d)/2;a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push}}}
 function updateAlly(st,a,dt){
   if(a.life!==Infinity){a.life-=dt;if(a.life<=0){a.dead=true;puff(a.x,a.y-8,14,'#eee',90,.5,8);return}}
   a.cd-=dt;a.sp-=dt;const p=st.player;let tgt=null,bd=520;
@@ -822,10 +830,16 @@ function updateAlly(st,a,dt){
         a.x=ex;a.y=ey;spark(tgt.x,tgt.y-8,14,'#e8fff0',380,.3,16);floatText(a.x,a.y-36,'Oni Giri!','#7fd07a',14);SND.slash()}}
       else if(a.ally==='Sanji'){if(d>90)a.sp=.5;else{for(const e of st.enemies)if(!e.dead&&!e.fake&&!e.invuln&&D(e,a)<90)hurtEnemy(st,e,18,{a:A(a,e),kb:300,burn:true,melee:true});
         puff(a.x,a.y-6,26,'#ff7a2f',220,.5,6,0,true);floatText(a.x,a.y-36,'Diable Jambe!','#f2d24b',14);SND.fire()}}
-      else if(a.ally==='Megumi'){if(d>360)a.sp=.5;else{for(const i of[-1,1])shot(st,{x:a.x,y:a.y-4,a:ang+i*.18,spd:430,r:12,dmg:18,team:'p',kind:'dog',white:i>0,life:.8,kb:300,pierce:true});floatText(a.x,a.y-36,'Divine Dogs!','#9fb6d9',14);SND.dash()}}
+      else if(a.ally==='Megumi'){if(d>420)a.sp=.5;else{a.sp=2.6;const t=['nue','rabbit','elephant'][a.tech=((a.tech??-1)+1)%3],tx=tgt.x,ty=tgt.y;
+        if(t==='nue'){shot(st,{x:a.x,y:a.y-20,a:ang,spd:480,r:14,dmg:20,team:'p',kind:'nue',life:1,kb:220,melee:true});floatText(a.x,a.y-36,'Nue!','#9fb6d9',14);SND.zap()}
+        else if(t==='rabbit'){floatText(a.x,a.y-36,'Rabbit Escape!','#e8e6f0',14);for(let k=0;k<6;k++)st.after(k*.12,()=>puff(tx+rand(-40,40),ty+rand(-30,30),4,'#f4f2fa',90,.6,4));
+          if(hurtEnemy(st,tgt,6,{a:ang,melee:true})&&!tgt.dead){tgt.stun=Math.max(tgt.stun,tgt.boss?1:1.6);floatText(tgt.x,tgt.y-56,'Distracted!','#e8e6f0',14)}SND.dash()}
+        else{floatText(a.x,a.y-36,'Max Elephant!','#5fb0ff',14);hz(st,{shape:'circle',x:tx,y:ty,r:85,warn:.85,dmg:0,col:'#5fb0ff',onFire:()=>{
+          for(const e of st.enemies)if(!e.dead&&!e.fake&&Math.hypot(e.x-tx,e.y-ty)<85+e.r)hurtEnemy(st,e,40,{a:Math.atan2(e.y-ty,e.x-tx),kb:420,melee:true});puff(tx,ty,40,'#7fc4ff',260,.8,7,0,true);shake=Math.max(shake,12);SND.boom()}})}}}
       else if(d<70){hurtEnemy(st,tgt,14,{a:ang,kb:120,melee:true});st.after(.15,()=>{if(!tgt.dead){hurtEnemy(st,tgt,16,{a:ang,kb:320,melee:true});spark(tgt.x,tgt.y-8,12,'#6fb8ff',300,.3,12)}});floatText(a.x,a.y-36,'Divergent Fist!','#ff9fb8',14)}
       else a.sp=.5}
-    if(d>tgt.r+26){a.x+=Math.cos(ang)*205*dt;a.y+=Math.sin(ang)*205*dt;a.walk+=dt*13}
+    if(a.ally==='Megumi'){const mv=d>300?1:d<220?-1:0;if(Math.random()<dt*.5)a.strafe*=-1;a.x+=(Math.cos(ang)*mv+Math.cos(ang+Math.PI/2)*a.strafe*.5)*190*dt;a.y+=(Math.sin(ang)*mv+Math.sin(ang+Math.PI/2)*a.strafe*.5)*190*dt;a.walk+=dt*12}
+    else if(d>tgt.r+26){a.x+=Math.cos(ang)*205*dt;a.y+=Math.sin(ang)*205*dt;a.walk+=dt*13}
     else if(a.cd<=0){a.cd=.5;hurtEnemy(st,tgt,(a.ally==='clone'?5:8)*(tgt.boss?.4:1),{a:ang,kb:100,melee:true});spark(a.x+Math.cos(ang)*16,a.y-6+Math.sin(ang)*16,4,'#fff',200,.15,8,ang,1)}}
   else{const d=D(a,p);if(d>70){const ang=A(a,p);a.facing=ang;a.x+=Math.cos(ang)*215*dt;a.y+=Math.sin(ang)*215*dt;a.walk+=dt*13}}
   collideWalls(st,a)}
@@ -837,7 +851,7 @@ function updateShots(st,dt){const p=st.player;
     else if(s.kind==='water'&&Math.random()<.5)puff(s.x,s.y,1,'#9fdcff',20,.3,3,0,true);
     if(s.t>=s.life){s.dead=true;if(s.explode)boom(st,s);continue}
     if(hitsWall(st,s.x,s.y)){s.dead=true;if(s.explode)boom(st,s);else puff(s.x,s.y,4,'#ccc',60,.2,3);continue}
-    if(s.team==='p'){for(const e of st.enemies){if(e.dead||s.hit.has(e))continue;if(Math.hypot(e.x-s.x,e.y-6-s.y)<e.r+s.r){if(s.explode){s.dead=true;boom(st,s);break}hurtEnemy(st,e,s.dmg,{a:Math.atan2(s.vy,s.vx),kb:s.kb||120,burn:s.burn});s.hit.add(e);if(!s.pierce){s.dead=true;break}}}}
+    if(s.team==='p'){for(const e of st.enemies){if(e.dead||s.hit.has(e))continue;if(Math.hypot(e.x-s.x,e.y-6-s.y)<e.r+s.r){if(s.explode){s.dead=true;boom(st,s);break}hurtEnemy(st,e,s.dmg,{a:Math.atan2(s.vy,s.vx),kb:s.kb||120,burn:s.burn,melee:s.melee});s.hit.add(e);if(!s.pierce){s.dead=true;break}}}}
     else{for(const r of st.rocks)if(Math.hypot(r.x-s.x,r.y-s.y)<r.r+s.r){s.dead=true;puff(s.x,s.y,6,'#c9a070',80,.3,4)}
       if(!s.dead&&Math.hypot(p.x-s.x,p.y-4-s.y)<p.r+s.r*.8){if(hurtPlayer(st,s.dmg,s)&&!s.pierce)s.dead=true}}}}
 function insideHz(p,h){if(h.shape==='circle')return Math.hypot(p.x-h.x,p.y-h.y)<h.r+p.r*.5;const dx=p.x-h.x,dy=p.y-h.y,c=Math.cos(h.a),s=Math.sin(h.a),along=dx*c+dy*s,perp=Math.abs(-dx*s+dy*c);return along>=-p.r&&along<=h.len+p.r&&perp<=h.w/2+p.r*.5}
@@ -859,7 +873,7 @@ function stageUpdate(st,dt){
   updatePlayer(st,p,dt,wdt);
   for(const a of st.allies)updateAlly(st,a,wdt);
   for(const e of st.enemies)updateEnemy(st,e,wdt);
-  separate(st);updateShots(st,wdt);updateHazards(st,wdt);
+  separate(st);spreadAllies(st);updateShots(st,wdt);updateHazards(st,wdt);
   for(const r of st.rocks){r.life-=wdt;r.rise=Math.min(1,r.rise+wdt*6)}
   for(const k of st.pickups)if(!k.taken&&D(k,p)<30){k.taken=true;k.take()}
   for(const tm of st.timers.slice()){tm.t-=wdt;if(tm.t<=0&&!tm.done){tm.done=true;tm.fn()}}
@@ -908,9 +922,11 @@ function drawShots(st){g.save();for(const s of st.shots){const a=Math.atan2(s.vy
     case'rod':g.globalCompositeOperation='source-over';g.strokeStyle='#15121c';g.lineWidth=4;g.beginPath();g.moveTo(s.x,s.y);g.lineTo(s.x-Math.cos(a)*22,s.y-Math.sin(a)*22);g.stroke();g.strokeStyle='#b9a3e8';g.lineWidth=1;g.stroke();break;
     case'blue':glow(s.x,s.y,s.r*2.4,'rgba(60,120,255,.85)');g.globalCompositeOperation='source-over';g.fillStyle='#0a0a30';circ(s.x,s.y,s.r*.45);break;
     case'spear':g.globalCompositeOperation='source-over';g.save();g.translate(s.x,s.y);g.rotate(a+Math.PI/2+.7);drawItem('spear',0,0,0,.75);g.restore();break;
-    case'dog':{g.globalCompositeOperation='source-over';const run=Math.sin(s.t*30)*2,c=s.white?'#e8e6f0':'#1a1a22';g.save();g.translate(s.x,s.y);g.rotate(a);g.fillStyle=c;ell(-2,0,12,6.5);ell(10,0,6.5,5);
-      g.beginPath();g.moveTo(9,-4);g.lineTo(12,-9);g.lineTo(13,-3);g.moveTo(9,4);g.lineTo(12,9);g.lineTo(13,3);g.fill();g.fillRect(-10+run,-8,3,3);g.fillRect(-10-run,5,3,3);g.fillRect(4-run,-8,3,3);g.fillRect(4+run,5,3,3);
-      g.strokeStyle=c;g.lineWidth=3;g.beginPath();g.moveTo(-12,0);g.lineTo(-19,run);g.stroke();g.fillStyle=s.white?'#3a3a48':'#e8e6f0';circ(13,-2,1.1);circ(13,2,1.1);g.restore();break}
+    // Nue: Megumi's owl-masked bird, wings spread, crackling as it dives
+    case'nue':{g.save();g.translate(s.x,s.y);g.rotate(a);glow(0,0,26,'rgba(140,190,255,.45)');g.globalCompositeOperation='source-over';const fl=Math.sin(s.t*40)*3;
+      g.fillStyle='#1c1c26';g.beginPath();g.moveTo(4,0);g.lineTo(-10,-20-fl);g.lineTo(-4,-4);g.lineTo(-14,0);g.lineTo(-4,4);g.lineTo(-10,20+fl);g.closePath();g.fill();
+      ell(2,0,8,5);g.fillStyle='#e8e6f0';ell(7,0,4,3.6);g.fillStyle='#1c1c26';circ(8,-1.4,.9);circ(8,1.4,.9);g.restore();
+      if(Math.random()<.5)spark(s.x,s.y,1,'#cfe8ff',160,.15,8);break}
     case'airblade':g.strokeStyle='rgba(215,232,255,.9)';g.lineWidth=5;g.beginPath();g.arc(s.x-Math.cos(a)*12,s.y-Math.sin(a)*12,s.r,a-1.1,a+1.1);g.stroke();break;
     case'bullet':g.globalCompositeOperation='source-over';g.strokeStyle='#ffe08a';g.lineWidth=3;g.beginPath();g.moveTo(s.x,s.y);g.lineTo(s.x-Math.cos(a)*10,s.y-Math.sin(a)*10);g.stroke();break;
     // Luffy's rubber arm stretches from wherever he is now to the fist
@@ -1275,14 +1291,13 @@ function tojiThink(st,b,dt){
   const p=st.player,ph=b.hp/b.maxHp>.5?1:2;
   if(ph!==b.phase){b.phase=ph;b.timer=.8;banner('Toji gets serious','Faster. Much faster.','#e8e4f0',2)}
   if(b.nullify>0)b.nullify-=dt;
-  if(b.busy>0)b.busy-=dt;else{const d=D(b,p),a=A(b,p);b.facing=a;const mv=d>200?1:d<120?-1:0,sp=ph>1?230:190;if(Math.random()<dt*.6)b.strafe*=-1;b.x+=(Math.cos(a)*mv+Math.cos(a+Math.PI/2)*b.strafe*.7)*sp*dt;b.y+=(Math.sin(a)*mv+Math.sin(a+Math.PI/2)*b.strafe*.7)*sp*dt;b.walk+=dt*14}
-  b.swipeCd-=dt;if(D(b,p)<80&&b.swipeCd<=0){b.swipeCd=1.3;hz(st,{shape:'circle',x:b.x,y:b.y,r:82,warn:.36,dmg:15,col:'#e8e4f0'})}
+  if(b.busy>0)b.busy-=dt;else{const d=D(b,p),a=A(b,p);b.facing=a;const mv=d>180?1:0,sp=ph>1?230:190;/* no close-range swipe and no backing off, so getting in close lets you hit him */if(Math.random()<dt*.6)b.strafe*=-1;b.x+=(Math.cos(a)*mv+Math.cos(a+Math.PI/2)*b.strafe*.7)*sp*dt;b.y+=(Math.sin(a)*mv+Math.sin(a+Math.PI/2)*b.strafe*.7)*sp*dt;b.walk+=dt*14}
   b.timer-=dt;if(b.timer>0||b.busy>0)return;
   TPAT[pick(ph===1?['lunge','knives','spear','lunge']:['lunge','chain','spear','knives','lunge'])](st,b);b.timer=ph===1?1.4:1.05}
 function tojiFight(){
   const st=makeStage('station',{start:[600,260]});
   st.allies.push(makeAlly('Yuji',530,250),makeAlly('Megumi',680,250));
-  const b=spawn(st,'boss',606,470,{name:'Toji',sub:'Sorcerer Killer · Heavenly Restriction',hp:950,maxHp:950,look:LOOK.Toji,think:tojiThink,timer:1.4,phase:1,swipeCd:0,boss:true,holdSpear:true,onDie:bossDie});
+  const b=spawn(st,'boss',606,470,{name:'Toji',sub:'Sorcerer Killer · Heavenly Restriction',hp:950,maxHp:950,look:LOOK.Toji,think:tojiThink,timer:1.4,phase:1,boss:true,holdSpear:true,onDie:bossDie});
   st.boss=b;banner('Toji Fushiguro','The Sorcerer Killer','#e8e4f0',2.6);
   st.drawUnder=()=>drawTrain(100,true);
   st.drawOver=()=>{if(b.nullify>0&&!b.dead){g.save();g.globalCompositeOperation='lighter';g.strokeStyle=`rgba(200,185,255,${.45+.25*Math.sin(st.t*12)})`;g.lineWidth=3;g.beginPath();g.arc(b.x,b.y-8,30,0,TAU);g.stroke();glow(b.x,b.y-8,40,'rgba(200,185,255,.25)');g.restore()}};
