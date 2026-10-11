@@ -24,7 +24,9 @@ The canvas is not a fixed 960x540 bitmap: `fitCanvas()` (on resize and a `Resize
 backing store to the displayed size times `devicePixelRatio`, capped at 3x, and sets `DPR` to that
 scale; all drawing stays in 960x540 logical units through `setTransform(DPR)`. Map grounds are cached
 once at the sharpest scale within a 6M-pixel budget. `sharingan()` draws the three-tomoe eye (the
-tomoe spin; below about 5 screen pixels it is just iris, rim and pupil). Easy mode is `save.easy`, picked
+tomoe spin; below about 5 screen pixels, which is the in-game eye on most screens, the tomoe become
+three turning dots, and below about 1.6 it is just iris, rim and pupil). Sharingan eyes draw a little
+larger than plain ones, and the HUD shows a big one beside the SHARINGAN label while it is held. Easy mode is `save.easy`, picked
 in the creator; `easy(k)` returns the `EASY` multiplier or 1, applied in `makePlayer()` (health and
 chakra), the chakra regen line in `updatePlayer()` and `hurtPlayer()` (damage taken).
 The story is the `ORDER` list (one `startChapter()` entry and one debug-menu `DBG` row per chapter, in

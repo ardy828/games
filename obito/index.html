@@ -323,15 +323,17 @@ function wrap(text,maxW){const words=text.split(' '),lines=[];let cur='';for(con
 
 /* ---------------- character art ---------------- */
 // The three-tomoe Sharingan: red iris with a dark rim, the thin inner ring, a black pupil and three
-// comma-shaped tomoe on the ring that turn slowly, tails trailing. Under about 5 screen pixels the detail would only
-// blur, so it drops to the iris, rim and pupil.
+// comma-shaped tomoe on the ring that turn slowly, tails trailing. Under about 5 screen pixels (the in-game eye on
+// most screens) the tails would only blur, so the tomoe become three dots on the ring, still turning; under about
+// 1.6 it is just the iris, rim and pupil.
 function sharingan(x,y,R){
   const T=g.getTransform(),px=R*Math.hypot(T.a,T.b);
   const gr=g.createRadialGradient(x-R*.2,y-R*.25,R*.1,x,y,R);gr.addColorStop(0,'#ff4a4f');gr.addColorStop(.7,'#d8262f');gr.addColorStop(1,'#8e1016');
   g.fillStyle=gr;circ(x,y,R);
   g.strokeStyle='#1a0507';g.lineWidth=R*.16;g.beginPath();g.arc(x,y,R-R*.08,0,TAU);g.stroke();
   g.fillStyle='#120406';
-  if(px<5){circ(x,y,R*.35);return}
+  if(px<1.6){circ(x,y,R*.35);return}
+  if(px<5){circ(x,y,R*.22);const a0=performance.now()/1000*1.1;for(let i=0;i<3;i++){const th=a0+i*TAU/3;circ(x+Math.cos(th)*R*.58,y+Math.sin(th)*R*.58,R*.2)}return}
   g.strokeStyle='rgba(26,5,7,.75)';g.lineWidth=R*.06;g.beginPath();g.arc(x,y,R*.55,0,TAU);g.stroke();
   circ(x,y,R*.2);
   const rr=R*.55,hr=R*.16,a0=performance.now()/1000*1.1;
@@ -364,7 +366,7 @@ function drawFace(o,fx){
     g.fillStyle='#120a0a';ell(ex,ey,2.9,2.6);eye(ex,ey,o.eyes||'rinnegan',1.5);
     g.fillStyle='rgba(255,255,255,.55)';circ(ex+.8,ey-.8,.45);return}
   if(o.blindfold){g.fillStyle='#121218';g.fillRect(-11,-17,22,6)}
-  else{if(o.sage){g.fillStyle='#6a3a8a';ell(-4.5+fx,-11,4,3);ell(4.5+fx,-11,4,3)}eye(-4+fx,-11,o.eyes,2);eye(4+fx,-11,o.eyes,2)}
+  else{if(o.sage){g.fillStyle='#6a3a8a';ell(-4.5+fx,-11,4,3);ell(4.5+fx,-11,4,3)}const er=o.eyes==='sharingan'?2.6:2;eye(-4+fx,-11,o.eyes,er);eye(4+fx,-11,o.eyes,er)}
   if(o.glasses){g.strokeStyle='#cfd2e0';g.lineWidth=.8;g.beginPath();g.arc(-4+fx,-11,3.2,0,TAU);g.moveTo(7.2+fx,-11);g.arc(4+fx,-11,3.2,0,TAU);g.moveTo(-.8+fx,-11);g.lineTo(.8+fx,-11);g.stroke()}
   if(o.scar){g.strokeStyle='#a0402a';g.lineWidth=.8;g.beginPath();g.moveTo(-6.5+fx,-7.8);g.lineTo(-2+fx,-8.4);g.moveTo(-5.2+fx,-9.2);g.lineTo(-5.2+fx,-7);g.moveTo(-3.6+fx,-9.4);g.lineTo(-3.6+fx,-7.2);g.stroke()}
   if(o.nose){g.fillStyle=o.skin;g.strokeStyle='rgba(90,50,30,.6)';g.lineWidth=.7;rr(-1.2+fx*1.3,-10,2.4,9,1.2);g.fill();g.stroke()}
@@ -892,7 +894,7 @@ function drawHud(st){
   const p=st.player;
   g.fillStyle='rgba(13,10,22,.8)';rr(14,14,264,68,10);g.fill();
   g.font=`15px ${FD}`;g.fillStyle='#f1ecff';g.fillText(save.name,26,36);
-  if(st.slow){g.font=`700 11px ${FB}`;g.fillStyle='#ff3344';g.fillText('SHARINGAN',190,35)}
+  if(st.slow){g.font=`700 11px ${FB}`;g.fillStyle='#ff3344';g.fillText('SHARINGAN',176,35);sharingan(260,31,9)}
   const bar=(x,y,w,h,k,c,bg)=>{g.fillStyle=bg;rr(x,y,w,h,h/2);g.fill();if(k>0){g.fillStyle=c;rr(x,y,Math.max(h,w*clamp(k,0,1)),h,h/2);g.fill()}};
   bar(26,45,240,11,p.hp/p.maxHp,'#e2343a','#3a1418');bar(26,63,240,8,p.ch/p.maxCh,'#47b2ff','#132a40');
   g.font=`700 9px ${FB}`;g.fillStyle='rgba(255,255,255,.8)';g.fillText(`${Math.ceil(p.hp)} HP`,30,54);
