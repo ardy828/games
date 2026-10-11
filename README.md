@@ -130,7 +130,8 @@ always makes the same world.
 
 A story-driven ninja action game. Obito is stealing power from other worlds to become the perfect
 villain; you are a normal ninja from the Leaf who has to stop him, chapter by chapter, through
-fights against bosses pulled from other worlds and a final showdown with Obito himself.
+fights against bosses pulled from other worlds (Jujutsu Kaisen's Sukuna, and a One Piece arc with
+Luffy's crew, a Marine ambush and Kabuto) and a final showdown with Obito himself.
 
 - **Controls** — WASD or the arrow keys to move, `J` to strike, `K` and `L` for your two jutsu,
   Space to dash and to advance dialogue, Shift, `R` and `I` for powers unlocked along the way,

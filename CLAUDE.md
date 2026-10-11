@@ -10,7 +10,7 @@ when the player presses CO-OP; solo play never loads it. `scrapline/index.html` 
 (~970 lines) each hold their own markup, CSS and JS. The repo root `index.html` is a landing page
 linking to them; `README.md` documents controls.
 
-`obito/index.html` (Obito's Multiverse, ~1150 lines) is another single-file game: modern syntax, canvas
+`obito/index.html` (Obito's Multiverse, ~1650 lines) is another single-file game: modern syntax, canvas
 plus DOM menus, Google Fonts, progress in `localStorage` (`obito-multiverse-save-v1`). It was written
 as a Claude Artifact, so it guards its `window.claude.hot` calls and runs unchanged as a static page.
 Touch support is one section after the keyboard input: `TOUCH` (set via the `tui` body class, since
@@ -27,6 +27,12 @@ once at the sharpest scale within a 6M-pixel budget. `sharingan()` draws the thr
 tomoe spin; below about 5 screen pixels it is just iris, rim and pupil). Easy mode is `save.easy`, picked
 in the creator; `easy(k)` returns the `EASY` multiplier or 1, applied in `makePlayer()` (health and
 chakra), the chakra regen line in `updatePlayer()` and `hurtPlayer()` (damage taken).
+The story is the `ORDER` list (one `startChapter()` entry and one debug-menu `DBG` row per chapter, in
+the same order; `grantFor()` unlocks powers by index). Between Sukuna and the final chapter is a One
+Piece arc: the Sunny (`ship` map), a Marine ambush on the `cove` map with Luffy, Zoro and Sanji as allies
+(their specials are in `updateAlly()`), the Kabuto boss (`kabutoThink`; hitting him mid-heal stops the
+Mystical Palm) and the Kaido cutscene that ends in Luffy's throw. A cutscene actor with `rot` is drawn
+lying down.
 
 `flatcraft/index.html` is the other exception: it loads Three.js r128 (the last UMD build) from cdnjs at
 boot (and carries its texture art inline as one base64 PNG strip), since a voxel renderer without WebGL helpers is not worth hand-rolling. It also injects the same

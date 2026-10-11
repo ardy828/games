@@ -273,10 +273,25 @@ const LOOK={
   Stranger:{skin:'#e2b892',hair:'#5a3d26',outfit:'#6c8aa8',style:'flat'},
   Sukuna:{skin:'#f0c9a2',hair:'#f29bb0',outfit:'#e8e2d4',accent:'#2a2a2a',style:'spiky',eyes:'sukuna'},
   Ninja:{skin:'#e0b896',hair:'#2a2a2a',outfit:'#4a4f5a',band:'#5b5f6a',style:'flat',mask:'cloth',slash:true},
-  Thrower:{skin:'#d8ae88',hair:'#3a2a1a',outfit:'#5a4a3a',band:'#5b5f6a',style:'messy',mask:'cloth',slash:true}};
-const SPK={Naruto:'#ff9a3d',Sasuke:'#b58cff',Obito:'#c07bff',Gojo:'#8fd8ff',Yuji:'#ff9fb8',Megumi:'#9fb6d9',Nobara:'#ffb36b',Sukuna:'#ff4a5a',Stranger:'#cfd6e0'};
-const ORDER=['village','clash','portal','jjk','spirits','fingers','sukuna','rewards','final','obito','ending'];
-const CHNAME={village:'Ch. 1 · The Leaf Burns',clash:'Ch. 1 · The Masked Man',portal:'Ch. 2 · Through the Portal',jjk:'Ch. 3 · Jujutsu High',spirits:'Ch. 4 · Shibuya Night',fingers:'Ch. 5 · The King of Curses',sukuna:'Boss · Sukuna',rewards:'Ch. 5 · Lessons',final:'Final Chapter',obito:'Final Boss · Obito',ending:'Epilogue'};
+  Thrower:{skin:'#d8ae88',hair:'#3a2a1a',outfit:'#5a4a3a',band:'#5b5f6a',style:'messy',mask:'cloth',slash:true},
+  Luffy:{skin:'#f0c9a2',hair:'#16141c',outfit:'#d8262f',accent:'#e8c040',style:'messy',hat:'straw',scar:true},
+  Zoro:{skin:'#e2b892',hair:'#4fa456',outfit:'#ecebe4',accent:'#3d8a57',style:'flat'},
+  Nami:{skin:'#f3d0b0',hair:'#f08a2c',outfit:'#f2f2f6',accent:'#3a7fd0',style:'long'},
+  Sanji:{skin:'#f1d3b8',hair:'#f2d24b',outfit:'#1c1c26',accent:'#e8e2d4',style:'flat'},
+  Usopp:{skin:'#a8714a',hair:'#16141c',outfit:'#c9a86a',band:'#7a5a2a',style:'messy',nose:true},
+  Marine:{skin:'#e8c4a0',hair:'#3a2a1a',outfit:'#f2f2f6',accent:'#2d4ea0',style:'flat',hat:'marine'},
+  Rifle:{skin:'#d8ae88',hair:'#1a1a22',outfit:'#e6e8ee',accent:'#2d4ea0',style:'flat',hat:'marine'},
+  'Vice Admiral':{skin:'#e0b896',hair:'#d8d8e0',outfit:'#2d4ea0',cloak:'#f4f4f8',accent:'#d8b04a',style:'flat',hat:'marine'},
+  Kabuto:{skin:'#ead2b8',hair:'#c8c8d8',outfit:'#6a5a8a',cloak:'#3d3450',style:'long',glasses:true},
+  KabutoSage:{skin:'#ddd2c8',hair:'#c8c8d8',outfit:'#6a5a8a',cloak:'#3d3450',style:'long',eyes:'snake',sage:true},
+  Edo:{skin:'#b9b2ad',hair:'#3a3a3a',outfit:'#4a4f5a',band:'#5b5f6a',style:'flat',eyes:'edo',cracks:true,slash:true},
+  Kaido:{skin:'#e0a07a',hair:'#16141c',outfit:'#e8e2d4',cloak:'#5a3a8a',accent:'#c8a040',style:'long',horns:true},
+  Beast:{skin:'#d8ae88',hair:'#4a2f1f',outfit:'#3a2a2a',accent:'#7a1a1a',style:'messy',horns:true}};
+const SPK={Naruto:'#ff9a3d',Sasuke:'#b58cff',Obito:'#c07bff',Gojo:'#8fd8ff',Yuji:'#ff9fb8',Megumi:'#9fb6d9',Nobara:'#ffb36b',Sukuna:'#ff4a5a',Stranger:'#cfd6e0',
+  Luffy:'#ff5a4a',Zoro:'#7fd07a',Nami:'#ffa64a',Sanji:'#f2d24b',Usopp:'#d9b77a','Shanks?':'#ff6a5a','Den Den Mushi':'#c9e07a','Vice Admiral':'#8fb8ff',Kabuto:'#b8a8e0',Kaido:'#a98cff'};
+const ORDER=['village','clash','portal','jjk','spirits','fingers','sukuna','rewards','sea','marines','kabuto','sage','kaido','final','obito','ending'];
+const CHNAME={village:'Ch. 1 · The Leaf Burns',clash:'Ch. 1 · The Masked Man',portal:'Ch. 2 · Through the Portal',jjk:'Ch. 3 · Jujutsu High',spirits:'Ch. 4 · Shibuya Night',fingers:'Ch. 5 · The King of Curses',sukuna:'Boss · Sukuna',rewards:'Ch. 5 · Lessons',
+  sea:'Ch. 6 · The Grand Line',marines:'Ch. 6 · Rendezvous Island',kabuto:'Ch. 6 · The Snake in the Sand',sage:'Boss · Kabuto',kaido:'Ch. 7 · The Strongest Creature',final:'Final Chapter',obito:'Final Boss · Obito',ending:'Epilogue'};
 
 /* ---------------- save ---------------- */
 const SAVE_KEY='obito-multiverse-save-v1';
@@ -331,6 +346,8 @@ function eye(x,y,type,r){
   if(type==='sharingan'){sharingan(x,y,r+.6);return}
   else if(type==='rinnegan'){g.fillStyle='#bba6ea';circ(x,y,r+.6);g.strokeStyle='#4a3a7a';g.lineWidth=.6;g.beginPath();g.arc(x,y,r*.6,0,TAU);g.stroke();g.fillStyle='#2a1f45';circ(x,y,r*.25)}
   else if(type==='sukuna'){g.fillStyle='#d42a2a';circ(x,y,r)}
+  else if(type==='snake'){g.fillStyle='#e8c83a';circ(x,y,r+.4);g.fillStyle='#1a1008';ell(x,y,r*.22,r*.85)}
+  else if(type==='edo'){g.fillStyle='#141012';circ(x,y,r+.4);g.fillStyle='#d8cfc0';circ(x,y,r*.45)}
   else{g.fillStyle='#1a1420';circ(x,y,r*.85)}}
 function drawFace(o,fx){
   if(o.mask==='spiral'){
@@ -347,7 +364,11 @@ function drawFace(o,fx){
     g.fillStyle='#120a0a';ell(ex,ey,2.9,2.6);eye(ex,ey,o.eyes||'rinnegan',1.5);
     g.fillStyle='rgba(255,255,255,.55)';circ(ex+.8,ey-.8,.45);return}
   if(o.blindfold){g.fillStyle='#121218';g.fillRect(-11,-17,22,6)}
-  else{eye(-4+fx,-11,o.eyes,2);eye(4+fx,-11,o.eyes,2)}
+  else{if(o.sage){g.fillStyle='#6a3a8a';ell(-4.5+fx,-11,4,3);ell(4.5+fx,-11,4,3)}eye(-4+fx,-11,o.eyes,2);eye(4+fx,-11,o.eyes,2)}
+  if(o.glasses){g.strokeStyle='#cfd2e0';g.lineWidth=.8;g.beginPath();g.arc(-4+fx,-11,3.2,0,TAU);g.moveTo(7.2+fx,-11);g.arc(4+fx,-11,3.2,0,TAU);g.moveTo(-.8+fx,-11);g.lineTo(.8+fx,-11);g.stroke()}
+  if(o.scar){g.strokeStyle='#a0402a';g.lineWidth=.8;g.beginPath();g.moveTo(-6.5+fx,-7.8);g.lineTo(-2+fx,-8.4);g.moveTo(-5.2+fx,-9.2);g.lineTo(-5.2+fx,-7);g.moveTo(-3.6+fx,-9.4);g.lineTo(-3.6+fx,-7.2);g.stroke()}
+  if(o.nose){g.fillStyle=o.skin;g.strokeStyle='rgba(90,50,30,.6)';g.lineWidth=.7;rr(-1.2+fx*1.3,-10,2.4,9,1.2);g.fill();g.stroke()}
+  if(o.cracks){g.strokeStyle='rgba(60,50,50,.6)';g.lineWidth=.7;g.beginPath();g.moveTo(-9+fx,-18);g.lineTo(-6+fx,-15);g.lineTo(-7+fx,-12);g.moveTo(7+fx,-6);g.lineTo(5+fx,-9);g.lineTo(8+fx,-12);g.stroke()}
   if(o.eyes==='sukuna'){eye(-4+fx,-7,'sukuna',1.1);eye(4+fx,-7,'sukuna',1.1);g.strokeStyle='#2b1414';g.lineWidth=1.1;g.beginPath();g.moveTo(-9+fx,-9);g.lineTo(-6+fx,-5);g.moveTo(9+fx,-9);g.lineTo(6+fx,-5);g.moveTo(-3+fx,-19);g.lineTo(3+fx,-19);g.stroke()}
   if(o.whiskers){g.strokeStyle='rgba(70,35,15,.55)';g.lineWidth=.8;g.beginPath();for(const s of[-1,1])for(let i=0;i<3;i++){g.moveTo(s*5+fx,-7+i*1.6);g.lineTo(s*9+fx,-7.5+i*1.8)}g.stroke()}
   if(o.mask==='cloth'){g.fillStyle='#2b2d36';g.fillRect(-10,-9,20,7)}}
@@ -387,6 +408,9 @@ function drawPerson(x,y,o){
   if(o.band){g.fillStyle=o.band;g.fillRect(-11,-21,22,4.5);
     if(back){g.fillRect(-2,-19,4,9)}
     else{g.fillStyle='#cfd6e0';rr(-5+fx*.5,-21.5,10,5.5,1.5);g.fill();if(o.slash){g.strokeStyle='#333';g.lineWidth=1;g.beginPath();g.moveTo(-4+fx*.5,-19);g.lineTo(4+fx*.5,-19);g.stroke()}}}
+  if(o.horns){g.fillStyle='#ece2c6';g.strokeStyle='#a8987a';g.lineWidth=.8;for(const s of[-1,1]){g.beginPath();g.moveTo(s*5,-23);g.quadraticCurveTo(s*15,-29,s*13,-41);g.quadraticCurveTo(s*11,-30,s*9,-21);g.closePath();g.fill();g.stroke()}}
+  if(o.hat==='straw'){g.fillStyle='#e9c46a';ell(0,-21,17,5.5);g.strokeStyle='rgba(150,110,40,.6)';g.lineWidth=.7;g.beginPath();g.ellipse(0,-21,17,5.5,0,0,TAU);g.stroke();g.fillStyle='#ddb455';rr(-9.5,-32,19,12,5);g.fill();g.fillStyle='#c8303a';g.fillRect(-9.5,-24.5,19,3.2)}
+  else if(o.hat==='marine'){g.fillStyle='#f4f4f8';g.beginPath();g.arc(0,-19,11.8,Math.PI,0);g.closePath();g.fill();g.fillStyle='#24345e';g.fillRect(-11.8,-20.5,23.6,2.6);if(!back)ell(fx*.5,-18,8,2.6)}
   if(o.flash>0){g.globalCompositeOperation='lighter';g.globalAlpha=Math.min(1,o.flash*6);g.fillStyle='#fff';circ(0,-14,12);rr(-11,-6,22,20,6);g.fill()}
   g.restore()}
 function drawSpirit(e,t){
@@ -401,7 +425,27 @@ function drawSpirit(e,t){
     const ix=Math.cos(e.facing)*e.r*.38,iy=Math.sin(e.facing)*e.r*.38;g.fillStyle='#3f8a5a';circ(ix,iy,e.r*.45);g.fillStyle='#0a0a0a';ell(ix,iy,e.r*.12,e.r*.32)}
   else if(e.draw==='hand'){g.rotate(e.facing);g.fillStyle=fl?'#fff':'#8a6a7a';ell(0,0,e.r,e.r*.85);for(let i=0;i<4;i++){const yy=(i-1.5)*5.5;ell(e.r+6,yy,8,2.6)}ell(2,e.r*.9,6,2.6,.8);g.fillStyle='#2a1a22';for(let i=0;i<4;i++)circ(e.r+13,(i-1.5)*5.5,1.6);g.fillStyle='#f3efe6';circ(-2,0,4);g.fillStyle='#a01a2a';circ(-1,0,2)}
   else if(e.draw==='womb'){const p=1+.06*Math.sin(t*4);g.fillStyle=fl?'#fff':'#5a1f34';ell(0,-8,e.r*1.1*p,e.r*p);g.fillStyle='#7a2f4a';ell(0,-12,e.r*.8*p,e.r*.7*p);g.fillStyle='#1a060c';ell(0,-6,e.r*.45,e.r*.32);g.fillStyle='#efe6d8';for(let i=0;i<10;i++){const a=i/10*TAU;g.beginPath();g.moveTo(Math.cos(a)*e.r*.45,-6+Math.sin(a)*e.r*.32);g.lineTo(Math.cos(a)*e.r*.3,-6+Math.sin(a)*e.r*.2);g.lineTo(Math.cos(a+.2)*e.r*.45,-6+Math.sin(a+.2)*e.r*.32);g.fill()}g.fillStyle='#ff3b4a';circ(-12,-26,3);circ(12,-26,3);circ(0,-31,2.4)}
+  else if(e.draw==='snake'){const f=e.facing,wig=t*10+e.x*.05;g.strokeStyle=fl?'#fff':'#e9e6f0';g.lineCap='round';g.lineWidth=e.r*.85;g.beginPath();
+    for(let i=0;i<=12;i++){const k=i/12,d=k*e.r*3.2,side=Math.sin(wig-k*5)*e.r*.5*k,x=-Math.cos(f)*d-Math.sin(f)*side,y=(-Math.sin(f)*d+Math.cos(f)*side)*.7-5;i?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();
+    const hx=Math.cos(f)*5,hy=Math.sin(f)*3.5-5;g.fillStyle=fl?'#fff':'#f6f4fb';ell(hx,hy,e.r*.8,e.r*.62,f);
+    g.fillStyle='#e8c83a';circ(hx+Math.cos(f+.8)*5,hy+Math.sin(f+.8)*4,1.6);circ(hx+Math.cos(f-.8)*5,hy+Math.sin(f-.8)*4,1.6);
+    if(Math.sin(t*8+e.x)>0){g.strokeStyle='#d8262f';g.lineWidth=1.2;g.beginPath();g.moveTo(hx+Math.cos(f)*e.r*.8,hy+Math.sin(f)*e.r*.6);g.lineTo(hx+Math.cos(f)*(e.r*.8+7),hy+Math.sin(f)*(e.r*.6+5));g.stroke()}}
   g.restore()}
+// The Den Den Mushi: a snail with a phone dial on its shell; it shakes and opens its mouth while ringing.
+function drawSnail(x,y,t,ring){g.save();g.translate(x+(ring?Math.sin(t*60)*1.3:0),y);
+  g.fillStyle='rgba(0,0,0,.3)';ell(0,10,22,5);
+  g.fillStyle='#d9c27a';rr(-20,-2,40,12,6);g.fill();g.fillStyle='#e7d28a';ell(14,-6,8,9);
+  g.strokeStyle='#d9c27a';g.lineWidth=2.5;g.beginPath();g.moveTo(12,-12);g.lineTo(9,-22);g.moveTo(17,-12);g.lineTo(20,-22);g.stroke();
+  g.fillStyle='#fff';circ(9,-23,3);circ(20,-23,3);g.fillStyle='#111';circ(9.5,-23,1.4);circ(20.5,-23,1.4);
+  g.fillStyle='#3a2a1a';if(ring)ell(15,-2,3,2.4);else g.fillRect(12,-3,6,1.2);
+  g.fillStyle='#8a6a3a';circ(-5,-10,14);g.strokeStyle='#c9a070';g.lineWidth=1.4;g.beginPath();for(let a=0;a<TAU*2.2;a+=.2){const r=2+a*1.6;g.lineTo(-5+Math.cos(a)*r,-10+Math.sin(a)*r)}g.stroke();
+  g.fillStyle='#f4f0e6';circ(-5,-10,5);g.fillStyle='#333';for(let i=0;i<6;i++){const a=i/6*TAU;circ(-5+Math.cos(a)*3.2,-10+Math.sin(a)*3.2,.7)}
+  g.fillStyle='#1a1a22';rr(-18,-30,26,6,3);g.fill();g.strokeStyle='#1a1a22';g.lineWidth=1;g.beginPath();for(let i=0;i<=8;i++)g.lineTo(-18-Math.sin(i*1.6)*2.5,-24+i*2);g.stroke();
+  g.restore()}
+// White snakes coiled around someone standing at (x, y): three loops over the body and a head.
+function drawCoils(x,y,t){g.save();g.translate(x,y);g.strokeStyle='#efedf6';g.lineWidth=3.2;
+  for(let i=0;i<3;i++){g.beginPath();g.ellipse(0,6-i*7,13.5,4,Math.sin(t*3+i)*.08,0,Math.PI);g.stroke()}
+  const hy=-16+Math.sin(t*4+x)*2;g.fillStyle='#efedf6';ell(15,hy,4.5,3.2);g.fillStyle='#e8c83a';circ(16.5,hy-1,1.1);g.restore()}
 function drawDragon(b,t){
   for(let i=b.seg.length-1;i>=0;i--){const s=b.seg[i],k=1-i/b.seg.length,r=9+20*k;g.fillStyle=i%2?'#2f62b0':'#3a78c9';circ(s.x,s.y,r);g.fillStyle='rgba(191,224,255,.8)';ell(s.x,s.y+r*.35,r*.55,r*.3);g.fillStyle='#e9eef8';g.beginPath();g.moveTo(s.x-4,s.y-r+2);g.lineTo(s.x,s.y-r-8);g.lineTo(s.x+4,s.y-r+2);g.fill()}
   g.save();g.translate(b.x,b.y);g.rotate(b.facing);
@@ -431,6 +475,41 @@ function paintTunnel(t,cx,cy,hue=275){g.fillStyle='#07040d';g.fillRect(0,0,W,H);
   for(let i=0;i<34;i++){const r=(i*34+t*140)%1150,k=r/1150;g.strokeStyle=`hsla(${hue+(i*9)%80},85%,${45+k*20}%,${.08+k*.35})`;g.lineWidth=2+k*16;const a0=i*1.7+t*(i%2?.8:-.6);g.beginPath();g.arc(cx,cy,r+10,a0,a0+2.2+k);g.stroke()}
   for(let i=0;i<40;i++){const a=i*2.39996,d=(i*53+t*260)%700;g.strokeStyle=`hsla(${hue+30},90%,75%,${d/700*.5})`;g.lineWidth=1.5;g.beginPath();g.moveTo(cx+Math.cos(a)*d,cy+Math.sin(a)*d*.7);g.lineTo(cx+Math.cos(a)*(d*1.15+30),cy+Math.sin(a)*(d*1.15+30)*.7);g.stroke()}
   glow(cx,cy,170,`hsla(${hue},90%,70%,.55)`);g.restore()}
+// The Thousand Sunny from above: a lawn deck, two masts, Nami's tangerine trees and the lion figurehead at the bow.
+function shipHull(k){g.save();g.translate(490,270);g.scale(k,k);g.beginPath();g.moveTo(-390,-174);g.lineTo(210,-174);g.quadraticCurveTo(400,-160,415,0);g.quadraticCurveTo(400,160,210,174);g.lineTo(-390,174);g.quadraticCurveTo(-420,0,-390,-174);g.closePath();g.restore()}
+function paintShip(m){
+  const gr=g.createLinearGradient(0,0,0,m.h);gr.addColorStop(0,'#1f6aa8');gr.addColorStop(1,'#2a82c0');g.fillStyle=gr;g.fillRect(0,0,m.w,m.h);
+  const Rn=srand(71);for(let i=0;i<260;i++){g.fillStyle='rgba(255,255,255,.12)';g.fillRect(Rn()*m.w,Rn()*m.h,8+Rn()*14,2)}
+  g.save();g.translate(10,14);shipHull(1);g.fillStyle='rgba(0,20,40,.35)';g.fill();g.restore();
+  shipHull(1);g.fillStyle='#5e3820';g.fill();shipHull(.96);g.fillStyle='#8a5530';g.fill();shipHull(.92);g.fillStyle='#c99a62';g.fill();
+  g.save();shipHull(.92);g.clip();g.fillStyle='rgba(90,55,25,.28)';for(let y=100;y<450;y+=16)g.fillRect(0,y,m.w,2);for(let i=0;i<60;i++)g.fillRect(100+Rn()*800,100+Rn()*340,2,14);g.restore();
+  g.fillStyle='#4a8a30';rr(246,146,428,248,42);g.fill();g.fillStyle='#5ea33e';rr(252,152,416,236,38);g.fill();
+  for(let i=0;i<500;i++){g.fillStyle=Rn()<.5?'rgba(40,90,30,.45)':'rgba(170,220,120,.35)';g.fillRect(262+Rn()*396,160+Rn()*220,2,3)}
+  for(const[x,y]of[[150,150],[150,390]]){g.fillStyle='#4a3020';rr(x-22,y-14,44,28,6);g.fill();g.fillStyle='#3d7a32';circ(x,y,20);g.fillStyle='#4f9441';circ(x-5,y-5,13);g.fillStyle='#ff9a2a';for(let i=0;i<6;i++)circ(x+Math.cos(i*1.1)*12,y+Math.sin(i*1.1)*10,3)}
+  for(const[x,y,r]of[[720,270,20],[250,270,14]]){g.fillStyle='rgba(0,0,0,.25)';circ(x+4,y+5,r+2);g.fillStyle='#7a4a26';circ(x,y,r);g.fillStyle='#9a6a3a';circ(x,y,r*.6);g.strokeStyle='#e8dcc0';g.lineWidth=2;g.beginPath();g.arc(x,y,r+3,0,TAU);g.stroke()}
+  g.save();g.translate(905,270);g.fillStyle='#e8a830';for(let i=0;i<14;i++){const a=i/14*TAU;ell(Math.cos(a)*30,Math.sin(a)*30,12,7,a)}
+  g.fillStyle='#f8d98a';circ(0,0,25);g.fillStyle='#2a1a10';circ(-8,-6,2.5);circ(8,-6,2.5);ell(0,3,4,3);g.strokeStyle='#2a1a10';g.lineWidth=1.5;g.beginPath();g.moveTo(-8,10);g.quadraticCurveTo(0,16,8,10);g.stroke();g.restore()}
+function dynShip(m,t){g.save();g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=2;
+  for(let i=0;i<46;i++){const x=(i*97+t*40)%(m.w+60)-30,y=(i*53)%m.h;if(x>80&&x<940&&y>80&&y<460)continue;g.beginPath();g.arc(x,y,8,Math.PI*1.15,Math.PI*1.85);g.stroke()}g.restore()}
+// Rendezvous Island: a sand cove with the sea along the top, a Marine warship anchored offshore and jungle around the edges.
+function paintCove(m){
+  g.fillStyle='#e6d29c';g.fillRect(0,0,m.w,m.h);const Rn=srand(81);for(let i=0;i<4000;i++){g.fillStyle=Rn()<.5?'rgba(150,120,60,.18)':'rgba(255,250,220,.3)';g.fillRect(Rn()*m.w,Rn()*m.h,2,2)}
+  const sea=g.createLinearGradient(0,0,0,140);sea.addColorStop(0,'#18527f');sea.addColorStop(1,'#2f8ac4');
+  g.fillStyle='#cdb57e';g.beginPath();g.moveTo(0,0);g.lineTo(m.w,0);for(let x=m.w;x>=0;x-=50)g.lineTo(x,150+Math.sin(x*.013)*8);g.fill();
+  g.fillStyle=sea;g.beginPath();g.moveTo(0,0);g.lineTo(m.w,0);for(let x=m.w;x>=0;x-=50)g.lineTo(x,136+Math.sin(x*.013)*8);g.fill();
+  g.save();g.translate(1130,62);g.fillStyle='rgba(0,0,0,.25)';ell(8,10,190,40);g.fillStyle='#ecedf2';g.beginPath();g.moveTo(-190,0);g.quadraticCurveTo(-140,-42,100,-40);g.lineTo(170,-30);g.lineTo(170,30);g.lineTo(100,40);g.quadraticCurveTo(-140,42,-190,0);g.fill();
+  g.fillStyle='#2d4ea0';g.fillRect(-150,-6,310,5);g.fillStyle='#9a7048';g.beginPath();g.moveTo(-150,0);g.quadraticCurveTo(-110,-28,95,-28);g.lineTo(150,-20);g.lineTo(150,20);g.lineTo(95,28);g.quadraticCurveTo(-110,28,-150,0);g.fill();
+  g.fillStyle='rgba(60,40,20,.25)';for(let x=-120;x<150;x+=14)g.fillRect(x,-24,2,48);
+  for(const x of[-70,20,100]){g.fillStyle='#5a3a20';circ(x,0,8);g.fillStyle='#f4f4f8';g.fillRect(x-4,-34,8,68);g.fillStyle='#2d4ea0';g.fillRect(x-4,-6,8,4)}
+  g.fillStyle='#222';for(let x=-110;x<140;x+=34){g.fillRect(x,-44,8,6);g.fillRect(x,38,8,6)}g.restore();
+  g.fillStyle='#2f5a2c';g.fillRect(0,748,m.w,52);g.fillRect(0,0,44,m.h);g.fillRect(m.w-44,0,44,m.h);
+  g.fillStyle='#244a22';for(let x=0;x<m.w;x+=26)circ(x+Rn()*10,750,14);for(let y=150;y<m.h;y+=26){circ(44,y+Rn()*10,13);circ(m.w-44,y+Rn()*10,13)}
+  for(const w of m.walls.filter(w=>w.rock)){g.fillStyle='rgba(0,0,0,.25)';ell(w.x+w.w/2+4,w.y+w.h/2+6,w.w/2+4,w.h/2);g.fillStyle='#7d7a72';ell(w.x+w.w/2,w.y+w.h/2,w.w/2+4,w.h/2+4);g.fillStyle='#96938a';ell(w.x+w.w/2-6,w.y+w.h/2-6,w.w/3,w.h/3)}
+  g.strokeStyle='rgba(120,70,30,.5)';g.lineWidth=7;g.lineCap='round';g.beginPath();g.moveTo(670,420);g.lineTo(730,480);g.moveTo(730,420);g.lineTo(670,480);g.stroke();g.lineCap='butt';
+  for(const[x,y]of m.trees){g.fillStyle='#6a4a2a';circ(x,y,7)}}
+function dynCove(m,t){g.save();g.strokeStyle='rgba(255,255,255,.55)';g.lineWidth=2.5;g.beginPath();for(let x=0;x<=m.w;x+=20){const y=138+Math.sin(x*.013)*8+Math.sin(t*1.6+x*.05)*3;x?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();
+  g.strokeStyle='rgba(255,255,255,.25)';g.lineWidth=2;for(let i=0;i<24;i++){const x=(i*131+t*25)%m.w,y=20+(i*37)%100;g.beginPath();g.arc(x,y,7,Math.PI*1.15,Math.PI*1.85);g.stroke()}g.restore()}
+function overCove(m,t){for(const[x,y]of m.trees){g.save();g.translate(x,y-26);g.rotate(Math.sin(t*1.2+x)*.04);for(let i=0;i<7;i++){const a=i/7*TAU;g.fillStyle=i%2?'#3f8a3a':'#2f7030';ell(Math.cos(a)*18,Math.sin(a)*12,20,6,a)}g.fillStyle='#6a4a2a';circ(0,0,4);g.restore()}}
 
 /* ---------------- maps ---------------- */
 const R=(x,y,w,h,o={})=>({x,y,w,h,...o});
@@ -534,7 +613,11 @@ const MAPDEF={
   shibuya:()=>({w:2200,h:1100,walls:[R(0,0,2200,150),R(0,950,2200,150),R(650,430,200,170),R(1300,620,220,150)],paint:paintShibuya,dyn:dynShibuya}),
   arena:()=>({w:1100,h:700,walls:[R(0,0,1100,90),R(0,630,1100,70),R(0,0,60,700),R(1040,0,60,700),R(300,250,44,40,{rubble:1}),R(760,430,50,36,{rubble:1})],paint:paintArena}),
   void:()=>({w:1200,h:800,walls:[R(0,0,1200,70),R(0,730,1200,70),R(0,0,70,800),R(1130,0,70,800)],paint:paintVoid,dyn:dynVoid}),
-  tunnel:()=>({w:W,h:H,walls:[],dyn:(m,t)=>paintTunnel(t,W/2,H/2)})};
+  tunnel:()=>({w:W,h:H,walls:[],dyn:(m,t)=>paintTunnel(t,W/2,H/2)}),
+  tunnelSea:()=>({w:W,h:H,walls:[],dyn:(m,t)=>paintTunnel(t,W/2,H/2,195)}),
+  ship:()=>({w:960,h:540,walls:[],paint:paintShip,dyn:dynShip}),
+  cove:()=>{const trees=[[80,300],[1320,560],[300,200],[1180,690],[110,620],[1290,250]];
+    return{w:1400,h:800,trees,walls:[R(0,0,1400,140),R(0,748,1400,52),R(0,0,44,800),R(1356,0,44,800),R(420,330,64,44,{rock:1}),R(930,560,70,46,{rock:1}),R(1080,250,56,40,{rock:1}),...trees.map(([x,y])=>R(x-8,y-6,16,12,{tree:1}))],paint:paintCove,dyn:dynCove,over:overCove}}};
 const MAPCACHE={};
 function getMap(id){if(MAPCACHE[id])return MAPCACHE[id];const m=MAPDEF[id]();m.id=id;if(m.paint){const sc=Math.min(DPR,Math.max(1,Math.sqrt(6e6/(m.w*m.h))));m.ground=offscreen(m.w,m.h,()=>m.paint(m),sc)}if(m.tick)m.tick=m.tick.bind(m);MAPCACHE[id]=m;return m}
 function paintMap(m,t){if(m.ground)g.drawImage(m.ground,0,0,m.w,m.h);m.dyn&&m.dyn(m,t)}
@@ -563,6 +646,9 @@ const ETYPES={
   eye:{hp:40,r:14,spd:70,ai:'ranged',dmg:10,draw:'eye',shotKind:'orb'},
   hand:{hp:45,r:13,spd:75,ai:'charger',dmg:14,draw:'hand'},
   womb:{hp:420,r:30,spd:55,ai:'none',dmg:16,draw:'womb',heavy:true},
+  marine:{hp:45,r:12,spd:112,ai:'melee',dmg:10,look:LOOK.Marine},
+  rifle:{hp:34,r:12,spd:95,ai:'ranged',dmg:9,look:LOOK.Rifle,shotKind:'bullet'},
+  snake:{hp:28,r:11,spd:150,ai:'melee',dmg:8,draw:'snake'},
   boss:{hp:100,r:15,spd:0,ai:'none',dmg:12,heavy:true}};
 function makeStage(mapId,opts={}){
   const m=getMap(mapId);
@@ -695,10 +781,19 @@ function updateAlly(st,a,dt){
     if(a.sp<=0&&a.ally!=='clone'){a.sp=a.ally==='Naruto'?6:4.5;
       if(a.ally==='Naruto'){if(Math.random()<.5){shot(st,{x:a.x,y:a.y-6,a:ang,spd:330,r:13,dmg:30,team:'p',kind:'rasengan',life:.9,kb:380});floatText(a.x,a.y-36,'Rasengan!','#8fd8ff',14)}
         else{for(let i=0;i<2;i++){const c=makeAlly('clone',a.x+rand(-30,30),a.y+rand(-30,30));st.allies.push(c);puff(c.x,c.y,10,'#eee',80,.5,7)}floatText(a.x,a.y-36,'Shadow Clone Jutsu!','#ff9a3d',14)}}
+      else if(a.ally==='Luffy'){if(d>340)a.sp=.5;
+        else if(Math.random()<.6){shot(st,{x:a.x,y:a.y-6,a:ang,spd:640,r:11,dmg:22,team:'p',kind:'fist',life:.5,kb:380,pierce:true,from:a});floatText(a.x,a.y-36,'Gum-Gum Pistol!','#ff5a4a',14);SND.swing()}
+        else{for(let i=0;i<7;i++)st.after(i*.07,()=>{if(!a.dead)shot(st,{x:a.x,y:a.y-6,a:ang+rand(-.25,.25),spd:620,r:9,dmg:7,team:'p',kind:'fist',life:.35,kb:120,from:a})});floatText(a.x,a.y-36,'Gum-Gum Gatling!','#ff5a4a',14)}}
+      else if(a.ally==='Zoro'){if(d>220)a.sp=.5;else{const ex=tgt.x+Math.cos(ang)*50,ey=tgt.y+Math.sin(ang)*50;
+        for(let k=0;k<8;k++)puff(lerp(a.x,ex,k/8),lerp(a.y,ey,k/8)-8,1,'rgba(200,255,210,.7)',20,.35,7,0,true);
+        for(const e of st.enemies)if(!e.dead&&!e.fake&&!e.invuln&&D(e,tgt)<60)hurtEnemy(st,e,e===tgt?26:14,{a:ang,kb:260});
+        a.x=ex;a.y=ey;spark(tgt.x,tgt.y-8,14,'#e8fff0',380,.3,16);floatText(a.x,a.y-36,'Oni Giri!','#7fd07a',14);SND.slash()}}
+      else if(a.ally==='Sanji'){if(d>90)a.sp=.5;else{for(const e of st.enemies)if(!e.dead&&!e.fake&&!e.invuln&&D(e,a)<90)hurtEnemy(st,e,18,{a:A(a,e),kb:300,burn:true});
+        puff(a.x,a.y-6,26,'#ff7a2f',220,.5,6,0,true);floatText(a.x,a.y-36,'Diable Jambe!','#f2d24b',14);SND.fire()}}
       else if(d<70){hurtEnemy(st,tgt,14,{a:ang,kb:120});st.after(.15,()=>{if(!tgt.dead){hurtEnemy(st,tgt,16,{a:ang,kb:320});spark(tgt.x,tgt.y-8,12,'#6fb8ff',300,.3,12)}});floatText(a.x,a.y-36,'Divergent Fist!','#ff9fb8',14)}
       else a.sp=.5}
     if(d>tgt.r+26){a.x+=Math.cos(ang)*205*dt;a.y+=Math.sin(ang)*205*dt;a.walk+=dt*13}
-    else if(a.cd<=0){a.cd=.5;hurtEnemy(st,tgt,a.ally==='clone'?5:8,{a:ang,kb:100});spark(a.x+Math.cos(ang)*16,a.y-6+Math.sin(ang)*16,4,'#fff',200,.15,8,ang,1)}}
+    else if(a.cd<=0){a.cd=.5;hurtEnemy(st,tgt,(a.ally==='clone'?5:8)*(tgt.boss?.4:1),{a:ang,kb:100});spark(a.x+Math.cos(ang)*16,a.y-6+Math.sin(ang)*16,4,'#fff',200,.15,8,ang,1)}}
   else{const d=D(a,p);if(d>70){const ang=A(a,p);a.facing=ang;a.x+=Math.cos(ang)*215*dt;a.y+=Math.sin(ang)*215*dt;a.walk+=dt*13}}
   collideWalls(st,a)}
 function updateShots(st,dt){const p=st.player;
@@ -775,7 +870,12 @@ function drawShots(st){g.save();for(const s of st.shots){const a=Math.atan2(s.vy
     case'orb':glow(s.x,s.y,s.r*2,'rgba(170,70,230,.8)');g.fillStyle='#f2d8ff';circ(s.x,s.y,s.r*.4);break;
     case'rod':g.globalCompositeOperation='source-over';g.strokeStyle='#15121c';g.lineWidth=4;g.beginPath();g.moveTo(s.x,s.y);g.lineTo(s.x-Math.cos(a)*22,s.y-Math.sin(a)*22);g.stroke();g.strokeStyle='#b9a3e8';g.lineWidth=1;g.stroke();break;
     case'blue':glow(s.x,s.y,s.r*2.4,'rgba(60,120,255,.85)');g.globalCompositeOperation='source-over';g.fillStyle='#0a0a30';circ(s.x,s.y,s.r*.45);break;
-    case'swordwave':g.strokeStyle='rgba(170,110,255,.9)';g.lineWidth=6;g.beginPath();g.arc(s.x-Math.cos(a)*12,s.y-Math.sin(a)*12,s.r,a-1.1,a+1.1);g.stroke();break}}
+    case'swordwave':g.strokeStyle='rgba(170,110,255,.9)';g.lineWidth=6;g.beginPath();g.arc(s.x-Math.cos(a)*12,s.y-Math.sin(a)*12,s.r,a-1.1,a+1.1);g.stroke();break;
+    case'airblade':g.strokeStyle='rgba(215,232,255,.9)';g.lineWidth=5;g.beginPath();g.arc(s.x-Math.cos(a)*12,s.y-Math.sin(a)*12,s.r,a-1.1,a+1.1);g.stroke();break;
+    case'bullet':g.globalCompositeOperation='source-over';g.strokeStyle='#ffe08a';g.lineWidth=3;g.beginPath();g.moveTo(s.x,s.y);g.lineTo(s.x-Math.cos(a)*10,s.y-Math.sin(a)*10);g.stroke();break;
+    // Luffy's rubber arm stretches from wherever he is now to the fist
+    case'fist':g.globalCompositeOperation='source-over';if(s.from){g.strokeStyle='#e8bf98';g.lineWidth=4;g.lineCap='round';g.beginPath();g.moveTo(s.from.x,s.from.y-4);g.lineTo(s.x,s.y);g.stroke();g.lineCap='butt'}
+      g.fillStyle='#f0c9a2';circ(s.x,s.y,6.5);g.strokeStyle='#a87a5a';g.lineWidth=1;g.stroke();break}}
   g.restore()}
 function drawHazards(st){for(const h of st.hz){const col=h.col||'#ff3b4a';
   if(h.shape==='ring'){g.save();g.globalCompositeOperation='lighter';g.strokeStyle='rgba(220,205,255,.75)';g.lineWidth=14;g.beginPath();g.arc(h.x,h.y,h.r,0,TAU);g.stroke();g.strokeStyle='#fff';g.lineWidth=3;g.stroke();g.restore();continue}
@@ -872,7 +972,9 @@ function cutscene(o){
     if(m)paintMap(m,cs.t);
     for(const f of cs.fx)f.draw(f);
     const list=Object.values(cs.actors).filter(a=>!a.hidden).sort((a,b)=>a.y-b.y);
-    for(const a of list){const by=a.bob?Math.sin(cs.t*3+a.x*.01)*4:0;if(a.draw)a.draw(a,cs.t);else drawPerson(a.x,a.y+by,{...a.look,facing:a.facing,walk:a.walk,alpha:a.alpha,s:a.s})}
+    for(const a of list){const by=a.bob?Math.sin(cs.t*3+a.x*.01)*4:0;if(a.draw){a.draw(a,cs.t);continue}
+      const o={...a.look,facing:a.facing,walk:a.walk,alpha:a.alpha,s:a.s};
+      if(a.rot){g.save();g.translate(a.x,a.y+by);g.rotate(a.rot);drawPerson(0,0,o);g.restore()}else drawPerson(a.x,a.y+by,o)} // rot lays someone down
     drawParts();if(m&&m.over)m.over(m,cs.t);drawTexts();g.restore();
     o.screen&&o.screen(cs);
     if(cs.dlg)cs.dlg.draw();
@@ -883,7 +985,8 @@ function cutscene(o){
   return cs}
 
 /* ---------------- chapter: Leaf Village ---------------- */
-function reviveHandler(who){return st=>{const p=st.player;p.hp=p.maxHp*.7;p.inv=2.5;st.dlg=Dialogue([[who,who==='Naruto'?"Hey! Get up, {name}! We're not done yet!":"You okay?! Shake it off, {name}, I've got your back!"]]);for(const e of st.enemies){const a=A(p,e);e.kbx+=Math.cos(a)*420;e.kby+=Math.sin(a)*420}}}
+const REVIVE={Naruto:"Hey! Get up, {name}! We're not done yet!",Yuji:"You okay?! Shake it off, {name}, I've got your back!",Luffy:"Oi, {name}! Get up! These Marines aren't gonna beat themselves!"};
+function reviveHandler(who){return st=>{const p=st.player;p.hp=p.maxHp*.7;p.inv=2.5;st.dlg=Dialogue([[who,REVIVE[who]]]);for(const e of st.enemies){const a=A(p,e);e.kbx+=Math.cos(a)*420;e.kby+=Math.sin(a)*420}}}
 function houseScene(){
   const st=makeStage('house',{start:[280,200]});st.obj='Find out what that noise is';
   st.after(.6,()=>{shake=10;SND.boom();st.dlg=Dialogue([['{name}',"...What was that? It sounded like an explosion right outside."],['',"Walk out the front door. Move with WASD or the arrow keys."]])});
@@ -1120,25 +1223,232 @@ function rewardsScene(){return cutscene({map:'arena',cam:{x:70,y:80},
     ['say','{name}',"Thank you, all of you. I'll end this."],
     ['move','p',560,190,300],['hide','p'],
     ['fade',1,.6,'255,255,255']],
-  then:()=>startChapter('final')})}
+  then:()=>startChapter('sea')})}
+
+/* ---------------- chapter: the Grand Line ---------------- */
+function seaScene(){return cutscene({map:'tunnelSea',fadeIn:true,fadeColor:'255,255,255',
+  actors:{p:{x:480,y:300,s:2,look:playerLook(),facing:Math.PI/2,bob:true}},
+  steps:[['fade',0,.6],
+    ['say','{name}',"This portal feels different from the last one... Is that salt water I smell?"],
+    ['do',cs=>{flashC='#fff';flashA=.9;shake=16;SND.boom();const p=cs.actors.p;p.to=[480,720];p.spd=520;p.noTurn=true}],
+    ['wait',.6],
+    ['say','',"The portal twists and drops you out of the sky, high above an endless blue sea..."],
+    ['fade',1,.6,'255,255,255']],
+  then:()=>go(shipScene())})}
+function shipScene(){
+  const toP=(x,y)=>Math.atan2(300-y,460-x);
+  return cutscene({map:'ship',fadeIn:true,fadeColor:'255,255,255',
+    actors:{p:{x:460,y:300,look:playerLook(),facing:Math.PI/2,rot:-Math.PI/2},
+      lu:{x:505,y:250,look:LOOK.Luffy,facing:toP(505,250)},us:{x:330,y:215,look:LOOK.Usopp,facing:toP(330,215)},
+      na:{x:400,y:370,look:LOOK.Nami,facing:toP(400,370)},sj:{x:560,y:365,look:LOOK.Sanji,facing:toP(560,365)},
+      zo:{x:745,y:305,look:LOOK.Zoro,facing:Math.PI},dd:{x:300,y:330,draw:(a,t)=>drawSnail(a.x,a.y,t,a.ring)}},
+    steps:[['fade',0,.8],
+      ['title','Chapter 6','The Grand Line'],
+      ['say','Luffy',"Hey. Hey! Are you alive? You fell right out of the sky and landed on the Sunny!"],
+      ['say','Usopp',"Careful, Luffy! It could be a sky monster! The kind that eats brave sharpshooters like me!"],
+      ['do',cs=>{const p=cs.actors.p;p.rot=0;puff(p.x,p.y,12,'rgba(255,255,255,.7)',70,.4,5);SND.dash()}],
+      ['say','{name}',"Ugh... Where am I? This isn't Jujutsu High."],
+      ['say','Nami',"You're on the Thousand Sunny, in the middle of the Grand Line. And you owe me for that dent in the lawn."],
+      ['say','Sanji',"You must be starving after a fall like that. I'll fix you a plate."],
+      ['say','Zoro',"...Hm. Look at the way they landed. That's a fighter."],
+      ['say','Luffy',"Shishishi! I'm Monkey D. Luffy, and I'm gonna be King of the Pirates! Who are you?"],
+      ['say','{name}',"I'm {name}, a ninja from the Hidden Leaf. I'm chasing a man in an orange spiral mask. He jumps between worlds and steals their strongest powers."],
+      ['say','Nami',"The strongest power in this sea? That has to be Kaido of the Beasts. They say his Devil Fruit turns him into a giant dragon."],
+      ['say','Luffy',"Kaido's MINE to beat! Nobody's stealing anything from him. Don't worry, {name}, I'll help you kick that masked guy's butt!"],
+      ['do',cs=>{const a=cs.actors;a.dd.ring=true;floatText(300,280,'Puru puru puru...','#c9e07a',15);SND.ui();for(const k of['lu','us','na','sj','zo'])a[k].facing=A(a[k],a.dd)}],
+      ['say','Den Den Mushi',"Puru puru puru... Puru puru puru... Gacha!"],
+      ['do',cs=>{cs.actors.dd.ring=false}],
+      ['say','Shanks?',"Yo, Luffy. It's been a long time."],
+      ['say','Luffy',"SHANKS?!"],
+      ['say','Shanks?',"I heard a guest from another world dropped in on you. Bring them to Rendezvous Island at sundown. I've got something important to tell you both."],
+      ['say','Shanks?',"See you there. Gacha."],
+      ['say','Zoro',"Since when does Shanks call anyone? And how does he already know about our guest?"],
+      ['say','Nami',"This smells like a trap. A big, obvious trap."],
+      ['say','Luffy',"Shishishi! If it's a trap, we'll just bust out of it! Set sail for Rendezvous Island!"],
+      ['say','Usopp',"I-I'll guard the ship! I've come down with a terrible case of can't-walk-into-traps disease!"],
+      ['say','Nami',"I'll stay with Usopp and keep the Sunny ready to run. Be careful, all of you."],
+      ['fade',1,.8,'0,0,0']],
+    then:()=>startChapter('marines')})}
+const VPAT={
+  soru(st,b){const p=st.player,a=A(b,p),len=Math.min(D(b,p)+130,620);b.busy=.9;floatText(b.x,b.y-50,'Soru','#dfe8ff',16);
+    hz(st,{shape:'line',x:b.x,y:b.y,a,len,w:30,warn:b.phase>1?.42:.52,dmg:15,col:'#bcd4ff',onFire:()=>{const ex=clamp(b.x+Math.cos(a)*len,90,st.w-90),ey=clamp(b.y+Math.sin(a)*len,170,st.h-90);for(let k=0;k<10;k++)puff(lerp(b.x,ex,k/10),lerp(b.y,ey,k/10)-10,1,'rgba(220,235,255,.6)',20,.4,9,0,true);b.x=ex;b.y=ey;shake=Math.max(shake,6)}})},
+  rankyaku(st,b){const n=b.phase>1?5:3,a=A(b,st.player);floatText(b.x,b.y-50,'Rankyaku','#dfe8ff',16);for(let i=0;i<n;i++)shot(st,{x:b.x,y:b.y-6,a:a+(i-(n-1)/2)*.22,spd:340,r:14,dmg:12,team:'e',kind:'airblade',life:2.4,pierce:true});SND.slash()},
+  cannon(st,b){const p=st.player,n=b.phase>1?6:4;floatText(b.x,b.y-50,'Fire the cannons!','#ff8a3d',16);
+    for(let i=0;i<n;i++){const x=i?clamp(p.x+rand(-200,200),80,st.w-80):p.x,y=i?clamp(p.y+rand(-160,160),180,st.h-80):p.y;
+      hz(st,{shape:'circle',x,y,r:70,warn:1+i*.22,dmg:16,col:'#ff8a3d',onFire:(s,h)=>{puff(h.x,h.y,26,'#ff7a2f',200,.6,8,0,true);puff(h.x,h.y,8,'rgba(60,50,50,.5)',60,1,12,-20);shake=Math.max(shake,8);SND.boom()}})}}};
+function viceThink(st,b,dt){
+  const p=st.player,ph=b.hp/b.maxHp>.5?1:2;
+  if(ph!==b.phase){b.phase=ph;b.timer=1;banner('Absolute Justice','The Vice Admiral gets serious','#8fb8ff',2)}
+  if(b.busy>0)b.busy-=dt;else{const d=D(b,p),a=A(b,p);b.facing=a;const mv=d>230?1:d<150?-1:0;if(Math.random()<dt*.4)b.strafe*=-1;b.x+=(Math.cos(a)*mv+Math.cos(a+Math.PI/2)*b.strafe*.6)*140*dt;b.y+=(Math.sin(a)*mv+Math.sin(a+Math.PI/2)*b.strafe*.6)*140*dt;b.walk+=dt*10}
+  b.swipeCd-=dt;if(D(b,p)<80&&b.swipeCd<=0){b.swipeCd=1.6;floatText(b.x,b.y-50,'Shigan','#dfe8ff',14);hz(st,{shape:'circle',x:b.x,y:b.y,r:84,warn:.42,dmg:14,col:'#bcd4ff'})}
+  b.timer-=dt;if(b.timer>0||b.busy>0)return;
+  VPAT[pick(ph===1?['soru','rankyaku','cannon']:['soru','rankyaku','cannon','soru'])](st,b);b.timer=ph===1?1.8:1.35}
+function marinesScene(){
+  const st=makeStage('cove',{start:[220,470]}),p=st.player;p.facing=0;
+  for(const[k,x,y]of[['Luffy',170,410],['Zoro',150,530],['Sanji',120,470]])st.allies.push(makeAlly(k,x,y));
+  st.onDown=reviveHandler('Luffy');st.wave=0;
+  banner('Rendezvous Island','Sundown','#ffc94a',3);
+  st.drawScreen=()=>{g.fillStyle='rgba(255,110,40,.1)';g.fillRect(0,0,W,H)};
+  st.after(1.2,()=>{st.dlg=Dialogue([['Luffy',"SHAAANKS! We're heeere! ...Shanks?"],['Zoro',"Nobody's here. Not even footprints."],['Sanji',"Wait. I smell gunpowder."]],ambush)});
+  function ambush(){shake=16;SND.boom();flashC='#fff';flashA=.4;spawnWave(1);
+    st.dlg=Dialogue([['Vice Admiral',"Straw Hat Luffy! That call came from a Marine Den Den Mushi. A man in a spiral mask said you'd come running."],
+      ['Luffy',"You faked being Shanks?! That's the lowest thing you could do! Now I'm really mad!"],
+      ['Sanji',"So the masked guy sold us out to the Navy. Classy."],
+      ['',"Defeat the Marines! Luffy, Zoro and Sanji fight at your side."]])}
+  function spawnWave(n){st.wave=n;
+    if(n<3){st.obj=`Defeat the Marines · Wave ${n} of 2`;const c=n===1?{x:[620,1000],m:5,r:2}:{x:[780,1280],m:6,r:4};
+      for(let i=0;i<c.m;i++)spawn(st,'marine',...freeSpot(st,c.x[0],c.x[1],180,720));
+      for(let i=0;i<c.r;i++)spawn(st,'rifle',...freeSpot(st,c.x[0],c.x[1],180,720))}
+    else{const b=spawn(st,'boss',1050,420,{name:'Vice Admiral',sub:'Marine Headquarters · Absolute Justice',hp:650,maxHp:650,look:LOOK['Vice Admiral'],think:viceThink,timer:1.6,phase:1,swipeCd:0,boss:true,onDie:bossDie});
+      st.boss=b;st.reinf=8;banner('Vice Admiral','Marine Headquarters','#8fb8ff',2.6);
+      for(let i=0;i<2;i++)spawn(st,'marine',...freeSpot(st,950,1250,200,700))}}
+  st.onTick=dt=>{const clear=st.enemies.every(e=>e.dead);
+    if(st.wave===1&&clear){st.wave=1.5;st.dlg=Dialogue([['Luffy',"Shishishi! Who's next?"],['Zoro',"More of them, coming off that warship."]],()=>spawnWave(2))}
+    else if(st.wave===2&&clear){st.wave=2.5;st.dlg=Dialogue([['Vice Admiral',"Useless, all of you! Fine. I'll deal with these pirates myself. Soldiers, keep the Straw Hats busy!"]],()=>spawnWave(3))}
+    else if(st.wave===3&&!st.won){st.reinf-=dt;if(st.reinf<=0){st.reinf=9;
+      if(st.enemies.filter(e=>!e.dead&&!e.boss).length<3){for(let i=0;i<2;i++)spawn(st,pick(['marine','marine','rifle']),...freeSpot(st,700,1300,180,720));floatText(st.boss.x,st.boss.y-50,'Reinforcements!','#8fb8ff',16)}}}};
+  st.retry=()=>startChapter('marines');st.next=()=>startChapter('kabuto');
+  return stageScene(st)}
+
+/* ---------------- chapter: Kabuto ---------------- */
+function kabutoIntro(){
+  const lu={x:560,y:420,look:LOOK.Luffy,facing:0},zo={x:540,y:520,look:LOOK.Zoro,facing:0},sj={x:600,y:575,look:LOOK.Sanji,facing:0};
+  const coil=of=>({x:of.x,y:of.y+.5,hidden:true,draw:(a,t)=>drawCoils(a.x,a.y-.5,t)});
+  return cutscene({map:'cove',cam:{x:300,y:150},
+    actors:{p:{x:650,y:470,look:playerLook(),facing:0},lu,zo,sj,c1:coil(lu),c2:coil(zo),c3:coil(sj),
+      va:{x:960,y:440,look:LOOK['Vice Admiral'],facing:Math.PI/2,rot:-Math.PI/2},kb:{x:900,y:330,look:LOOK.Kabuto,facing:Math.PI*.85,hidden:true}},
+    steps:[['say','Luffy',"Shishishi! That's what you get for faking Shanks!"],
+      ['say','Zoro',"Too easy. Why set a trap for us and send only one Vice Admiral?"],
+      ['do',cs=>{const k=cs.actors.kb;k.hidden=false;puff(k.x,k.y,30,'#efedf6',160,.8,7);shake=10;SND.zap()}],
+      ['say','Kabuto',"Because the Marines were only ever meant to wear you down. Obito sends his regards."],
+      ['say','{name}',"Kabuto?! You're from my world! What are you doing here?"],
+      ['say','Kabuto',"Obito promised me a whole new world to study. Devil Fruits, Haki... a researcher's dream."],
+      ['say','Kabuto',"And while I keep you busy, he's paying a visit to the strongest creature in this sea."],
+      ['say','Luffy',"He's going after Kaido?! Outta my way, snake guy!"],
+      ['do',cs=>{const a=cs.actors;for(const k of['c1','c2','c3'])a[k].hidden=false;for(const k of['lu','zo','sj'])puff(a[k].x,a[k].y,16,'#efedf6',120,.5,6);flashC='#fff';flashA=.6;shake=12;SND.slash()}],
+      ['say','',"White snakes burst out of the sand and coil around Luffy, Zoro and Sanji!"],
+      ['say','Sanji',"Gah! Get these slimy things off me!"],
+      ['say','Zoro',"Tch... they keep growing back. {name}, he's all yours. Don't lose."],
+      ['say','Kabuto',"Let's find out what the Leaf taught you, {name}."]],
+    then:()=>startChapter('sage')})}
+function kScalpel(st,b){const p=st.player,a=A(b,p),len=Math.min(D(b,p)+120,600);b.busy=.8;floatText(b.x,b.y-50,'Chakra Scalpel','#7dffc0',16);
+  hz(st,{shape:'line',x:b.x,y:b.y,a,len,w:28,warn:b.sage?.42:.5,dmg:14,col:'#7dffc0',onFire:()=>{const ex=clamp(b.x+Math.cos(a)*len,90,st.w-90),ey=clamp(b.y+Math.sin(a)*len,170,st.h-90);for(let k=0;k<10;k++)puff(lerp(b.x,ex,k/10),lerp(b.y,ey,k/10)-10,1,'rgba(125,255,190,.6)',20,.4,9,0,true);b.x=ex;b.y=ey;shake=Math.max(shake,6)}})}
+const KPAT={
+  scalpel(st,b){kScalpel(st,b);if(b.sage){b.busy=1.5;st.after(.75,()=>{if(!b.dead&&b.stun<=0&&!st.won)kScalpel(st,b)})}},
+  kunai(st,b){const n=b.sage?7:5,a=A(b,st.player);for(let i=0;i<n;i++)shot(st,{x:b.x,y:b.y-8,a:a+(i-(n-1)/2)*.14,spd:360,r:6,dmg:8,team:'e',kind:'kunai',life:2.4});SND.swing()},
+  snakes(st,b){if(st.enemies.filter(e=>!e.dead&&e.type==='snake').length>=4)return KPAT.kunai(st,b);
+    floatText(b.x,b.y-50,'Hidden Shadow Snake Hands','#efedf6',15);for(let i=0;i<2;i++)spawn(st,'snake',clamp(b.x+rand(-70,70),80,st.w-80),clamp(b.y+rand(-70,70),180,st.h-80));SND.zap()},
+  palm(st,b){b.healing=2.6;b.busy=2.6;b.palmCd=13;floatText(b.x,b.y-50,'Mystical Palm','#7dffc0',18);if(!st.palmHint){st.palmHint=true;banner('Mystical Palm','Hit Kabuto to stop him healing!','#7dffc0',2.4)}},
+  rage(st,b){b.busy=1;floatText(b.x,b.y-50,'Sage Art: White Rage','#efedf6',16);hz(st,{shape:'circle',x:b.x,y:b.y,r:70,warn:.6,dmg:0,col:'#efedf6',onFire:()=>{st.hz.push({shape:'ring',x:b.x,y:b.y,r0:20,spd:420,max:900,dmg:15,t:0,kb:420});shake=Math.max(shake,12);SND.boom()}})},
+  rain(st,b){const p=st.player;floatText(b.x,b.y-50,'Snake Rain','#efedf6',16);
+    for(let i=0;i<6;i++){const x=i?clamp(p.x+rand(-230,230),80,st.w-80):p.x,y=i?clamp(p.y+rand(-180,180),180,st.h-80):p.y;hz(st,{shape:'circle',x,y,r:52,warn:.9+i*.08,dmg:13,col:'#efedf6',onFire:(s,h)=>{puff(h.x,h.y,14,'#efedf6',160,.5,6);SND.slash()}})}},
+  edo(st,b){if(st.enemies.filter(e=>!e.dead&&e.edo).length>=2)return KPAT.rain(st,b);floatText(b.x,b.y-50,'Impure World Reincarnation','#c9a3ff',15);
+    for(let i=0;i<2;i++){const[x,y]=freeSpot(st,Math.max(80,b.x-200),Math.min(st.w-80,b.x+200),200,700);puff(x,y,20,'#7a6a5a',120,.7,8);spawn(st,'ninja',x,y,{look:LOOK.Edo,edo:true,hp:60,maxHp:60})}SND.boom()}};
+function kabutoThink(st,b,dt){
+  const p=st.player;
+  if(!b.sage&&!b.transforming&&b.hp<=b.maxHp*.5){b.transforming=true;b.invuln=true;b.invText='Sage Mode';b.healing=0;b.busy=0;st.hz=[];
+    banner('Sage Mode','Kabuto draws in natural energy','#c9a3ff',2.6);flashC='#6a3a8a';flashA=.6;shake=16;SND.bf();puff(b.x,b.y-10,40,'#b9e8a0',180,1,6,0,true);
+    st.after(1.4,()=>{b.transforming=false;b.invuln=false;b.sage=true;b.look=LOOK.KabutoSage;b.sub='Sage Mode · the White Snake Sage';b.timer=1;puff(b.x,b.y-10,30,'#c9a3ff',160,.7,6,0,true)})}
+  if(b.transforming){b.facing=A(b,p);return}
+  if(b.healing>0){b.healing-=dt;b.facing=A(b,p);b.hp=Math.min(b.maxHp,b.hp+b.maxHp*.04*dt);if(Math.random()<dt*18)puff(b.x+rand(-12,12),b.y+rand(-20,8),1,'#7dffc0',30,.6,3,-40,true);if(b.healing<=0)b.busy=0;return}
+  b.palmCd-=dt;
+  if(b.busy>0)b.busy-=dt;else{const d=D(b,p),a=A(b,p);b.facing=a;const mv=d>250?1:d<160?-1:0;if(Math.random()<dt*.4)b.strafe*=-1;b.x+=(Math.cos(a)*mv+Math.cos(a+Math.PI/2)*b.strafe*.6)*150*dt;b.y+=(Math.sin(a)*mv+Math.sin(a+Math.PI/2)*b.strafe*.6)*150*dt;b.walk+=dt*10}
+  b.swipeCd-=dt;if(D(b,p)<75&&b.swipeCd<=0){b.swipeCd=1.5;hz(st,{shape:'circle',x:b.x,y:b.y,r:78,warn:.4,dmg:13,col:'#7dffc0'})}
+  b.timer-=dt;if(b.timer>0||b.busy>0)return;
+  if(b.palmCd<=0&&b.hp<b.maxHp*.85&&Math.random()<.5){KPAT.palm(st,b);b.timer=1;return}
+  KPAT[pick(b.sage?['scalpel','rage','rain','edo','snakes','kunai']:['scalpel','kunai','snakes','scalpel'])](st,b);b.timer=b.sage?1.25:1.6}
+// Mystical Palm is a channel: any hit that lands while Kabuto heals cuts it off and staggers him.
+function kabutoHurt(st,b){if(b.healing>0){b.healing=0;b.busy=0;b.stun=.8;b.palmCd=11;floatText(b.x,b.y-58,'Interrupted!','#ffc94a',18);spark(b.x,b.y-10,14,'#7dffc0',300,.3,12)}}
+function kabutoFight(){
+  const st=makeStage('cove',{start:[560,580]});
+  const b=spawn(st,'boss',820,380,{name:'Kabuto',sub:"Rogue medical ninja · Orochimaru's heir",hp:1000,maxHp:1000,look:LOOK.Kabuto,think:kabutoThink,timer:1.6,palmCd:7,swipeCd:0,boss:true,onDie:bossDie,onHurt:kabutoHurt});
+  st.boss=b;banner('Kabuto','Rogue medical ninja','#b8a8e0',2.6);
+  const bound=[['Luffy',190,650],['Zoro',260,700],['Sanji',330,650]];
+  st.drawUnder=()=>{for(const[k,x,y]of bound){const wx=x+Math.sin(st.t*9+x)*1.2;drawPerson(wx,y,{...LOOK[k],facing:.3});drawCoils(wx,y,st.t)}};
+  st.drawOver=()=>{if(b.healing>0&&!b.dead){g.save();g.globalCompositeOperation='lighter';glow(b.x,b.y-10,50,'rgba(120,255,170,.45)');g.restore()}};
+  st.retry=()=>startChapter('sage');st.next=()=>startChapter('kaido');
+  return stageScene(st)}
+
+/* ---------------- chapter: Kaido ---------------- */
+function kaidoScene(){
+  const pf=portalFx(860,300);
+  const ac={p:{x:560,y:470,look:playerLook(),facing:0},lu:{x:480,y:420,look:LOOK.Luffy,facing:0},zo:{x:470,y:530,look:LOOK.Zoro,facing:0},sj:{x:530,y:585,look:LOOK.Sanji,facing:0},
+    kb:{x:820,y:420,look:LOOK.KabutoSage,facing:Math.PI},
+    kd:{x:1340,y:430,look:LOOK.Kaido,facing:Math.PI,s:1.7,hidden:true},
+    b1:{x:1330,y:330,look:LOOK.Beast,facing:Math.PI,hidden:true},b2:{x:1350,y:540,look:LOOK.Beast,facing:Math.PI,hidden:true},b3:{x:1380,y:610,look:LOOK.Beast,facing:Math.PI,hidden:true},
+    ob:{x:850,y:430,look:LOOK.Obito,facing:0,hidden:true,bob:true},
+    fr:{x:1040,y:380,hidden:true,draw:(a,t)=>drawItem('fruit',a.x,a.y,t,1.3)},
+    arm:{x:0,y:1e4,hidden:true}};
+  // Luffy's stretched arm, from his shoulder to the player's collar, so it follows them through the throw
+  ac.arm.draw=()=>{const l=ac.lu,p=ac.p,a=Math.atan2(p.y-l.y,p.x-l.x),sx=l.x+Math.cos(a)*10,sy=l.y-2+Math.sin(a)*6;g.save();g.lineCap='round';
+    g.strokeStyle='#e8bf98';g.lineWidth=5;g.beginPath();g.moveTo(sx,sy);g.lineTo(p.x,p.y-6);g.stroke();
+    g.strokeStyle='#d8262f';g.lineWidth=7;g.beginPath();g.moveTo(l.x,l.y-2);g.lineTo(sx,sy);g.stroke();g.fillStyle='#f0c9a2';circ(p.x-Math.cos(a)*4,p.y-6,6);g.restore()};
+  const beat=k=>[['do',cs=>{const e=cs.actors[k],o=cs.actors.ob;o.facing=A(o,e);spark(e.x,e.y-10,16,'#c9a3ff',380,.3,16);puff(e.x,e.y-10,24,'#7a5ad0',160,.6,7,0,true);floatText(e.x,e.y-44,'Kamui!','#c9a3ff',16);e.hidden=true;shake=12;SND.bf()}],['wait',.35]];
+  return cutscene({map:'cove',cam:{x:300,y:150},actors:ac,
+    steps:[['title','Chapter 7','The Strongest Creature'],
+      ['say','Kabuto',"Hm. You've grown, {name}. No matter. I already have what I came for: data."],
+      ['do',cs=>{const k=cs.actors.kb;puff(k.x,k.y-8,30,'#efedf6',150,.8,7);k.hidden=true;SND.zap()}],
+      ['say','Luffy',"Hey, he ran off! ...Oh! The snakes let go of us!"],
+      ['do',()=>{shake=22;flashC='#dff4ff';flashA=.8;SND.boom()}],
+      ['say','',"Thunder splits the sky. Something enormous is coming ashore."],
+      ['do',cs=>{const a=cs.actors;for(const k of['kd','b1','b2','b3'])a[k].hidden=false;a.kd.to=[1060,430];a.kd.spd=150;a.b1.to=[1120,330];a.b2.to=[1130,540];a.b3.to=[1190,610];for(const k of['b1','b2','b3'])a[k].spd=170;shake=10;SND.boom()}],
+      ['wait',1.9],
+      ['say','Kaido',"Wororororo! Who's making all this noise on my sea?"],
+      ['say','Luffy',"KAIDO!!"],
+      ['say','Sanji',"The Beasts Pirates. Of all the lousy timing..."],
+      ['say','Kaido',"Straw Hat. And a brat that smells like another world. A masked man promised me your heads if I came here."],
+      ['do',cs=>{const o=cs.actors.ob;o.hidden=false;puff(o.x,o.y-10,30,'#7a5ad0',150,.7,6,0,true);SND.zap()}],
+      ['say','Obito',"I promised nothing. I only needed you out in the open, Kaido."],
+      ['say','Obito',"I've come for your dragon."],
+      ['say','Kaido',"Hah! Kill him."],
+      ['do',cs=>{const a=cs.actors;a.b1.to=[905,390];a.b2.to=[905,470];a.b3.to=[930,430];for(const k of['b1','b2','b3'])a[k].spd=330}],
+      ['wait',.7],
+      ...beat('b1'),...beat('b2'),...beat('b3'),
+      ['say','Obito',"Your crew is weak. Let's see if their captain is any better."],
+      ['do',cs=>{const k=cs.actors.kd;flashC='#5fb0ff';flashA=.7;shake=20;spark(k.x,k.y-20,26,'#9fdcff',420,.4,20);SND.bf()}],
+      ['say','Kaido',"You little worm..."],
+      ['do',cs=>{const a=cs.actors,o=a.ob;o.facing=A(o,a.kd);cs.fx.push(portalFx(a.kd.x,a.kd.y-20,40));a.fr.hidden=false;a.fr.x=a.kd.x;a.fr.y=a.kd.y-30;a.fr.to=[o.x+20,o.y-40];a.fr.spd=230;floatText(o.x,o.y-50,'Kamui!','#c9a3ff',18);SND.zap()}],
+      ['wait',1.2],
+      ['do',cs=>{const a=cs.actors;a.fr.hidden=true;a.kd.rot=-Math.PI/2;cs.fx=[];puff(a.ob.x,a.ob.y-20,40,'#5fb0ff',200,.8,6,0,true);flashC='#5fb0ff';flashA=.8;shake=18;SND.boom()}],
+      ['say','Kaido',"My power... You ripped the dragon right out of me?!"],
+      ['say','Obito',"The Fish-Fish Fruit, Model: Azure Dragon. Thank you, Kaido."],
+      ['say','Obito',"Don't bother following, little ninja. The last world I visit, I'll shape myself."],
+      ['do',cs=>{cs.fx.push(pf);SND.zap()}],
+      ['wait',.7],
+      ['move','ob',860,300,200],
+      ['do',cs=>{const o=cs.actors.ob;puff(o.x,o.y-10,30,'#7a5ad0',140,.7,6,0,true);o.hidden=true;SND.zap()}],
+      ['say','{name}',"He's getting away! The portal's already closing, and it's way too high to reach!"],
+      ['say','Luffy',"Leave that to me! Hold on tight, {name}!"],
+      ['do',cs=>{const a=cs.actors;a.arm.hidden=false;a.lu.facing=A(a.lu,a.p);a.p.facing=A(a.p,{x:860,y:300});SND.dash()}],
+      ['say','Luffy',"Kick his butt for me! And tell him nobody beats Kaido but ME!"],
+      ['say','Zoro',"Don't lose, ninja."],
+      ['say','Sanji',"Come back hungry. I'll have a feast waiting."],
+      ['say','Luffy',"Gum-Gum... ROCKET!!!"],
+      ['do',cs=>{const p=cs.actors.p;p.to=[860,300];p.spd=800;p.noTurn=true;shake=12;SND.dash()}],
+      ['wait',.55],
+      ['do',cs=>{const a=cs.actors;a.arm.hidden=true;a.p.hidden=true;pf.shrink=pf.t;flashC='#fff';flashA=.7;SND.zap()}],
+      ['wait',.4],
+      ['fade',1,.6,'255,255,255']],
+    then:()=>startChapter('final')})}
 
 /* ---------------- final chapter ---------------- */
 function finalIntro(){
   const item=(k,x,y)=>({x,y,draw:(a,t)=>drawItem(k,a.x,a.y,t,1.4)});
   const absorb=k=>[['move',k,600,320,240],['do',cs=>{const it=cs.actors[k];it.hidden=true;puff(it.x,it.y,26,'#9b5cff',150,.7,6,0,true);flashC='#1a0a2a';flashA=.5;shake=10;SND.bf()}]];
-  return cutscene({map:'void',cam:{x:120,y:130},
+  return cutscene({map:'void',cam:{x:120,y:130},fadeIn:true,fadeColor:'255,255,255',
     actors:{o:{x:600,y:330,look:LOOK.Obito,facing:Math.PI/2,bob:true},dn:item('deathnote',500,280),sw:item('sword',600,230),fr:item('fruit',700,280),p:{x:600,y:560,look:playerLook(),facing:-Math.PI/2}},
-    steps:[['title','Final Chapter','The Perfect Villain'],
-      ['say','Obito',"You followed me all the way here? Persistent. Fine. You'll get a front-row seat."],
+    steps:[['fade',0,.8],
+      ['title','Final Chapter','The Perfect Villain'],
+      ['say','Obito',"A rubber pirate threw you through my portal? Persistent. Fine. You'll get a front-row seat."],
       ['say','Obito',"From one world, a notebook of death. Write a name in it, and that person dies."],
       ...absorb('dn'),
       ['say','Obito',"From another, a cursed blade soaked in centuries of hatred."],
       ...absorb('sw'),
-      ['say','Obito',"And from a sea of pirates, the Fish-Fish Fruit, Model: Azure Dragon. The power of Kaido himself."],
+      ['say','Obito',"And from a sea of pirates, the dragon you watched me tear out of Kaido himself: the Fish-Fish Fruit, Model: Azure Dragon."],
       ...absorb('fr'),
       ['do',cs=>{flashC='#9b5cff';flashA=.9;shake=22;SND.boom();const o=cs.actors.o;o.look=LOOK.ObitoFinal;puff(o.x,o.y-10,50,'#9b5cff',220,1,6,0,true)}],
       ['say','Obito',"The Rinnegan. The Death Note. Cursed steel. A dragon's body. I am the perfect villain."],
-      ['say','{name}',"Then I'm the one who stops you. For Naruto, for Jujutsu High, and for everyone you used."]],
+      ['say','{name}',"Then I'm the one who stops you. For Naruto, for Jujutsu High, for Luffy's crew, and for everyone you used."]],
     then:()=>startChapter('obito')})}
 function kamuiTo(st,b){puff(b.x,b.y-10,22,'#7a5ad0',140,.6,6,0,true);const p=st.player;for(let i=0;i<12;i++){b.x=rand(140,st.w-140);b.y=rand(140,st.h-140);if(D(b,p)>230)break}puff(b.x,b.y-10,22,'#7a5ad0',140,.6,6,0,true);SND.zap()}
 function dashAttack(st,b,dmg,col){const p=st.player,a=A(b,p),len=Math.min(D(b,p)+130,650);hz(st,{shape:'line',x:b.x,y:b.y,a,len,w:30,warn:.45,dmg,col,onFire:()=>{const ex=clamp(b.x+Math.cos(a)*len,100,st.w-100),ey=clamp(b.y+Math.sin(a)*len,100,st.h-100);for(let k=0;k<10;k++)puff(lerp(b.x,ex,k/10),lerp(b.y,ey,k/10)-10,1,'rgba(155,92,255,.6)',20,.4,9,0,true);b.x=ex;b.y=ey}})}
@@ -1215,7 +1525,7 @@ function obitoDownScene(){
 function endingScene(){
   const L=(k,x,y)=>({x,y,look:LOOK[k],facing:A({x,y},{x:1380,y:770})});
   return cutscene({map:'villageCalm',cam:{x:900,y:500},fadeIn:true,fadeColor:'255,255,255',
-    actors:{p:{x:1380,y:770,look:playerLook(),facing:Math.PI/2},n:L('Naruto',1290,745),s:L('Sasuke',1470,745),gj:L('Gojo',1230,800),yu:L('Yuji',1530,800),mg:L('Megumi',1300,820),nb:L('Nobara',1460,825)},
+    actors:{p:{x:1380,y:770,look:playerLook(),facing:Math.PI/2},n:L('Naruto',1290,745),s:L('Sasuke',1470,745),gj:L('Gojo',1230,800),yu:L('Yuji',1530,800),mg:L('Megumi',1300,820),nb:L('Nobara',1460,825),lu:L('Luffy',1620,770)},
     steps:[['fade',0,1],
       ['title','Epilogue','Home'],
       ['say','Naruto',"You did it, {name}! You actually beat him! I knew you would. Believe it!"],
@@ -1224,10 +1534,11 @@ function endingScene(){
       ['say','Yuji',"Thank you, {name}! The fingers are sealed up again, and that guy made it home safe."],
       ['say','Megumi',"Thank you. We owe you one."],
       ['say','Nobara',"Thanks, hero. Next time you drop in, try not to land on my flowers."],
+      ['say','Luffy',"Shishishi! You did it, {name}! Kaido's still mine, though. ...Hey, is there any meat in this village?"],
       ['say','{name}',"Thank you, everyone. I couldn't have done any of it alone."],
       ['fade',1,1.2,'0,0,0']],
     then:()=>go(creditsScene())})}
-function creditsScene(){let t=0;const lines=[["OBITO'S MULTIVERSE",'h'],['',''],['Starring','k'],[save.name,'n'],['',''],['With','k'],['Naruto Uzumaki'],['Sasuke Uchiha'],['Satoru Gojo'],['Yuji Itadori'],['Megumi Fushiguro'],['Nobara Kugisaki'],['',''],['Villains','k'],['Obito Uchiha'],['Ryomen Sukuna'],['',''],['A fan game made for fun.'],['Naruto, Jujutsu Kaisen, Death Note and One Piece','s'],['belong to their creators.','s'],['',''],['Thanks for playing!','h']];
+function creditsScene(){let t=0;const lines=[["OBITO'S MULTIVERSE",'h'],['',''],['Starring','k'],[save.name,'n'],['',''],['With','k'],['Naruto Uzumaki'],['Sasuke Uchiha'],['Satoru Gojo'],['Yuji Itadori'],['Megumi Fushiguro'],['Nobara Kugisaki'],['Monkey D. Luffy'],['Roronoa Zoro'],['Nami'],['Sanji'],['Usopp'],['',''],['Villains','k'],['Obito Uchiha'],['Ryomen Sukuna'],['Kabuto Yakushi'],['Kaido of the Beasts'],['',''],['A fan game made for fun.'],['Naruto, Jujutsu Kaisen, Death Note and One Piece','s'],['belong to their creators.','s'],['',''],['Thanks for playing!','h']];
   return{update(dt){t+=dt;if(t>3&&(tp('space')||tp('enter')))go(TitleScene)},
     draw(){paintTunnel(t*.4,W/2,H/2,280);g.fillStyle='rgba(5,3,10,.55)';g.fillRect(0,0,W,H);const top=Math.max(H-t*45,-lines.length*34+H/2+40);g.textAlign='center';
       lines.forEach(([s,k],i)=>{const y=top+i*34;if(y<-20||y>H+20)return;g.font=k==='h'?`30px ${FD}`:k==='n'?`26px ${FD}`:k==='k'?`700 13px ${FB}`:k==='s'?`500 14px ${FB}`:`700 18px ${FB}`;g.fillStyle=k==='k'?'#ffc94a':k==='h'?'#d8262f':k==='s'?'#a99fc4':'#f1ecff';g.fillText(k==='k'?s.toUpperCase():s,W/2,y)});
@@ -1276,14 +1587,15 @@ $('startBtn').onclick=()=>{if(creatorEls.length!==2)return;save.name=($('nameIn'
 /* ---------------- flow ---------------- */
 function startChapter(ch){
   save.chapter=ch;grantFor(ch);writeSave();parts=[];texts=[];ban=null;
-  ({village:()=>go(houseScene()),clash:()=>go(clashIntro()),portal:()=>go(portalScene()),jjk:()=>go(jjkArrival()),spirits:()=>go(spiritsScene()),fingers:()=>go(fingersScene()),sukuna:()=>go(sukunaFight()),rewards:()=>go(rewardsScene()),final:()=>go(finalIntro()),obito:()=>go(obitoFight()),ending:()=>go(endingScene())})[ch]()}
+  ({village:()=>go(houseScene()),clash:()=>go(clashIntro()),portal:()=>go(portalScene()),jjk:()=>go(jjkArrival()),spirits:()=>go(spiritsScene()),fingers:()=>go(fingersScene()),sukuna:()=>go(sukunaFight()),rewards:()=>go(rewardsScene()),
+    sea:()=>go(seaScene()),marines:()=>go(marinesScene()),kabuto:()=>go(kabutoIntro()),sage:()=>go(kabutoFight()),kaido:()=>go(kaidoScene()),final:()=>go(finalIntro()),obito:()=>go(obitoFight()),ending:()=>go(endingScene())})[ch]()}
 let scene=null,last=performance.now();
 function go(s){scene=s;if(s!==TitleScene&&s!==CreatorScene)showUI(null);const a=document.activeElement;if(a&&a!==document.body&&a.blur)a.blur();s.enter&&s.enter()}
 let DEBUG=location.hash==='#debug',godMode=false;
-function debugKeys(){if(tp('h')&&scene&&scene.st){const p=scene.st.player;p.hp=p.maxHp;p.ch=p.maxCh}if(tp('g'))godMode=!godMode;const map={'1':0,'2':1,'3':2,'4':3,'5':4,'6':5,'7':6,'8':7,'9':8,'0':9,'-':10};for(const k in map)if(tp(k)){startChapter(ORDER[map[k]]);return}
+function debugKeys(){if(tp('h')&&scene&&scene.st){const p=scene.st.player;p.hp=p.maxHp;p.ch=p.maxCh}if(tp('g'))godMode=!godMode;for(let i=0;i<DBG.length;i++)if(tp(DBG[i][0].toLowerCase())){startChapter(ORDER[i]);return}
   if(tp('=')&&scene&&scene.st){const st=scene.st;for(const e of st.enemies)if(!e.dead&&!e.invuln&&!e.intangible)hurtEnemy(st,e,e.boss?e.maxHp*.24:9999,{})}}
-const DBG=[['1','Ch. 1 · Leaf Village'],['2','Ch. 1 · Obito at the cliffs'],['3','Ch. 2 · The portal'],['4','Ch. 3 · Jujutsu High'],['5','Ch. 4 · Shibuya'],['6',"Ch. 5 · Sukuna's fingers"],['7','Boss · Sukuna'],['8','Ch. 5 · Lessons'],['9','Final chapter'],['0','Final boss · Obito'],['-','Epilogue']];
-function drawDebug(){const x=W-262,y=12,w=248,h=292;g.fillStyle='rgba(10,8,16,.92)';rr(x,y,w,h,10);g.fill();g.strokeStyle='#ff3344';g.lineWidth=1.5;g.stroke();
+const DBG=[['1','Ch. 1 · Leaf Village'],['2','Ch. 1 · Obito at the cliffs'],['3','Ch. 2 · The portal'],['4','Ch. 3 · Jujutsu High'],['5','Ch. 4 · Shibuya'],['6',"Ch. 5 · Sukuna's fingers"],['7','Boss · Sukuna'],['8','Ch. 5 · Lessons'],['9','Ch. 6 · The Grand Line'],['0','Ch. 6 · Rendezvous Island'],['-','Ch. 6 · Kabuto arrives'],['Z','Boss · Kabuto'],['X','Ch. 7 · Kaido'],['C','Final chapter'],['V','Final boss · Obito'],['B','Epilogue']]; // one row per ORDER entry
+function drawDebug(){const x=W-262,y=12,w=248,h=105+DBG.length*17;g.fillStyle='rgba(10,8,16,.92)';rr(x,y,w,h,10);g.fill();g.strokeStyle='#ff3344';g.lineWidth=1.5;g.stroke();
   g.font=`14px ${FD}`;g.fillStyle='#ff3344';g.fillText('Debug menu',x+14,y+24);g.font=`700 10px ${FB}`;g.fillStyle='#a99fc4';g.textAlign='right';g.fillText('Press ] to close',x+w-14,y+24);g.textAlign='left';
   const inGame=scene!==TitleScene&&scene!==CreatorScene;
   DBG.forEach(([k,n],i)=>{const yy=y+48+i*17,cur=inGame&&ORDER[i]===save.chapter;g.font=`11px ${FD}`;g.fillStyle='#ffc94a';g.fillText(k,x+16,yy);g.font=`700 12px ${FB}`;g.fillStyle=cur?'#ffc94a':'#f1ecff';g.fillText(n+(cur?'  ◂ you are here':''),x+36,yy)});
