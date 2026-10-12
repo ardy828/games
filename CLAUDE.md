@@ -37,7 +37,9 @@ Spear of Heaven sets `nullify`, and while it is up `hurtEnemy()` ignores any hit
 (strikes, Black Flash, Cloud Sweep and allies' punches pass it). Megumi is the one ranged ally: he holds 220-300 away
 and cycles Nue, Rabbit Escape (staggers) and Max Elephant (a telegraphed splash), all physical, and
 `spreadAllies()` keeps allies from stacking. Toji has no close-range swipe and never backs off. Obito takes the spear, which he uses in
-the final fight's third phase. Between Sukuna and the final chapter is a One
+the final fight's third phase. The spear is one shape, `spearShape()` (pommel ring and chain, wrapped grip, hooked
+guard, long thin blade), held in the hand by `drawHolding()` (enemies with `holdSpear`, cutscene actors with
+`hold:'spear'`), pointing at the target while the holder is `busy` or `thrust`. Between Sukuna and the final chapter is a One
 Piece arc: the Sunny (`ship` map), a Marine ambush on the `cove` map with Luffy, Zoro and Sanji as allies
 (their specials are in `updateAlly()`), the Kabuto boss (`kabutoThink`; hitting him mid-heal stops the
 Mystical Palm) and the Kaido cutscene that ends in Luffy's throw. A cutscene actor with `rot` is drawn

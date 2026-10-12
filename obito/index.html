@@ -470,14 +470,31 @@ function drawDragon(b,t){
   g.strokeStyle='#e9eef8';g.lineWidth=1.5;g.beginPath();g.moveTo(44,-8);g.quadraticCurveTo(60,-30+Math.sin(t*4)*6,40,-46);g.moveTo(44,8);g.quadraticCurveTo(60,30+Math.sin(t*4+1)*6,40,46);g.stroke();
   g.fillStyle='#ffd23a';ell(22,-11,5,3);ell(22,11,5,3);g.fillStyle='#120a0a';ell(23,-11,1.5,2.6);ell(23,11,1.5,2.6);
   g.restore()}
+// The Inverted Spear of Heaven along +x from the pommel: a stub of the chain and a ring, a wrapped grip, a guard
+// with one hooked prong like a jitte, and a long, thin pale blade.
+function spearShape(lit){
+  g.lineCap='round';g.strokeStyle='#7a6e92';g.lineWidth=1.1;for(let i=0;i<3;i++){g.beginPath();g.ellipse(-12-i*4,0,2.2,1.3,0,0,TAU);g.stroke()}
+  g.lineWidth=1.5;g.strokeStyle='#9a8cc0';g.beginPath();g.arc(-6,0,2.8,0,TAU);g.stroke();
+  g.fillStyle='#2a2236';g.fillRect(-3.4,-1.8,13,3.6);g.strokeStyle='rgba(220,210,255,.35)';g.lineWidth=.6;g.beginPath();for(let x=-2;x<9;x+=2.4){g.moveTo(x,-1.8);g.lineTo(x+1.6,1.8)}g.stroke();
+  g.fillStyle='#6a5a86';g.fillRect(9.4,-4,2.2,8);
+  g.beginPath();g.moveTo(10.4,-3.6);g.quadraticCurveTo(12.5,-8.5,20,-7.6);g.lineTo(19.4,-6);g.quadraticCurveTo(14,-6.2,11.8,-2.2);g.closePath();g.fill();
+  const gr=g.createLinearGradient(0,-2,0,2);gr.addColorStop(0,'#f4f2fb');gr.addColorStop(1,'#a9a2c2');g.fillStyle=gr;
+  g.beginPath();g.moveTo(11.6,-2);g.lineTo(37,-1.3);g.lineTo(43,0);g.lineTo(37,1.3);g.lineTo(11.6,2);g.closePath();g.fill();
+  g.strokeStyle='#8f88a8';g.lineWidth=.5;g.beginPath();g.moveTo(12,0);g.lineTo(39,0);g.stroke();
+  if(lit){g.globalCompositeOperation='lighter';glow(28,0,18,'rgba(190,170,255,.45)');g.globalCompositeOperation='source-over'}}
+function drawHeldSpear(x,y,a,lit,alpha=1){g.save();g.globalAlpha=alpha;g.translate(x,y);g.rotate(a);g.translate(-2,0);g.scale(.9,.9);spearShape(lit);g.restore()}
+// Someone holding the spear: the grip sits in the hand on the side they face. At rest the blade points the way
+// they face, tipped down and out, and mid-attack (thrust) it points straight at the target. Drawn behind them
+// when they face away.
+function drawHolding(x,y,o,thrust,lit){const f=o.facing??Math.PI/2,c=Math.cos(f),k=o.s||1,hx=(c>.3?11:c<-.3?-11:Math.sin(f)>0?-11:11)*k,hy=7*k;
+  const a=thrust?f:f+(c>=0?.45:-.45),back=Math.sin(f)<-.3,al=o.alpha??1;
+  if(back)drawHeldSpear(x+hx,y+hy,a,lit,al);drawPerson(x,y,o);if(!back)drawHeldSpear(x+hx,y+hy,a,lit,al)}
 function drawItem(k,x,y,t,s=1){
   g.save();g.translate(x,y+Math.sin(t*3+x)*4);g.scale(s,s);
   const col={deathnote:'rgba(220,220,235,.4)',spear:'rgba(200,185,255,.55)',cloud:'rgba(255,200,90,.5)',fruit:'rgba(80,150,255,.5)',necklace:'rgba(255,201,74,.6)',fingers:'rgba(220,40,60,.45)'}[k];
   g.globalCompositeOperation='lighter';glow(0,0,28,col);g.globalCompositeOperation='source-over';
   if(k==='deathnote'){g.fillStyle='#111';rr(-11,-14,22,28,2);g.fill();g.strokeStyle='#444';g.lineWidth=1;g.stroke();g.fillStyle='#e6e6e6';g.font='bold 5px serif';g.textAlign='center';g.fillText('DEATH',0,-2);g.fillText('NOTE',0,5);g.textAlign='left'}
-  // the Inverted Spear of Heaven: a long hilt with a ring at the end and a forked pale blade
-  else if(k==='spear'){g.rotate(-.7);g.strokeStyle='#5a4a6a';g.lineWidth=1.6;g.beginPath();g.arc(0,21,3.2,0,TAU);g.stroke();g.fillStyle='#2a2030';g.fillRect(-2,2,4,16);g.fillStyle='#8a7aa8';g.fillRect(-5,1,10,2.5);
-    g.fillStyle='#e6e2f4';g.beginPath();g.moveTo(-2.5,1);g.lineTo(0,-24);g.lineTo(2.5,1);g.fill();g.beginPath();g.moveTo(2,-4);g.lineTo(8,-14);g.lineTo(3.5,-1);g.fill();g.strokeStyle='#b9a8e8';g.lineWidth=.7;g.stroke()}
+  else if(k==='spear'){g.rotate(-.87);g.translate(-16,0);spearShape(true)}
   else if(k==='cloud'){g.rotate(-.5);drawCloud(-20,4,-.2,0)}
   else if(k==='fruit'){g.fillStyle='#3d6fd6';circ(0,2,11);g.strokeStyle='#a9ccff';g.lineWidth=1.3;for(let i=0;i<3;i++){g.beginPath();g.arc(-3+i*3,2,4+i,0,Math.PI*1.4);g.stroke()}g.fillStyle='#2f6e3a';ell(4,-10,6,2.5,-.5);g.fillRect(-1,-12,2,4)}
   else if(k==='necklace'){g.strokeStyle='#d8b04a';g.lineWidth=1.2;g.beginPath();g.arc(0,-6,13,Math.PI*1.1,Math.PI*1.9);g.stroke();g.fillStyle='#ffc94a';g.beginPath();g.moveTo(-6,-6);g.lineTo(6,-6);g.lineTo(0,2);g.lineTo(6,10);g.lineTo(-6,10);g.lineTo(0,2);g.closePath();g.fill();g.fillStyle='#fff3c4';g.beginPath();g.moveTo(-2,8);g.lineTo(2,8);g.lineTo(0,4);g.fill()}
@@ -905,7 +922,7 @@ function drawEntity(st,e){
   const fy=e.float?Math.sin(st.t*3+e.x*.01)*3-6:0;
   if(e.aura){g.save();g.globalCompositeOperation='lighter';glow(e.x,e.y-10+fy,44,'rgba(155,92,255,.32)');g.restore()}
   let alpha=e.alpha??1;if(e.fake&&st.slow)alpha=.3;if(e.intangible)alpha=.85;
-  if(e.look){if(e.holdSpear)drawItem('spear',e.x+12,e.y-2+fy,0,.8);drawPerson(e.x,e.y+fy,{...e.look,facing:e.facing,walk:e.walk,flash:e.flash,alpha})}else{if(e.curse&&has('contacts')){g.save();g.globalCompositeOperation='lighter';glow(e.x,e.y-8,e.r*2.4,'rgba(150,90,255,.45)');g.restore()}drawSpirit(e,st.t)}
+  if(e.look){const po={...e.look,facing:e.facing,walk:e.walk,flash:e.flash,alpha};if(e.holdSpear)drawHolding(e.x,e.y+fy,po,e.busy>0,e.nullify>0);else drawPerson(e.x,e.y+fy,po)}else{if(e.curse&&has('contacts')){g.save();g.globalCompositeOperation='lighter';glow(e.x,e.y-8,e.r*2.4,'rgba(150,90,255,.45)');g.restore()}drawSpirit(e,st.t)}
   if(e.fake&&st.slow){g.font=`18px ${FD}`;g.fillStyle='#ff3344';g.textAlign='center';g.fillText('?',e.x,e.y-44+fy);g.textAlign='left'}
   if(e.state==='wind'){g.font=`16px ${FD}`;g.fillStyle='#ff3b4a';g.textAlign='center';g.fillText('!',e.x,e.y-40-e.r*.5);g.textAlign='left'}
   if(e.state==='aim'){g.save();g.translate(e.x,e.y);g.rotate(e.ca);g.fillStyle='rgba(255,59,74,.28)';g.fillRect(0,-e.r,240,e.r*2);g.restore()}
@@ -921,7 +938,7 @@ function drawShots(st){g.save();for(const s of st.shots){const a=Math.atan2(s.vy
     case'orb':glow(s.x,s.y,s.r*2,'rgba(170,70,230,.8)');g.fillStyle='#f2d8ff';circ(s.x,s.y,s.r*.4);break;
     case'rod':g.globalCompositeOperation='source-over';g.strokeStyle='#15121c';g.lineWidth=4;g.beginPath();g.moveTo(s.x,s.y);g.lineTo(s.x-Math.cos(a)*22,s.y-Math.sin(a)*22);g.stroke();g.strokeStyle='#b9a3e8';g.lineWidth=1;g.stroke();break;
     case'blue':glow(s.x,s.y,s.r*2.4,'rgba(60,120,255,.85)');g.globalCompositeOperation='source-over';g.fillStyle='#0a0a30';circ(s.x,s.y,s.r*.45);break;
-    case'spear':g.globalCompositeOperation='source-over';g.save();g.translate(s.x,s.y);g.rotate(a+Math.PI/2+.7);drawItem('spear',0,0,0,.75);g.restore();break;
+    case'spear':g.globalCompositeOperation='source-over';g.save();g.translate(s.x,s.y);g.rotate(a);g.translate(-24,0);spearShape(true);g.restore();break;
     // Nue: Megumi's owl-masked bird, wings spread, crackling as it dives
     case'nue':{g.save();g.translate(s.x,s.y);g.rotate(a);glow(0,0,26,'rgba(140,190,255,.45)');g.globalCompositeOperation='source-over';const fl=Math.sin(s.t*40)*3;
       g.fillStyle='#1c1c26';g.beginPath();g.moveTo(4,0);g.lineTo(-10,-20-fl);g.lineTo(-4,-4);g.lineTo(-14,0);g.lineTo(-4,4);g.lineTo(-10,20+fl);g.closePath();g.fill();
@@ -1030,7 +1047,8 @@ function cutscene(o){
     const list=Object.values(cs.actors).filter(a=>!a.hidden).sort((a,b)=>a.y-b.y);
     for(const a of list){const by=a.bob?Math.sin(cs.t*3+a.x*.01)*4:0;if(a.draw){a.draw(a,cs.t);continue}
       const o={...a.look,facing:a.facing,walk:a.walk,alpha:a.alpha,s:a.s};
-      if(a.rot){g.save();g.translate(a.x,a.y+by);g.rotate(a.rot);drawPerson(0,0,o);g.restore()}else drawPerson(a.x,a.y+by,o)} // rot lays someone down
+      const dp=(x,y)=>a.hold==='spear'?drawHolding(x,y,o,a.thrust):drawPerson(x,y,o);
+      if(a.rot){g.save();g.translate(a.x,a.y+by);g.rotate(a.rot);dp(0,0);g.restore()}else dp(a.x,a.y+by)} // rot lays someone down, hold puts the spear in their hand
     drawParts();if(m&&m.over)m.over(m,cs.t);drawTexts();g.restore();
     o.screen&&o.screen(cs);
     if(cs.dlg)cs.dlg.draw();
@@ -1227,7 +1245,7 @@ function spiritsScene(){
 
 /* ---------------- chapter: the seance, Shibuya Station and Toji ---------------- */
 function ogamiScene(){return cutscene({map:'shibuya',cam:{x:1240,y:300},
-  actors:{o:{x:1760,y:520,look:LOOK.Obito,facing:Math.PI,bob:true},og:{x:1610,y:560,look:LOOK['Granny Ogami'],facing:0},sp:{x:1624,y:556,draw:(a,t)=>drawItem('spear',a.x,a.y,t,.9)},tj:{x:1500,y:540,look:LOOK.Toji,facing:0,hidden:true}},
+  actors:{o:{x:1760,y:520,look:LOOK.Obito,facing:Math.PI,bob:true},og:{x:1610,y:560,look:LOOK['Granny Ogami'],facing:0,hold:'spear'},tj:{x:1500,y:540,look:LOOK.Toji,facing:0,hidden:true}},
   steps:[['title','Chapter 4','The Seance'],
     ['say','Obito',"The Leaf ninja and Itadori's brat tore through every curse I sent. Annoying."],
     ['say','Granny Ogami',"Leave them to me. My Seance Technique can call back any sorcerer who ever lived, and the spear you gave me will make them unstoppable."],
@@ -1243,14 +1261,15 @@ function ogamiScene(){return cutscene({map:'shibuya',cam:{x:1240,y:300},
     ['do',cs=>{const og=cs.actors.og;og.to=[1720,610];og.spd=700;og.noTurn=true;og.rot=-Math.PI/2;flashC='#fff';flashA=.8;shake=22;spark(1600,545,20,'#fff',420,.3,18);SND.bf()}],
     ['wait',.5],
     ['say','',"One punch sends the old woman flying. She doesn't get up again."],
-    ['do',cs=>{const a=cs.actors;a.sp.to=[a.tj.x+14,a.tj.y-6];a.sp.spd=260;a.tj.facing=A(a.tj,a.og)}],['wait',.6],
+    ['do',cs=>{const t=cs.actors.tj;t.to=[1690,592];t.spd=260}],['wait',.6],
+    ['do',cs=>{const a=cs.actors;a.og.hold=null;a.tj.hold='spear';a.tj.facing=Math.PI*.15;spark(a.tj.x+12,a.tj.y-6,14,'#d9ccff',260,.3,12);SND.slash()}],['wait',.4],
     ['say','Toji',"I'll take this, though. The Inverted Spear of Heaven. It cuts through any technique."],
     ['say','Toji',"A ninja from another world, huh? Might actually be fun."],
     ['fade',1,.8,'0,0,0']],
   then:()=>startChapter('station')})}
 function stationScene(){return cutscene({map:'station',cam:{x:120,y:20},fadeIn:true,
   actors:{tr:{x:1500,y:0,open:false,draw:a=>drawTrain(a.x,a.open)},p:{x:560,y:640,look:playerLook(),facing:-Math.PI/2},yu:{x:640,y:660,look:LOOK.Yuji,facing:-Math.PI/2},
-    mg:{x:760,y:300,look:LOOK.Megumi,facing:Math.PI*.75},tj:{x:606,y:320,look:LOOK.Toji,facing:-Math.PI/2,hidden:true}},
+    mg:{x:760,y:300,look:LOOK.Megumi,facing:Math.PI*.75},tj:{x:606,y:320,look:LOOK.Toji,facing:-Math.PI/2,hidden:true,hold:'spear'}},
   steps:[['fade',0,.6],['title','Chapter 5','Shibuya Station'],
     ['do',cs=>{const a=cs.actors;a.p.to=[560,380];a.p.spd=220;a.yu.to=[640,400];a.yu.spd=220}],['wait',1.4],
     ['say','Yuji',"The cursed energy leads all the way down here, to the lowest platform of Shibuya Station."],
@@ -1305,14 +1324,14 @@ function tojiFight(){
   return stageScene(st)}
 function spearScene(){return cutscene({map:'station',cam:{x:120,y:20},
   actors:{tr:{x:100,y:0,draw:()=>drawTrain(100,true)},p:{x:606,y:225,look:playerLook(),facing:Math.PI/2},yu:{x:530,y:235,look:LOOK.Yuji,facing:Math.PI/2},mg:{x:690,y:235,look:LOOK.Megumi,facing:Math.PI/2},
-    tj:{x:606,y:340,look:LOOK.Toji,facing:-Math.PI/2},sp:{x:640,y:352,draw:(a,t)=>drawItem('spear',a.x,a.y,t,1)},ob:{x:780,y:340,look:LOOK.Obito,facing:Math.PI,hidden:true,bob:true}},
+    tj:{x:606,y:340,look:LOOK.Toji,facing:-Math.PI/2,hold:'spear'},sp:{x:640,y:352,hidden:true,draw:a=>drawHeldSpear(a.x-22,a.y,.2)},ob:{x:780,y:340,look:LOOK.Obito,facing:Math.PI,hidden:true,bob:true}},
   steps:[['say','Toji',"Heh... Not bad, brats. Not bad at all."],
     ['do',cs=>{const a=cs.actors;a.tj.facing=A(a.tj,a.mg);a.mg.facing=A(a.mg,a.tj)}],
     ['say','Toji',"Hey. You, with the dogs. What's your last name?"],
     ['say','Megumi',"...Fushiguro."],
     ['say','Toji',"You're not a Zenin? ...That makes me glad."],
-    ['do',cs=>{const a=cs.actors;a.sp.to=[a.tj.x+12,a.tj.y-8];a.sp.spd=160}],['wait',.5],
-    ['do',cs=>{const a=cs.actors;flashC='#fff';flashA=.85;shake=16;spark(a.tj.x,a.tj.y-10,18,'#c9b6ff',300,.35,14);a.tj.rot=-Math.PI/2;a.tj.y+=6;a.sp.to=[a.tj.x+30,a.tj.y+10];a.sp.spd=120;SND.bf()}],
+    ['do',cs=>{const t=cs.actors.tj;t.thrust=true;t.facing=-Math.PI*.55}],['wait',.5],
+    ['do',cs=>{const a=cs.actors;flashC='#fff';flashA=.85;shake=16;spark(a.tj.x,a.tj.y-10,18,'#c9b6ff',300,.35,14);a.tj.rot=-Math.PI/2;a.tj.y+=6;a.tj.hold=null;a.sp.hidden=false;a.sp.x=a.tj.x+26;a.sp.y=a.tj.y+8;SND.bf()}],
     ['wait',.6],
     ['say','',"Toji turns the Inverted Spear of Heaven on himself. He falls, and doesn't get up again."],
     ['do',cs=>{const t=cs.actors.tj;puff(t.x,t.y-6,40,'#cfc6b8',120,1.2,8,-20);t.hidden=true}],
@@ -1320,7 +1339,7 @@ function spearScene(){return cutscene({map:'station',cam:{x:120,y:20},
     ['do',cs=>{const o=cs.actors.ob;o.hidden=false;puff(o.x,o.y-10,30,'#7a5ad0',150,.7,6,0,true);SND.zap()}],
     ['say','Obito',"How fitting. He held on to that spear just long enough for me to come and collect it."],
     ['do',cs=>{const a=cs.actors;a.sp.to=[a.ob.x-16,a.ob.y-30];a.sp.spd=320;floatText(a.ob.x,a.ob.y-50,'Kamui!','#c9a3ff',18);SND.zap()}],['wait',.6],
-    ['do',cs=>{cs.actors.sp.hidden=true;flashC='#9b5cff';flashA=.5}],
+    ['do',cs=>{const a=cs.actors;a.sp.hidden=true;a.ob.hold='spear';flashC='#9b5cff';flashA=.5}],
     ['say','Obito',"The Inverted Spear of Heaven. A blade that cancels any technique. It will be very useful."],
     ['say','{name}',"Obito! Give that back!"],
     ['do',cs=>{const o=cs.actors.ob;puff(o.x,o.y-10,30,'#7a5ad0',140,.7,6,0,true);o.hidden=true;SND.zap()}],
