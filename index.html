@@ -29,8 +29,14 @@
     position:relative;min-height:100vh;padding:56px 16px 48px;
     background:var(--paper);color:var(--ink);font-family:var(--sans);
     display:flex;flex-direction:column;align-items:center;gap:36px;overflow-x:hidden;
-    isolation:isolate; /* so the sun and petals (z-index -1) sit above the body background */
+    isolation:isolate; /* so the sun, torii and petals (z-index -1) sit above the body background */
+    animation:fade 900ms ease both;
   }
+  /* the page fades in, then the cards rise in one after another (--i is set by the script below) */
+  @keyframes fade{from{opacity:0}}
+  @keyframes rise{from{opacity:0;transform:translateY(18px)}}
+  header{animation:rise 700ms ease both}
+  a.card{animation:rise 600ms ease both;animation-delay:calc(200ms + var(--i,0) * 90ms)}
   /* paper fibre: a faint fixed noise layer over everything */
   body::before{
     content:"";position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.07;
@@ -110,6 +116,17 @@
   footer{font-size:.8rem;color:var(--muted);letter-spacing:.1em}
   footer span{font-family:var(--serif);font-weight:700;color:var(--shu)}
 
+  /* a big faint torii standing at the foot of the screen, behind the cards */
+  .torii{
+    position:fixed;z-index:-1;left:50%;bottom:0;translate:-50% 0;
+    width:min(94vw,104vh,980px);height:auto;opacity:.15;
+    --kuro:#1f1b16;
+    animation:fade 1800ms ease 300ms both;
+  }
+  .torii .aka{fill:var(--shu)}
+  .torii .kuro{fill:var(--kuro)}
+  @media (prefers-color-scheme:dark){.torii{opacity:.2;--kuro:#5a1c13}}
+
   /* sakura petals drifting down behind the cards */
   .petals{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
   .petals i{
@@ -124,6 +141,7 @@
   }
   @media (prefers-reduced-motion:reduce){
     a.card,.art svg .zoom,.nm::after{transition:none}
+    body,header,a.card,.torii{animation:none}
     .petals{display:none}
   }
 
@@ -138,6 +156,15 @@ html{touch-action:pan-y} /* no overflow here: body's overflow-x then applies to 
 </style>
 </head>
 <body>
+<svg class="torii" viewBox="0 0 400 360" aria-hidden="true">
+  <path class="aka" d="M92 52h28l-8 308H80Z M280 52h28l12 308h-32Z"/>
+  <path class="kuro" d="M80.7 332h31.9l-.6 28H80Z M287.4 332h31.9l.7 28h-32Z"/>
+  <rect class="aka" x="38" y="104" width="324" height="20"/>
+  <rect class="aka" x="188" y="50" width="24" height="56"/>
+  <rect class="kuro" x="181" y="62" width="38" height="34" rx="2"/>
+  <path class="aka" d="M16 24Q200 54 384 24L380 44Q200 72 20 44Z"/>
+  <path class="kuro" d="M0 8Q200 40 400 8L396 24Q200 54 4 24Z"/>
+</svg>
 <div class="petals" aria-hidden="true"></div>
 
 <header>
@@ -330,6 +357,10 @@ html{touch-action:pan-y} /* no overflow here: body's overflow-x then applies to 
 <footer><span lang="ja">遊んでね</span> &nbsp;·&nbsp; have fun</footer>
 
 <script>
+  // Stagger the cards' rise-in
+  var cards = document.querySelectorAll("a.card");
+  for (var c = 0; c < cards.length; c++) cards[c].style.setProperty("--i", c);
+
   // Sakura petals: a handful drifting down behind the cards, each with its own size, sway and pace.
   var box = document.querySelector(".petals");
   for (var i = 0; i < 16; i++) {
