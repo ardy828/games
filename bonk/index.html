@@ -41,8 +41,11 @@
   .note{font-size:14px;color:var(--muted);min-height:1.2em}
   .note:empty{display:none}
   .keys{font-size:12.5px;color:var(--muted);line-height:1.5}
-  .back{font-size:14px;color:var(--muted);text-decoration:none}
-  .back:hover{color:var(--ink)}
+  .back{display:block;font-family:var(--disp);font-size:21px;letter-spacing:.04em;color:var(--ink);text-decoration:none;
+    background:#f1e7d6;border:3px solid var(--ink);border-radius:14px;box-shadow:0 5px 0 var(--ink);padding:12px 10px;
+    transition:transform 70ms,box-shadow 70ms}
+  .back:hover{background:#fff}
+  .back:active{transform:translateY(4px);box-shadow:0 1px 0 var(--ink)}
 
   .logo{font-family:var(--disp);font-weight:400;line-height:.86;letter-spacing:.02em;rotate:-3deg;margin:2px 0 4px;
     animation:bob 2.4s ease-in-out infinite}
@@ -215,7 +218,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     <p class="note" id="menuNote"></p>
     <p class="keys" id="tip"></p>
     <p class="keys"><b>WASD</b> or <b>arrows</b> to roll · <b>SPACE</b> to dash · <b>1–4</b> emotes · <b>M</b> mute</p>
-    <a class="back" href="../">← All games</a>
+    <a class="back" href="../">← ALL GAMES</a>
   </div>
 </div>
 
@@ -315,6 +318,7 @@ const SKINS = [
   { n: 'Royal', c: '#8a5cf6', c2: '#ffd34d', h: 'crown', $: 500 },
   { n: 'Galaxy', c: '#2b1a5c', p: 'galaxy', $: 700 },
   { n: 'Midas', c: '#ffd34d', p: 'gold', h: 'crown', $: 1200 },
+  { n: 'Ninja', c: '#2f2a45', c2: '#e63946', h: 'ninja', $: 600 },
 ];
 const skinOk = (i) => Number.isInteger(i) && i >= 0 && i < SKINS.length;
 if (!skinOk(save.skin)) save.skin = 0;
@@ -555,6 +559,23 @@ function hat(c, r, s) {
     c.fillStyle = c2;
     c.beginPath(); c.moveTo(-r * 0.36, -r * 0.82); c.lineTo(r * 0.36, -r * 0.82); c.lineTo(r * 0.05, -r * 1.75); c.closePath(); c.fill(); c.stroke();
     c.fillStyle = '#ffd34d'; c.beginPath(); c.arc(r * 0.05, -r * 1.77, r * 0.14, 0, TAU); c.fill(); c.stroke();
+  } else if (h === 'ninja') {
+    // a headband across the brow (clipped to the ball), knotted at the side with two tails flapping
+    const y0 = -r * 0.8, bh = r * 0.24, w = Math.sin(T * 9) * r * 0.1;
+    c.save(); c.beginPath(); c.arc(0, 0, r, 0, TAU); c.clip();
+    c.fillStyle = c2; c.fillRect(-r, y0, 2 * r, bh);
+    c.beginPath(); c.moveTo(-r, y0); c.lineTo(r, y0); c.moveTo(-r, y0 + bh); c.lineTo(r, y0 + bh); c.stroke();
+    c.restore();
+    c.fillStyle = c2;
+    for (const k of [0, 1]) {
+      const dy = k * r * 0.34;
+      c.beginPath(); c.moveTo(r * 0.8, y0 + bh * 0.3);
+      c.quadraticCurveTo(r * 1.15, y0 - r * 0.05 + dy + w, r * 1.55, y0 + dy - w);
+      c.lineTo(r * 1.5, y0 + bh * 0.9 + dy - w);
+      c.quadraticCurveTo(r * 1.12, y0 + bh + dy * 0.8 + w, r * 0.8, y0 + bh * 0.7);
+      c.closePath(); c.fill(); c.stroke();
+    }
+    c.beginPath(); c.arc(r * 0.8, y0 + bh * 0.5, r * 0.14, 0, TAU); c.fill(); c.stroke();
   } else if (h === 'viking') {
     c.fillStyle = '#fff6e4';
     for (const k of [-1, 1]) {
@@ -1724,8 +1745,9 @@ function renderShop() {
   $('coins2').textContent = save.coins;
   const grid = $('skinGrid');
   grid.textContent = '';
-  SKINS.forEach((s, i) => {
-    const own = save.owned.includes(i);
+  const order = SKINS.map((_, i) => i).sort((a, b) => (SKINS[a].$ || 0) - (SKINS[b].$ || 0));   // stable: free ones keep their order
+  for (const i of order) {
+    const s = SKINS[i], own = save.owned.includes(i);
     const b = document.createElement('button');
     b.className = 'skin' + (save.skin === i ? ' eq' : '') + (own ? '' : ' locked');
     const cvs = document.createElement('canvas'); cvs.width = cvs.height = 168; paintSwatch(cvs, i);
@@ -1739,7 +1761,7 @@ function renderShop() {
       persist(); renderShop();
     };
     grid.append(b);
-  });
+  }
 }
 
 // ───────────────────────── Multiplayer (PeerJS) ─────────────────────────

@@ -192,7 +192,7 @@ The platform shrinks after ten seconds, so every round ends.
 - **Power-ups** — MEGA (huge and heavy), TURBO (faster, dash recharges quickly) and SHOCKWAVE
   (blasts everyone near you away).
 - **Coins and skins** — knock-offs, round wins and match wins earn coins (Rush pays per
-  knock-off). 24 skins, six free; the rest have patterns and hats (crown, halo, propeller, viking
-  helmet…). Bots wear shop skins too. Coins, skins, your name and stats are kept in `localStorage`.
+  knock-off). 25 skins, six free; the rest have patterns and hats (crown, halo, propeller, viking
+  helmet, ninja headband…). Bots wear shop skins too. Coins, skins, your name and stats are kept in `localStorage`.
 - All drawing is canvas, all audio is synthesised with the Web Audio API, and there are no image
   or sound files.

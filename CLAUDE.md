@@ -540,7 +540,8 @@ One IIFE, sections in this order: save, skins, tuning, canvas, audio, drawing ba
   the shop and the lobby swatches (`paintSwatch()`); a pattern is drawn clipped and the outline is
   stroked on a fresh circle path afterwards.
 - **Skins** are rows in `SKINS` (`c`, `c2`, pattern `p`, hat `h`, price `$`); the first six are free.
-  **Append new skins at the end**: saves and network messages store the index.
+  **Append new skins at the end**: saves and network messages store the index. The shop lists them
+  by price, so where a row sits in the table never shows.
 - **Screens**: `show(name)` toggles `SCREENS` (`null` is playing); one `#lobby` serves every mode
   (`lob.mode`), and `#over` serves both the match results and the Rush score.
 - **Multiplayer** is the same two-lane PeerJS scheme as Scrapline and Flatcraft (`stream()` for the
