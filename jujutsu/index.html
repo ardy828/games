@@ -886,17 +886,15 @@ const MOVES = {
     q(f) { startAct(f, 'nue'); fx(['snd', 'nue', r1(f.x), r1(f.y)]); },
     e(f) {
       startAct(f, 'cast', 0.25);
-      for (let i = 0; i < 14; i++) {
-        const a = f.aim + rnd(-0.55, 0.55), sp = rnd(280, 430);
-        S.rab.push({ id: S.nid++, own: f.id, x: f.x + Math.cos(a) * 16 + rnd(-8, 8), y: f.y + Math.sin(a) * 16 + rnd(-8, 8),
-          vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, t: rnd(3, 3.4), hcd: rnd(0, 0.2), hits: 0, tg: null, rt: 0, r: 7, px: f.x, py: f.y });
-      }
+      const d = rayLen(f.x, f.y, f.aim, clamp(f.inp.ad || 300, RAB.min, RAB.max));
+      S.rab.push({ id: S.nid++, own: f.id, x0: r1(f.x), y0: r1(f.y), x: r1(f.x + Math.cos(f.aim) * d), y: r1(f.y + Math.sin(f.aim) * d),
+        a: r2(f.aim), t: 0, T: r2(Math.max(0.18, d / RAB.spd)), burst: false, nt: 0.3 });
       fx(['snd', 'rabbits', r1(f.x), r1(f.y)]);
     },
     c(f) {
       startAct(f, 'cast', 0.3);
       const d = rayLen(f.x, f.y, f.aim, clamp(f.inp.ad || 300, 140, 450));
-      S.ele.push({ id: S.nid++, own: f.id, x: r1(f.x + Math.cos(f.aim) * d), y: r1(f.y + Math.sin(f.aim) * d), t: -0.65 });
+      S.ele.push({ id: S.nid++, own: f.id, x: r1(f.x + Math.cos(f.aim) * d), y: r1(f.y + Math.sin(f.aim) * d), t: -0.65, a: r2(f.aim) });
       fx(['snd', 'whistle', r1(f.x), r1(f.y)]);
     },
     u(f) {
@@ -1142,40 +1140,32 @@ function updEle(dt) {
   }
   S.ele = S.ele.filter((e) => !e.dead);
 }
+// Rabbit Escape: the swarm pours out of Megumi's shadow, rushes to where he aimed (up to RAB.max
+// away) and bursts there, then mills about for a moment, nibbling and slowing whoever is caught in it.
+// One entity stands for the whole swarm; each rabbit's path is worked out from it when drawing.
+const RAB = { n: 16, min: 120, max: 430, spd: 820, r: 105, dmg: 130, linger: 1.3 };
 function updRabbits(dt) {
   for (const r of S.rab) {
-    r.t -= dt; r.hcd -= dt; r.rt -= dt;
-    if (r.t <= 0 || r.hits >= 2) { r.dead = true; fx(['puff', r1(r.x), r1(r.y)]); continue; }
-    if (r.rt <= 0) {
-      r.rt = 0.25;
-      let best = null, bd = 290;
-      for (const f of S.f) {
-        if (!f.alive || f.id === r.own || f.prot > 0) continue;
-        const d = Math.hypot(f.x - r.x, f.y - r.y);
-        if (d < bd) { bd = d; best = f; }
+    r.t += dt;
+    if (!r.burst && r.t >= r.T) {
+      r.burst = true;
+      for (const t of targets(r.own)) {
+        if (Math.hypot(t.x - r.x, t.y - r.y) < RAB.r + t.r) hurt(t, RAB.dmg, { by: r.own, a: Math.atan2(t.y - r.y, t.x - r.x), kb: 120, stun: 0.35, kind: 'rab' });
       }
-      r.tg = best ? best.id : null;
+      fx(['rabb', r.x, r.y, r.a]);
     }
-    const t = r.tg != null ? byId(r.tg) : null;
-    if (t && t.alive) {
-      const a = Math.atan2(t.y - r.y, t.x - r.x) + Math.sin(S.time * 7 + r.id) * 0.6, k = Math.min(1, 7 * dt);
-      r.vx += (Math.cos(a) * 430 - r.vx) * k; r.vy += (Math.sin(a) * 430 - r.vy) * k;
-      if (Math.hypot(t.x - r.x, t.y - r.y) < t.r + 9 && r.hcd <= 0) {
-        if (hurt(t, 8, { by: r.own, a: Math.atan2(t.y - r.y, t.x - r.x), kind: 'rab' })) { r.hits++; fx(['snd', 'nibble', r1(r.x), r1(r.y)]); }
-        r.hcd = 0.42; r.vx *= -0.6; r.vy *= -0.6;
+    if (!r.burst) continue;
+    if ((r.nt -= dt) <= 0) {
+      r.nt = 0.3;
+      for (const f of S.f) {
+        if (!f.alive || f.id === r.own || Math.hypot(f.x - r.x, f.y - r.y) > RAB.r - 12 + f.r) continue;
+        f.slow = Math.max(f.slow, 0.35);
+        hurt(f, 6, { by: r.own, kind: 'rab' });
       }
-    } else { const k = Math.exp(-1.5 * dt); r.vx *= k; r.vy *= k; }
-    r.x += r.vx * dt; r.y += r.vy * dt;
-    const c = collide(r, 7);
-    if (c.hit) { const into = -(r.vx * c.nx + r.vy * c.ny); if (into > 0) { r.vx += c.nx * into * 1.8; r.vy += c.ny * into * 1.8; } }
+    }
+    if (r.t > r.T + RAB.linger) { r.dead = true; fx(['rgone', r.x, r.y]); }
   }
   S.rab = S.rab.filter((r) => !r.dead);
-  for (const f of S.f) {        // three or more rabbits swarming someone slow them down
-    if (!f.alive) continue;
-    let n = 0;
-    for (const r of S.rab) if (r.own !== f.id && Math.abs(r.x - f.x) < 40 && Math.abs(r.y - f.y) < 40) n++;
-    if (n >= 3) f.slow = Math.max(f.slow, 0.2);
-  }
 }
 function updFighter(f, dt) {
   control(f, dt);
@@ -1236,7 +1226,6 @@ function step(dt) {
   if (s.phase === 'over' && (s.overT -= dt) <= 0) newMatch();
   for (const f of s.f) { f.px = f.x; f.py = f.y; }
   for (const m of s.maho) { m.px = m.x; m.py = m.y; }
-  for (const r of s.rab) { r.px = r.x; r.py = r.y; }
   for (const f of s.f) if (f.ctl === 'bot') botThink(f, dt);
   for (const f of s.f) updFighter(f, dt);
   separate();
@@ -1303,7 +1292,7 @@ function think(f, ai) {
     } else {
       if (d < 420 && !own && f.hp > maxHp(f) * 0.35 && ready('u') && Math.random() < 0.5) { inp.aim = aimAt(t); inp.u++; }
       else if (d > 150 && d < 470 && ready('c')) { const p = lead(0.65); inp.aim = aimAt(p); inp.ad = Math.hypot(p.x - f.x, p.y - f.y); inp.c++; }
-      else if (d < 340 && ready('e')) { inp.aim = aimAt(lead(0.4)); inp.e++; }
+      else if (d < RAB.max + 40 && ready('e')) { const p = lead(0.15 + d / RAB.spd); inp.aim = aimAt(p); inp.ad = Math.hypot(p.x - f.x, p.y - f.y); inp.e++; }
       else if (d > 140 && d < 400 && ready('q')) { inp.aim = aimAt(lead(0.2)); inp.q++; }
     }
   }
@@ -1384,6 +1373,7 @@ function doFx(a) {
   switch (k) {
     case 'h': {
       const [, , , dmg, kc, bl, id] = a;
+      if (kc === 6 && dmg < 10) { const e = S && byId(id); if (e) e.flash = 0.6; SFX.nibble(v); txt(x + rnd(-14, 14), y - 26, String(dmg), '#f4f2fa', 12, 0.5, -60); break; }
       const e = S ? (id >= 1e6 ? mahoById(id) : byId(id)) : null;
       if (e) e.flash = 1;
       const col = bl === 1 ? '#8fb6ff' : bl === 2 ? '#c9a24a' : HIT_COL[kc] || '#fff';
@@ -1457,6 +1447,8 @@ function doFx(a) {
     case 'die': SFX.die(v); puffs(x, y, 18, a[3] ? '#2a2f55' : '#4a1a2a', 140, 10, 34, 0.9, 0.7); ring(x, y, 10, 70, 0.5, '#8b5cff', 4); break;
     case 'sp': SFX.spawn(v); ring(x, y, 50, 10, 0.5, '#e8e4ff', 3); puffs(x, y, 6, '#8b5cff', 60, 8, 20, 0.6, 0.4); break;
     case 'puff': puffs(x, y, 3, '#f4f2fa', 40, 4, 10, 0.4, 0.6); break;
+    case 'rabb': SFX.rabbits(v); SFX.hit(v, true); shake(x, y, 7); ring(x, y, 20, RAB.r + 10, 0.35, '#ffffff', 5); puffs(x, y, 14, '#f4f2fa', 200, 6, 20, 0.6, 0.7); decal({ k: 'scorch', x, y, r: 70, life: 6 }); break;
+    case 'rgone': puffs(x, y, 12, '#e9e6f2', 90, 5, 16, 0.5, 0.6); puffs(x, y, 6, '#14121c', 60, 10, 26, 0.6, 0.5); break;
     case 'slam': SFX.slam(v); shake(x, y, 9); sparks(x, y, 12, '#b9b2a4', 260, 0.4, 3); puffs(x, y, 5, '#8f897d', 60, 6, 22, 0.6, 0.5); decal({ k: 'crack', x, y, r: 26, life: 20, seed: Math.random() * 1e4 }); break;
   }
 }
@@ -1773,52 +1765,113 @@ function drawFighter(f) {
     g.beginPath(); g.arc(x, y, 26 + f.actT * 30, 0, TAU); g.stroke();
   }
 }
-// Nue flies over Megumi while it carries him, drawn above the rooftops
+// The Ten Shadows shikigami, drawn from above after the anime: Nue, an orange owl-like bird with a white
+// skull mask and two sets of talons; the white rabbits of Rabbit Escape; Max Elephant, grey with yellow
+// markings on its forehead, head, back and knees; and Mahoraga, with the eight-handled wheel.
+function feather(x, y, a, len, w, col) { g.fillStyle = col; g.beginPath(); g.ellipse(x + Math.cos(a) * len / 2, y + Math.sin(a) * len / 2, len / 2, w, a, 0, TAU); g.fill(); }
 function drawNue(f) {
-  const x = f.rx, y = f.ry, a = f.actA, t = f.actT, dive = t < 0.1 ? 1 - t / 0.1 : 0;
-  g.save(); g.translate(x - 6, y - 10 - dive * 40); g.rotate(a); g.scale(1 + dive * 0.5, 1 + dive * 0.5);
-  g.globalAlpha = 1 - dive * 0.6;
-  const flap = Math.sin(T * 30) * 0.18;
-  g.fillStyle = '#232a42';
-  for (const s of [-1, 1]) {
-    g.beginPath(); g.moveTo(4, s * 6);
-    g.lineTo(-8, s * (40 + flap * 30)); g.lineTo(-22, s * (62 + flap * 40)); g.lineTo(-26, s * 54); g.lineTo(-30, s * 44); g.lineTo(-34, s * 30); g.lineTo(-18, s * 10);
-    g.closePath(); g.fill();
+  const x = f.rx, y = f.ry, a = f.actA, t = f.actT, dive = t < 0.1 ? 1 - t / 0.1 : 0, flap = Math.sin(T * 24);
+  g.save(); g.translate(x + 22, y + 30); g.rotate(a); g.fillStyle = 'rgba(0,0,0,.14)'; ell(0, 0, 22, 64); g.restore();
+  g.save(); g.translate(x - 4, y - 14 - dive * 50); g.rotate(a);
+  const sc = 1.05 + dive * 0.5; g.scale(sc, sc); g.globalAlpha = 1 - dive * 0.5;
+  // two sets of talons: one pair gripping Megumi's shoulders, one reaching forward
+  g.strokeStyle = '#3a2214'; g.lineWidth = 3.5;
+  g.beginPath(); g.moveTo(-2, -6); g.lineTo(2, -15); g.moveTo(-2, 6); g.lineTo(2, 15); g.moveTo(6, -5); g.lineTo(13, -11); g.moveTo(6, 5); g.lineTo(13, 11); g.stroke();
+  g.fillStyle = '#2a1a12'; circ(3, -16, 2.6); circ(3, 16, 2.6); circ(14, -12, 2.2); circ(14, 12, 2.2);
+  // tail: a fan with two long plumes
+  for (let i = -3; i <= 3; i++) feather(-16, 0, Math.PI + i * 0.13, 30 - Math.abs(i) * 2, 4.5, i % 2 ? '#b8551b' : '#d06a24');
+  feather(-18, -3, Math.PI - 0.05, 52, 3, '#9c4416'); feather(-18, 3, Math.PI + 0.05, 52, 3, '#9c4416');
+  // wings: long orange primaries fanned out to each side
+  for (const sd of [-1, 1]) {
+    const reach = 1 + 0.13 * flap;
+    for (let k = 0; k < 7; k++) {
+      const ang = sd * (Math.PI / 2 + 0.08 + k * 0.16), len = (72 - k * 4) * reach;
+      feather(-2 - k * 1.5, sd * 6, ang, len, 6.5, k % 2 ? '#c45a1e' : '#de7a2c');
+    }
+    for (let k = 0; k < 5; k++) feather(0, sd * 6, sd * (Math.PI / 2 + 0.15 + k * 0.17), (40 - k * 3) * reach, 6, '#ee9842');
+    feather(2, sd * 6, sd * (Math.PI / 2 - 0.05), 30 * reach, 5, '#f6b45e');
   }
-  g.fillStyle = '#323b5c'; ell(-6, 0, 20, 10);
-  g.fillStyle = '#1a1f33'; g.beginPath(); g.moveTo(-24, 0); g.lineTo(-40, -8); g.lineTo(-40, 8); g.closePath(); g.fill();
-  g.fillStyle = '#eceaf2'; ell(12, 0, 8, 9);
-  g.fillStyle = '#1a1f33'; circ(14, -3.5, 2); circ(14, 3.5, 2);
-  g.fillStyle = '#d9b14a'; g.beginPath(); g.moveTo(19, -2); g.lineTo(25, 0); g.lineTo(19, 2); g.fill();
-  g.restore();
-  if (t > 0.1 && Math.random() < 0.6) {
-    g.strokeStyle = '#bfe0ff'; g.lineWidth = 1.6; g.beginPath();
-    let px = x + rnd(-30, 30), py = y + rnd(-30, 30); g.moveTo(px, py);
-    for (let i = 0; i < 4; i++) { px += rnd(-12, 12); py += rnd(-12, 12); g.lineTo(px, py); }
+  // body and head
+  g.fillStyle = '#c05a20'; ell(-2, 0, 20, 11);
+  g.fillStyle = '#e6893a'; ell(2, 0, 11, 8);
+  g.fillStyle = '#8f3f14'; circ(15, 0, 9.5);
+  // the white skull mask: dark eye sockets and a row of human teeth
+  g.fillStyle = '#f2efe6'; g.beginPath(); g.moveTo(11, -8.5); g.quadraticCurveTo(25, -10, 28, 0); g.quadraticCurveTo(25, 10, 11, 8.5); g.quadraticCurveTo(14, 0, 11, -8.5); g.fill();
+  g.fillStyle = '#1a1418'; ell(18.5, -4, 3.6, 2.4, 0.25); ell(18.5, 4, 3.6, 2.4, -0.25); ell(23.5, 0, 1.4, 1);
+  g.strokeStyle = '#1a1418'; g.lineWidth = 1; g.beginPath(); g.moveTo(26, -4.5); g.lineTo(26, 4.5);
+  for (let i = -3; i <= 3; i += 1.5) { g.moveTo(25, i); g.lineTo(27.5, i); }
+  g.stroke();
+  g.restore(); g.globalAlpha = 1;
+  // lightning crackles off the wingtips
+  if (t > 0.1) for (const sd of [-1, 1]) if (Math.random() < 0.7) {
+    const wx = x - 4 + Math.cos(a + sd * 1.75) * 70, wy = y - 14 + Math.sin(a + sd * 1.75) * 70;
+    g.strokeStyle = Math.random() < 0.5 ? '#bfe0ff' : '#ffffff'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(wx, wy);
+    let px = wx, py = wy;
+    for (let i = 0; i < 4; i++) { px += rnd(-13, 13); py += rnd(-13, 13); g.lineTo(px, py); }
     g.stroke();
   }
 }
-function drawRabbit(r) {
-  const hop = Math.abs(Math.sin(T * 14 + r.id)) * 3.5, a = Math.atan2(r.vy || 0.01, r.vx || 0.01);
-  g.fillStyle = 'rgba(0,0,0,.25)'; ell(r.rx + 2, r.ry + 3, 7, 5);
-  g.save(); g.translate(r.rx, r.ry - hop); g.rotate(a);
-  g.fillStyle = '#f4f2fa'; ell(0, 0, 7.5, 5.4); circ(6, 0, 4);
-  g.fillStyle = '#e4e0ec'; ell(1.5, -2.6, 5.2, 1.8, -0.25); ell(1.5, 2.6, 5.2, 1.8, 0.25);
-  g.fillStyle = '#d23a4f'; circ(8, -1.5, 0.9); circ(8, 1.5, 0.9);
-  g.restore();
+function drawRabbit(x, y, a, hop, al) {
+  g.globalAlpha = al * 0.28; g.fillStyle = '#000'; ell(x + 2, y + 3, 7, 5);
+  g.globalAlpha = al;
+  g.save(); g.translate(x, y - hop); g.rotate(a);
+  g.fillStyle = '#ffffff'; ell(-1, 0, 7.6, 5.8); circ(-8, 0, 2.6);
+  g.fillStyle = '#f3f0f7'; circ(5.6, 0, 4.4);
+  g.fillStyle = '#ffffff'; ell(0.4, -3.6, 6.4, 2, -0.32); ell(0.4, 3.6, 6.4, 2, 0.32);
+  g.fillStyle = '#f2b3c4'; ell(0.8, -3.6, 4.2, 0.8, -0.32); ell(0.8, 3.6, 4.2, 0.8, 0.32);
+  g.fillStyle = '#1a1a22'; circ(7.3, -1.9, 1); circ(7.3, 1.9, 1);
+  g.fillStyle = '#f2b3c4'; circ(9.6, 0, 0.9);
+  g.restore(); g.globalAlpha = 1;
+}
+// where rabbit i of a swarm is: streaming out to the target, then milling about it
+function drawSwarm(r) {
+  const nx = -Math.sin(r.a), ny = Math.cos(r.a), end = r.T + RAB.linger;
+  if (r.t < r.T + 0.1) { const k = clamp(1 - r.t / (r.T + 0.1), 0, 1); g.fillStyle = `rgba(5,4,10,${0.5 * k})`; ell(r.x0, r.y0, 30, 22); }
+  if (r.burst) { const k = clamp((end - r.t) / 0.3, 0, 1); g.fillStyle = `rgba(5,4,10,${0.28 * k})`; circ(r.x, r.y, RAB.r - 10); }
+  for (let i = 0; i < RAB.n; i++) {
+    const h1 = hash1(r.id * 31 + i), h2 = hash1(r.id * 17 + i * 3 + 1);
+    let x, y, a, al = 1;
+    if (!r.burst || r.t < r.T) {
+      const p = clamp((r.t - i * 0.012) / r.T, 0, 1);
+      const lat = (h1 - 0.5) * 22 + (h1 - 0.5) * 60 * Math.sin(Math.PI * p);
+      x = lerp(r.x0, r.x, p) + nx * lat; y = lerp(r.y0, r.y, p) + ny * lat; a = r.a;
+      if (p <= 0) continue;
+    } else {
+      const q = r.t - r.T, ang = h1 * TAU + q * (h2 - 0.5) * 4, rad = 14 + (RAB.r - 30) * Math.min(1, q * 5) * (0.3 + 0.7 * h2);
+      x = r.x + Math.cos(ang) * rad + Math.sin(q * 8 + i) * 7; y = r.y + Math.sin(ang) * rad + Math.cos(q * 7 + i * 2) * 7;
+      a = ang + (h2 < 0.5 ? Math.PI / 2 : -Math.PI / 2); al = clamp((end - r.t) / 0.25, 0, 1);
+    }
+    if (vis(x, y, 12)) drawRabbit(x, y, a, Math.abs(Math.sin(T * 15 + i * 1.7)) * 3.5, al);
+  }
 }
 function drawElephant(x, y, a, s, alpha) {
+  const Y = '#f0c33c';      // the markings: yellow in the anime, on its forehead, head, back and knees
   g.save(); g.translate(x, y); g.rotate(a); g.scale(s, s); g.globalAlpha = alpha;
-  g.fillStyle = '#6f88a6'; ell(0, 0, 62, 48);
-  g.fillStyle = '#7f99b8'; ell(-4, -8, 50, 30);
-  g.fillStyle = '#5c7392'; ell(44, -30, 22, 26, 0.3); ell(44, 30, 22, 26, -0.3);
-  g.fillStyle = '#7891b0'; circ(52, 0, 25);
-  g.strokeStyle = '#6f88a6'; g.lineWidth = 13; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(70, 0); g.quadraticCurveTo(96, 4, 92, 22); g.stroke(); g.lineCap = 'butt';
-  g.fillStyle = '#f2ede0'; ell(68, -10, 9, 3, 0.3); ell(68, 10, 9, 3, -0.3);
-  g.strokeStyle = 'rgba(30,40,60,.5)'; g.lineWidth = 3;
-  g.beginPath(); g.moveTo(-30, -20); g.lineTo(-10, -26); g.lineTo(10, -20); g.moveTo(-30, 20); g.lineTo(-10, 26); g.lineTo(10, 20); g.stroke();
-  g.fillStyle = '#1a2233'; circ(60, -9, 2.5); circ(60, 9, 2.5);
+  for (const [lx, ly] of [[30, 42], [30, -42], [-34, 40], [-34, -40]]) { g.fillStyle = '#868c97'; ell(lx, ly, 14, 11); g.fillStyle = Y; ell(lx + 2, ly, 6, 5); }
+  g.fillStyle = '#7d838e'; g.beginPath(); g.moveTo(-60, 0); g.lineTo(-80, -5); g.lineTo(-80, 5); g.closePath(); g.fill();
+  g.fillStyle = '#979da8'; ell(0, 0, 64, 50);
+  g.fillStyle = '#aab0ba'; ell(-6, -6, 52, 34);
+  // the markings along its back
+  g.fillStyle = Y;
+  g.beginPath(); g.moveTo(-46, 0); g.lineTo(-30, -9); g.lineTo(-14, 0); g.lineTo(-30, 9); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(-8, 0); g.lineTo(6, -7); g.lineTo(20, 0); g.lineTo(6, 7); g.closePath(); g.fill();
+  circ(-58, 0, 3);
+  // ears
+  for (const sd of [-1, 1]) {
+    g.fillStyle = '#8b919c'; g.beginPath(); g.ellipse(38, sd * 32, 20, 27, sd * 0.4, 0, TAU); g.fill();
+    g.fillStyle = '#9fa5b0'; g.beginPath(); g.ellipse(40, sd * 30, 12, 18, sd * 0.4, 0, TAU); g.fill();
+  }
+  // head, with the marks on its crown and forehead
+  g.fillStyle = '#a3a9b4'; ell(56, 0, 24, 22);
+  g.fillStyle = Y; ell(46, 0, 7, 10); g.beginPath(); g.moveTo(58, 0); g.lineTo(66, -6); g.lineTo(74, 0); g.lineTo(66, 6); g.closePath(); g.fill();
+  g.fillStyle = '#1f1b16'; ell(62, -12, 3.2, 2, 0.4); ell(62, 12, 3.2, 2, -0.4);
+  g.fillStyle = '#f7f2e3'; ell(78, -11, 11, 3.2, 0.35); ell(78, 11, 11, 3.2, -0.35);
+  // the trunk, curling forward
+  g.strokeStyle = '#9ba1ac'; g.lineWidth = 12; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(74, 0); g.quadraticCurveTo(102, 0, 104, 18); g.stroke();
+  g.strokeStyle = 'rgba(31,27,22,.3)'; g.lineWidth = 1.5; g.beginPath();
+  for (const t of [0.25, 0.45, 0.65, 0.85]) { const px = lerp(74, 104, t), py = t * t * 18; g.moveTo(px - 4, py - 5); g.lineTo(px + 4, py + 5); }
+  g.stroke(); g.lineCap = 'butt';
   g.restore(); g.globalAlpha = 1;
 }
 function drawMaho(m) {
@@ -1979,13 +2032,13 @@ function render() {
   drawTelegraphs();
   const list = [];
   for (const e of S.ele) if (e.t >= 0 && vis(e.x, e.y, 130)) list.push([e.y, 0, e]);
-  for (const r of S.rab) if (vis(r.rx, r.ry, 20)) list.push([r.ry, 1, r]);
+  for (const r of S.rab) if (vis((r.x + r.x0) / 2, (r.y + r.y0) / 2, RAB.max)) list.push([r.y, 1, r]);
   for (const f of S.f) if (f.alive && vis(f.rx, f.ry, 60)) list.push([f.ry, 2, f]);
   for (const m of S.maho) if (vis(m.rx, m.ry, 130)) list.push([m.ry, 3, m]);
   list.sort((a, b) => a[0] - b[0]);
   for (const [, k, e] of list) {
     if (k === 0) { const s = e.t < 1 ? 1 : 1 - (e.t - 1) * 0.8, al = e.t < 1 ? 1 : clamp(1 - (e.t - 1) / 0.5, 0, 1); drawElephant(e.x, e.y, e.a || 0, s, al); }
-    else if (k === 1) drawRabbit(e);
+    else if (k === 1) drawSwarm(e);
     else if (k === 2) drawFighter(e);
     else drawMaho(e);
   }
@@ -2036,7 +2089,6 @@ function animate(dt, alpha) {
     if (m.spinT > 0) m.spinT -= dt;
     if (m.flash > 0) m.flash = Math.max(0, m.flash - dt * 6);
   }
-  if (host) for (const r of S.rab) { r.rx = lerp(r.px, r.x, alpha); r.ry = lerp(r.py, r.y, alpha); }
 }
 let demoT = 0, demoId = null;
 function updCam(dt) {
@@ -2330,9 +2382,15 @@ zone.addEventListener('pointerup', stickUp);
 zone.addEventListener('pointercancel', stickUp);
 // button layout: an arc of buttons around the big attack button in the bottom-right corner
 const PAD_LAYOUT = { m1: [0, 0, 86], blk: [0, 122, 58], q: [30, 122, 58], e: [60, 122, 58], c: [90, 122, 58], d: [8, 196, 56], r: [40, 196, 56], u: [72, 196, 60] };
-const AIM_LEN = { q: [190, 0], e: [900, 0], c: [450, 120], u: [450, 0] };
+// per fighter: [length of the aim line, ring at its end, length set by how far you drag]
+const AIM_LEN = {
+  yuji: { q: [190, 0], e: [900, 0], c: [700, 0], u: [450, 0] },
+  megumi: { q: [384, 0], e: [RAB.max, RAB.r, 1], c: [450, 120, 1], u: [90, 0] },
+};
+const dragLen = (spec, len) => (spec[2] ? 140 + clamp(len / 80, 0, 1) * (spec[0] - 140) : spec[0]);
 function buildPad(ch) {
   const box = $('pad'), C = CHARS[ch];
+  if (!AIM_LEN[ch]) return;
   for (const k in pads) pads[k].el.remove();
   for (const k of Object.keys(PAD_LAYOUT)) {
     const el = document.createElement('div');
@@ -2360,20 +2418,21 @@ function buildPad(ch) {
       if (l > 16) { o.aimA = Math.atan2(dy, dx); o.len = l; }
       else if (o.aimA != null && l < 10 && k !== 'm1') o.aimA = 'x';      // dragged back to the middle: cancel
       if (k === 'm1' && typeof o.aimA === 'number') forceAim = { a: o.aimA, ad: 300, until: T + 0.2 };
-      if (AIM_LEN[k]) aimPreview = typeof o.aimA === 'number' ? { a: o.aimA, len: k === 'c' ? 140 + clamp(o.len / 80, 0, 1) * 310 : AIM_LEN[k][0], ring: AIM_LEN[k][1] } : null;
+      const al = AIM_LEN[ch][k];
+      if (al) aimPreview = typeof o.aimA === 'number' ? { a: o.aimA, len: dragLen(al, o.len), ring: al[1] } : null;
     });
     const up = (e) => {
       if (e.pointerId !== o.pid) return;
       o.pid = -1; el.classList.remove('down');
       if (k === 'm1') touchHeld.m1 = false;
       else if (k === 'blk') touchHeld.blk = false;
-      else if (AIM_LEN[k] && e.type === 'pointerup' && o.aimA !== 'x') {
+      else if (AIM_LEN[ch][k] && e.type === 'pointerup' && o.aimA !== 'x') {
         const me = S && byId(meId);
-        if (typeof o.aimA === 'number') forceAim = { a: o.aimA, ad: 140 + clamp(o.len / 80, 0, 1) * 310, until: T + 0.25 };
+        if (typeof o.aimA === 'number') forceAim = { a: o.aimA, ad: dragLen(AIM_LEN[ch][k], o.len), until: T + 0.25 };
         else if (me) { const t = nearestFoe(me, 700); if (t) forceAim = { a: Math.atan2(t.ry - me.ry, t.rx - me.rx), ad: Math.hypot(t.ry - me.ry, t.rx - me.rx), until: T + 0.25 }; }
         press[k]++;
       }
-      if (AIM_LEN[k]) aimPreview = null;
+      if (AIM_LEN[ch][k]) aimPreview = null;
     };
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
@@ -2551,19 +2610,660 @@ function startSolo() {
 }
 
 // ───────────────────────── Multiplayer ─────────────────────────
-function broadcast() {}
-function broadcastLobby() {}
-function toHost() {}
-function closeNet() { net = null; }
-function joinTick() {}
-function netHostTick() {}
-function hostParty() { lob.note = 'Parties are coming in the next update.'; renderLobby(); }
-function startHost() {}
-function joinParty() { $('menuNote').textContent = 'Parties are coming in the next update.'; }
-function playOnline() { $('menuNote').textContent = 'The public server is not set up yet.'; }
+// Host-authoritative, like Bonk Arena. The host steps the match and streams a snapshot 20 times a
+// second; joiners send their input (move vector, aim, held buttons, and press counters, which a lost
+// packet cannot eat) and draw what they are sent, predicting only their own walking and dashing.
+// Two transports carry the same messages:
+//  - PeerJS (private parties): a star of WebRTC links to the host, each with a reliable lane and an
+//    unordered, no-retransmit "fast" lane for the snapshot and input streams. A joiner whose link
+//    drops redials for NET_GRACE with the id and token from its 'hi'; a bot plays for it meanwhile.
+//  - A WebSocket to the Cloudflare relay (the public server, jujutsu/server/): messages go through
+//    the room's Durable Object as "to|json" (to = '*' everyone, 'h' the host, or an id) and arrive
+//    as "from|json", where '!' is the server itself. If the host leaves or stalls, the server names
+//    another host and that client promote()s its mirrored match into a live one.
+// Host -> joiner: hi, full, lob, go, s, ev, bye. Joiner -> host: hello, i, ch, bye. Both: hb.
+const SERVER = '';     // the Cloudflare Worker's address, e.g. 'https://jujutsu-arena.NAME.workers.dev'
+const PUBLIC_ROOMS = ['pub-1', 'pub-2', 'pub-3', 'pub-4'];
+const PUBLIC_FILL = 4;     // bots keep a public room at this many fighters
+const PEER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js';
+const PREFIX = 'jjarena-';
+const FAST_ID = 9;          // negotiated channel id; PeerJS's own channel takes 0 or 1
+const NET_BACKLOG = 32768;  // bytes queued on a lane before stream messages are skipped
+const NET_TIMEOUT = 8000;   // ms of silence before a link counts as dropped
+const NET_GRACE = 30000;    // ms a dropped joiner keeps redialling
+let peer = null, nextId = 1, snapT = 0, inT = 0, lastSent = '', helloT = 0;
+// Snapshot rows: each entity is an array in the order of its SPEC, written by enc() and read by
+// dec(), so the two sides cannot drift. Types: 1 / 2 = rounded to 1 or 2 decimals, s = string,
+// b = boolean, B = bot or not, c = the cooldown table, none = a plain value.
+const SPEC = {
+  f: 'id name:s ch:s nch:s bot:B x:1 y:1 vx:1 vy:1 aim:2 hp:1 alive:b resp:2 prot:2 guard:1 gdT:2 blk:b stun:2 iframe:2 slow:2 heal:2 slamT:2 act:s actT:2 actA:2 actD:2 hitDone:b hitL combo comboT:2 swCd:2 cd:c kills deaths lastBy lastT:2',
+  m: 'id own x:1 y:1 vx:1 vy:1 aim:2 hp:1 t:2 spins adapt mode:s mt:2 cd:2 lcd:2 tg rt:2 stun:2 hitDone:b',
+  e: 'id own x:1 y:1 t:2 a:2',
+  r: 'id own x0:1 y0:1 x:1 y:1 a:2 t:2 T:2 burst:b nt:2',
+  h: 'id own x:1 y:1 a:2 d:1',
+};
+for (const k in SPEC) SPEC[k] = SPEC[k].split(' ').map((w) => w.split(':'));
+const num = (v, d = 0) => (Number.isFinite(v) ? v : d);
+const OK_STR = { ch: (v) => (CHARS[v] ? v : 'yuji'), nch: (v) => (CHARS[v] ? v : 'yuji'), act: (v) => (ACTS[v] ? v : ''), mode: (v) => (['rise', 'kick', 'hunt', 'swing', 'lunge'].includes(v) ? v : 'hunt'), name: (v) => clean(v, 14) || 'Sorcerer' };
+function enc(o, spec) {
+  return spec.map(([k, t]) => t === '1' ? r1(o[k]) : t === '2' ? r2(o[k]) : t === 'b' ? (o[k] ? 1 : 0) : t === 'B' ? (o.ctl === 'bot' ? 1 : 0) : t === 'c' ? KEYS.map((q) => r2(o.cd[q])) : o[k]);
+}
+function plain(v) {
+  if (v == null) return null;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  if (Array.isArray(v)) return v.filter((x) => typeof x === 'number' || typeof x === 'string').slice(0, 32);
+  return typeof v === 'string' ? v.slice(0, 16) : null;
+}
+function dec(o, row, spec) {
+  spec.forEach(([k, t], i) => {
+    const v = row[i];
+    if (t === '1' || t === '2') o[k] = num(v);
+    else if (t === 's') o[k] = OK_STR[k] ? OK_STR[k](v) : clean(v, 16);
+    else if (t === 'b') o[k] = !!v;
+    else if (t === 'B') o.bot = !!v;
+    else if (t === 'c') { if (Array.isArray(v)) KEYS.forEach((q, j) => { o.cd[q] = num(v[j]); }); }
+    else o[k] = plain(v);
+  });
+}
+function loadPeer(cb) {
+  if (window.Peer) { cb(); return; }
+  if (loadPeer.q) { loadPeer.q.push(cb); return; }
+  loadPeer.q = [cb];
+  const s = document.createElement('script');
+  s.src = PEER_URL;
+  s.onload = () => { const q = loadPeer.q; loadPeer.q = null; for (const f of q) f(); };
+  s.onerror = () => { loadPeer.q = null; toMenu('Could not load the network library. Are you online?'); };
+  document.head.appendChild(s);
+}
+function links() { return net && net.host ? humans.filter((h) => h.link).map((h) => h.link) : []; }
+function wsSend(to, m, isStream) {
+  const ws = net && net.ws;
+  if (!ws || ws.readyState !== 1 || (isStream && ws.bufferedAmount > NET_BACKLOG)) return;
+  try { ws.send(to + '|' + JSON.stringify(m)); } catch (e) { /* closing */ }
+}
+function broadcast(m) {
+  if (!net || !net.host) return;
+  if (net.kind === 'ws') { wsSend('*', m); return; }
+  for (const l of links()) l.send(m);
+}
+function toHost(m) {
+  if (!net || net.host) return;
+  if (net.kind === 'ws') wsSend('h', m);
+  else if (net.link) net.link.send(m);
+}
+// newest-wins messages (snapshots, input, heartbeats): numbered, and skipped rather than queued on a backed-up lane
+function stream(m) {
+  if (!net) return;
+  m.q = ++net.q;
+  if (net.kind === 'ws') { wsSend(net.host ? '*' : 'h', m, true); return; }
+  const s = JSON.stringify(m);
+  for (const l of net.host ? links() : net.link ? [net.link] : []) l.stream(m, s);
+}
+function peerLink(conn) {
+  const l = {
+    conn, fast: null, fastOk: false, heard: performance.now(), is: 0, h: null,
+    send(m) { if (conn.open) { try { conn.send(m); } catch (e) { /* closing */ } } },
+    // until the fast lane has been heard from, stream messages also go over the reliable lane
+    // (while it is idle), so a browser that cannot open the second channel still plays
+    stream(m, s) {
+      if (!conn.open) return;
+      const dc = l.fast, rc = conn.dataChannel;
+      try {
+        if (dc && dc.readyState === 'open' && dc.bufferedAmount < NET_BACKLOG) dc.send(s);
+        if (!l.fastOk && !conn.bufferSize && rc && rc.bufferedAmount < NET_BACKLOG) conn.send(m);
+      } catch (e) { /* oversized or closing: skipped, the next one replaces it */ }
+    },
+  };
+  return l;
+}
+function wsLink(id) { return { id, heard: performance.now(), is: 0, h: null, send(m) { wsSend(id, m); } }; }
+function openFast(conn, link, onData) {
+  let dc;
+  try { dc = conn.peerConnection.createDataChannel('fast', { negotiated: true, id: FAST_ID, ordered: false, maxRetransmits: 0 }); }
+  catch (e) { return null; }
+  dc.onmessage = (e) => {
+    const l = link();
+    if (!l || l.fast !== dc) return;
+    let m;
+    try { m = JSON.parse(e.data); } catch (err) { return; }
+    l.fastOk = true;
+    onData(m);
+  };
+  return dc;
+}
+function keepSignal(me) {
+  me.on('disconnected', () => setTimeout(() => {
+    if (peer === me && me.disconnected && !me.destroyed) { try { me.reconnect(); } catch (e) { /* retried on the next drop */ } }
+  }, 2000));
+}
+function closeNet() {
+  const old = peer, n = net;
+  let wait = 0;
+  if (n) {
+    clearTimeout(n.retry);
+    if (n.kind === 'ws') { try { n.ws.close(1000); } catch (e) { /* gone */ } }
+    else for (const l of n.host ? links() : n.link ? [n.link] : []) if (l.conn && l.conn.open) { try { l.conn.send({ t: 'bye' }); wait = 300; } catch (e) { /* gone */ } }
+  }
+  net = null; peer = null; fxq = []; humans = [];
+  pred.on = false;
+  $('netwarn').classList.remove('on');
+  if (old) setTimeout(() => { try { old.destroy(); } catch (e) { /* gone */ } }, wait);
+}
+const hello = () => ({ t: 'hello', name: myName(), ch: save.ch });
+const rndTok = () => Math.random().toString(36).slice(2);
+
+// Host side, shared by both transports
+function ensureFighter(h) {
+  let f = byId(h.id);
+  if (f) { if (f.ctl === 'bot') { f.ctl = 'net'; f.ai = null; f.fresh = true; } return f; }
+  if (S.f.length >= MAX_FIGHTERS) {     // make room: a bot leaves, a dead one first
+    const bots = S.f.filter((o) => o.ctl === 'bot');
+    const out = bots.find((o) => !o.alive) || bots[0];
+    if (!out) return null;
+    S.f = S.f.filter((o) => o !== out);
+  }
+  f = mkFighter(h.id, h.name, h.ch, 'net');
+  S.f.push(f);
+  return f;
+}
+// public rooms keep PUBLIC_FILL fighters with bots, which leave as people arrive
+function syncBots() {
+  if (!S || !S.pub) return;
+  const want = Math.max(0, PUBLIC_FILL - humans.length);
+  let bots = S.f.filter((f) => f.ctl === 'bot');
+  while (bots.length < want && S.f.length < MAX_FIGHTERS) { addBot(); bots = S.f.filter((f) => f.ctl === 'bot'); }
+  while (bots.length > want) { const out = bots.find((o) => !o.alive) || bots[0]; S.f = S.f.filter((o) => o !== out); bots = bots.filter((o) => o !== out); }
+}
+function onHostData(link, m) {
+  if (!m || typeof m !== 'object' || !net) return;
+  link.heard = performance.now();
+  const h = link.h;
+  if (!h) return;
+  if (m.t === 'i') {
+    if (!(m.s > link.is)) return;
+    link.is = m.s;
+    const f = S && S.mode === 'host' ? byId(h.id) : null;
+    if (f && f.ctl === 'net') readInput(f.inp, m);
+  } else if (m.t === 'hello' || m.t === 'ch') {
+    if (m.t === 'hello') h.name = clean(m.name, 14) || h.name;
+    if (CHARS[m.ch]) h.ch = m.ch;
+    if (S && S.mode === 'host') {
+      const known = !!byId(h.id), f = ensureFighter(h);
+      if (f) { f.name = h.name; f.nch = h.ch; if (!f.alive && f.deaths === 0 && f.kills === 0) f.ch = h.ch; }
+      if (!known && f) { syncBots(); event(['N', h.name + ' joined']); }
+      if (m.t === 'hello') link.send({ t: 'go', tw: S.toWin });
+    }
+    broadcastLobby();
+    if (screen === 'lobby') renderLobby();
+  } else if (m.t === 'bye') {
+    dropHuman(h, true);
+    if (link.conn) { try { link.conn.close(); } catch (e) { /* gone */ } }
+  }
+}
+function readInput(inp, m) {
+  const n = (v, a, b) => (Number.isFinite(v) ? clamp(v, a, b) : 0);
+  inp.mx = n(m.mx, -1, 1); inp.my = n(m.my, -1, 1);
+  if (Number.isFinite(m.aim)) inp.aim = m.aim;
+  inp.ad = n(m.ad, 0, 3000) || 300;
+  inp.m1 = !!m.m1; inp.blk = !!m.blk;
+  if (Array.isArray(m.k)) KEYS.forEach((k, i) => { if (Number.isInteger(m.k[i])) inp[k] = m.k[i]; });
+}
+function dropHuman(h, quit) {
+  h.link = null;
+  if (!S || S.mode !== 'host') {
+    humans = humans.filter((o) => o !== h);
+    broadcastLobby(); if (screen === 'lobby') renderLobby();
+    return;
+  }
+  const f = byId(h.id);
+  if (quit || net.kind === 'ws') {
+    h.gone = true;
+    humans = humans.filter((o) => o !== h);
+    if (f) S.f = S.f.filter((o) => o !== f);
+    syncBots();
+    event(['N', h.name + ' left']);
+  } else {
+    if (f && f.ctl === 'net') { f.ctl = 'bot'; f.ai = mkAI(S.diff); }
+    event(['N', h.name + ' lost connection. A bot plays for them until they are back.']);
+  }
+}
+function sendSnap() {
+  const s = S;
+  stream({
+    t: 's', tm: r2(s.time), ph: s.phase, ot: r2(s.overT), tw: s.toWin, nid: s.nid,
+    f: s.f.map((o) => enc(o, SPEC.f)), m: s.maho.map((o) => enc(o, SPEC.m)), e: s.ele.map((o) => enc(o, SPEC.e)),
+    r: s.rab.map((o) => enc(o, SPEC.r)), h: s.sh.map((o) => enc(o, SPEC.h)),
+    ak: humans.filter((h) => h.link).map((h) => [h.id, h.link.is]), fx: fxq,
+  });
+  fxq = [];
+}
+function netHostTick(dt) {
+  if (!net || !net.host || !S || S.mode !== 'host') return;
+  snapT -= dt;
+  if (snapT <= 0) { snapT = 1 / 20; sendSnap(); }
+}
+function broadcastLobby() {
+  if (!net || !net.host || net.kind !== 'peer') return;
+  broadcast({ t: 'lob', code: net.code, l: humans.map((h) => [h.id, h.name, h.ch]), bots: lob.bots, diff: lob.diff, tw: lob.tw });
+}
+function startHost() {
+  if (!net || !net.host) return;
+  S = newState('host', { toWin: lob.tw, diff: lob.diff });
+  meId = 0; deadBy = '';
+  for (const h of humans) S.f.push(mkFighter(h.id, h.name, h.ch, h.local ? 'local' : 'net'));
+  for (let i = 0; i < lob.bots && S.f.length < MAX_FIGHTERS; i++) addBot();
+  for (const f of S.f) respawn(f);
+  const me = byId(meId);
+  cam.x = me.x; cam.y = me.y;
+  broadcast({ t: 'go', tw: S.toWin });
+  paused = false;
+  show(null);
+}
+
+// PeerJS: host a private party
+function hostParty() {
+  closeNet();
+  humans = [{ id: 0, name: myName(), ch: save.ch, local: true, link: null }];
+  nextId = 1;
+  renderLobby();
+  loadPeer(() => {
+    if (screen !== 'lobby' || lob.mode !== 'host') return;
+    const code = String(1000 + Math.floor(Math.random() * 9000));
+    const me = peer = new Peer(PREFIX + code);
+    let opened = false;
+    keepSignal(me);
+    me.on('open', () => {
+      if (peer !== me || opened) return;   // a signalling reconnect opens again
+      opened = true;
+      net = { kind: 'peer', host: true, code, q: 0, me: 0, retry: 0 };
+      lob.code = code; lob.note = '';
+      renderLobby();
+    });
+    me.on('error', (e) => {
+      if (peer !== me) return;
+      if (e.type === 'unavailable-id' && !opened) { hostParty(); return; }
+      if (!opened) { lob.note = 'Could not open a party (' + e.type + '). Check your connection and try again.'; renderLobby(); }
+    });
+    me.on('connection', (conn) => conn.on('open', () => { if (peer === me && net) welcome(conn); else conn.close(); }));
+  });
+}
+function welcome(conn) {
+  const md = conn.metadata || {}, back = md.back;
+  let h = back && humans.find((o) => !o.local && o.id === back.id && o.tok === back.tok && !o.gone);
+  if (h && h.link) { try { h.link.conn.close(); } catch (e) { /* gone */ } }
+  const again = !!h;
+  if (!h) {
+    if (humans.length >= MAX_FIGHTERS) { try { conn.send({ t: 'full' }); } catch (e) { /* gone */ } setTimeout(() => conn.close(), 500); return; }
+    h = { id: nextId++, tok: rndTok(), name: clean(md.name, 14) || 'Sorcerer', ch: CHARS[md.ch] ? md.ch : 'yuji', local: false, link: null };
+    humans.push(h);
+  }
+  const link = peerLink(conn);
+  link.h = h; h.link = link;
+  link.fast = openFast(conn, () => (h.link === link ? link : null), (m) => onHostData(link, m));
+  conn.on('data', (m) => { if (h.link === link) onHostData(link, m); });
+  conn.on('close', () => { if (h.link === link) dropHuman(h, false); });
+  conn.on('error', () => { if (h.link === link && !conn.open) dropHuman(h, false); });   // PeerJS also reports non-fatal errors
+  link.send({ t: 'hi', id: h.id, tok: h.tok });
+  if (again && S && S.mode === 'host') event(['N', h.name + ' is back']);
+  broadcastLobby();
+  if (screen === 'lobby') renderLobby();
+}
+
+// PeerJS: join a private party
+function joinParty(code) {
+  closeNet();
+  $('menuNote').textContent = 'Connecting…';
+  loadPeer(() => dial(code, null));
+}
+function dial(code, back) {
+  if (peer) { try { peer.destroy(); } catch (e) { /* already gone */ } }
+  const me = peer = new Peer();
+  me.on('error', (e) => {
+    if (peer !== me || net) return;     // once in, the redial timer and the data channel take over
+    closeNet();
+    toMenu(e.type === 'peer-unavailable' ? 'No party with that code. Check the number on the host\'s screen.' : 'Network error: ' + e.type);
+  });
+  me.on('open', () => {
+    if (peer !== me) return;
+    const conn = me.connect(PREFIX + code, { reliable: true, serialization: 'json', metadata: { name: myName(), ch: save.ch, back } });
+    const link = peerLink(conn);
+    const mine = () => (net && net.link === link ? link : null);
+    const gone = () => {
+      if (mine()) linkLost();
+      else if (!net && peer === me) { closeNet(); toMenu('The host closed the party.'); }
+    };
+    const onData = (m) => {
+      if (!m || typeof m !== 'object' || peer !== me) return;
+      if (m.t === 'full') { closeNet(); toMenu('That party is full (8 players).'); return; }
+      if (m.t === 'hi') {
+        if (net && net.down) {
+          Object.assign(net, { link, heard: performance.now(), rq: 0, down: 0, me: m.id, tok: m.tok });
+          clearTimeout(net.retry);
+          $('netwarn').classList.remove('on');
+          link.send(hello());
+          return;
+        }
+        if (net) return;
+        net = { kind: 'peer', host: false, code, link, heard: performance.now(), q: 0, rq: 0, is: 0, me: m.id, tok: m.tok, down: 0, retry: 0 };
+        link.send(hello());
+        lob.mode = 'join'; lob.code = code; lob.note = ''; lob.list = [];
+        show('lobby'); renderLobby();
+        return;
+      }
+      if (!mine()) return;
+      net.heard = performance.now();
+      onJoinMsg(m);
+    };
+    conn.on('open', () => { link.fast = openFast(conn, () => link, onData); });
+    conn.on('data', onData);
+    conn.on('close', gone);
+    conn.on('error', () => { if (!conn.open) gone(); });
+  });
+}
+function linkLost() {
+  if (!net || net.host || net.down || net.kind !== 'peer') return;
+  net.down = performance.now(); net.link = null;
+  redial();
+}
+function redial() {
+  if (!net || !net.down) return;
+  dial(net.code, { id: net.me, tok: net.tok });
+  clearTimeout(net.retry);
+  net.retry = setTimeout(redial, 5000);   // ICE on a bad link can take a few seconds
+}
+
+// The public server: a WebSocket to the Cloudflare relay. Full rooms send us on to the next one.
+function playOnline() {
+  if (!SERVER) { $('menuNote').textContent = 'The public server is not set up yet. Host a party or practice for now.'; return; }
+  closeNet();
+  $('menuNote').textContent = 'Connecting to the server…';
+  wsConnect(0);
+}
+function wsConnect(i) {
+  const url = SERVER.replace(/^http/, 'ws').replace(/\/+$/, '') + '/room/' + PUBLIC_ROOMS[i] + '?name=' + encodeURIComponent(myName());
+  let ws;
+  try { ws = new WebSocket(url); } catch (e) { toMenu('Could not reach the server.'); return; }
+  const n = { kind: 'ws', host: false, ws, room: i, q: 0, rq: 0, is: 0, me: null, heard: performance.now(), down: 0, retry: 0, full: false };
+  net = n;
+  ws.onmessage = (e) => {
+    if (net !== n || typeof e.data !== 'string') return;
+    const j = e.data.indexOf('|');
+    if (j < 0) return;
+    let m;
+    try { m = JSON.parse(e.data.slice(j + 1)); } catch (err) { return; }
+    if (!m || typeof m !== 'object') return;
+    const from = e.data.slice(0, j);
+    n.heard = performance.now();
+    if (from === '!') onSys(m);
+    else if (n.host) { const h = humans.find((o) => o.id === +from); if (h && h.link) onHostData(h.link, m); }
+    else onJoinMsg(m);
+  };
+  ws.onclose = () => {
+    if (net !== n) return;
+    if (n.full) { net = null; if (i + 1 < PUBLIC_ROOMS.length) wsConnect(i + 1); else toMenu('Every public room is full. Try again soon, or host a party.'); return; }
+    toMenu(n.me == null ? 'Could not reach the server.' : 'Lost the connection to the server.');
+  };
+}
+function onSys(m) {
+  const n = net;
+  if (m.sys === 'full') { n.full = true; return; }
+  if (m.sys === 'welcome') {
+    n.me = meId = m.id; deadBy = '';
+    paused = false;
+    if (m.host === m.id) {         // first one in: start the room's match
+      n.host = true;
+      humans = [{ id: m.id, name: myName(), ch: save.ch, local: true, link: null }];
+      S = newState('host', { toWin: 10, diff: 1 }); S.pub = true;
+      const me = mkFighter(m.id, myName(), save.ch, 'local');
+      S.f.push(me);
+      respawn(me);
+      cam.x = me.x; cam.y = me.y;
+      syncBots();
+    } else {
+      S = newState('join', { toWin: 10 });
+      wsSend('h', hello());
+    }
+    show(null);
+    return;
+  }
+  if (m.sys === 'join') {
+    if (!n.host) return;
+    const h = { id: m.id, name: clean(m.name, 14) || 'Sorcerer', ch: 'yuji', local: false, link: null };
+    h.link = wsLink(h.id); h.link.h = h;
+    humans.push(h);      // their fighter arrives with their 'hello'
+    return;
+  }
+  if (m.sys === 'leave') { if (n.host) { const h = humans.find((o) => o.id === m.id); if (h) dropHuman(h, true); } return; }
+  if (m.sys === 'host') {
+    n.rq = 0;     // the new host numbers its stream from its own count
+    if (m.id === n.me && !n.host) promote(Array.isArray(m.peers) ? m.peers : []);
+    else if (m.id !== n.me && n.host) demote();
+  }
+}
+// The host left or stalled and the server picked us: the mirrored match becomes the live one.
+function promote(peers) {
+  net.host = true;
+  humans = peers.filter((p) => p && Number.isFinite(p.id)).map((p) => {
+    const h = { id: p.id, name: clean(p.name, 14) || 'Sorcerer', ch: 'yuji', local: p.id === net.me, link: null };
+    if (!h.local) { h.link = wsLink(h.id); h.link.h = h; }
+    return h;
+  });
+  if (!humans.some((h) => h.local)) humans.push({ id: net.me, name: myName(), ch: save.ch, local: true, link: null });
+  if (!S || S.mode !== 'join') { S = newState('host', { toWin: 10, diff: 1 }); }
+  S.mode = 'host'; S.pub = true;
+  for (const f of S.f) {
+    f.px = f.x; f.py = f.y; f.fresh = true; f.buf = null;
+    const h = humans.find((o) => o.id === f.id);
+    if (f.id === meId) f.ctl = 'local';
+    else if (f.bot) { f.ctl = 'bot'; f.ai = null; botN = Math.max(botN, -f.id); }
+    else if (h) { f.ctl = 'net'; h.ch = f.nch; h.name = f.name; f.inp.mx = f.inp.my = 0; f.inp.m1 = f.inp.blk = false; }
+    else f.gone = true;
+  }
+  S.f = S.f.filter((f) => !f.gone);
+  if (!byId(meId)) { const me = mkFighter(meId, myName(), save.ch, 'local'); S.f.push(me); }
+  for (const m of S.maho) { m.px = m.x; m.py = m.y; }
+  S.sh = [];       // shots in flight are dropped
+  pred.on = false; acc = 0; snapT = 0;
+  syncBots();
+  feed([['The host left. This room now runs on your device.', 1]]);
+}
+function demote() {      // we stalled (a hidden tab) and someone else took over
+  net.host = false;
+  humans = [];
+  if (S) S.mode = 'join';
+  pred.on = false;
+  wsSend('h', hello());
+}
+
+// Joiner side, shared by both transports
+function onJoinMsg(m) {
+  if (m.t === 'lob') {
+    if (!Array.isArray(m.l)) return;
+    lob.list = m.l.filter((r) => Array.isArray(r)).map(([id, n, ch]) => [id, clean(n, 14) || 'Sorcerer', CHARS[ch] ? ch : 'yuji']);
+    lob.code = String(m.code || lob.code);
+    lob.bots = clamp(m.bots | 0, 0, 7); lob.diff = clamp(m.diff | 0, 0, 2); lob.tw = [5, 10, 20].includes(m.tw) ? m.tw : 10;
+    if (screen === 'lobby') renderLobby();
+  } else if (m.t === 'go') {
+    if (S && S.mode === 'join') return;
+    paused = false; deadBy = '';
+    S = newState('join', { toWin: m.tw | 0 || 10 });
+    meId = net.me; pred.on = false;
+    show(null);
+  } else if (m.t === 's') {
+    if (!(m.q > net.rq)) return;
+    net.rq = m.q;
+    if (S && S.mode === 'join') applySnap(m);
+  } else if (m.t === 'ev') {
+    if (Array.isArray(m.a) && S && S.mode === 'join') doEvent(m.a);
+  } else if (m.t === 'bye') {
+    closeNet(); toMenu('The host ended the party.');
+  }
+}
+// merge a row list into a list of entities by id: update the ones we have, add new ones, drop the rest
+function mergeRows(list, rows, spec, make) {
+  if (!Array.isArray(rows)) return list;
+  const old = new Map(list.map((o) => [o.id, o]));
+  const out = [];
+  for (const row of rows) {
+    if (!Array.isArray(row) || !Number.isFinite(row[0])) continue;
+    let o = old.get(row[0]);
+    const fresh = !o;
+    if (!o) o = make(row[0]);
+    const ox = o.x, oy = o.y;
+    dec(o, row, spec);
+    if (fresh || Math.hypot(o.x - ox, o.y - oy) > 220) { o.rx = o.px = o.x; o.ry = o.py = o.y; }
+    out.push(o);
+  }
+  return out;
+}
+function applySnap(m) {
+  const s = S;
+  s.time = num(m.tm); s.phase = m.ph === 'over' ? 'over' : 'play'; s.overT = num(m.ot);
+  s.toWin = clamp(m.tw | 0, 1, 99) || 10; s.nid = Math.max(s.nid, m.nid | 0);
+  const me0 = byId(meId), wasAlive = me0 && me0.alive;
+  s.f = mergeRows(s.f, m.f, SPEC.f, (id) => mkFighter(id, 'Sorcerer', 'yuji', 'net'));
+  for (const f of s.f) { f.ctl = f.id === meId ? 'local' : f.bot ? 'bot' : 'net'; if (!f.alive) { f.rx = f.x; f.ry = f.y; } }
+  s.maho = mergeRows(s.maho, m.m, SPEC.m, (id) => ({ isM: true, id, r: MAHO.r, adapt: [], rx: 0, ry: 0, ra: 0, flash: 0, wa: 0, spins: 0 }));
+  s.ele = mergeRows(s.ele, m.e, SPEC.e, (id) => ({ id }));
+  s.rab = mergeRows(s.rab, m.r, SPEC.r, (id) => ({ id }));
+  s.sh = mergeRows(s.sh, m.h, SPEC.h, (id) => ({ id }));
+  for (const sh of s.sh) { sh.rx = sh.x; sh.ry = sh.y; }
+  // our own fighter: reconcile the prediction with where the host had us after our acknowledged input
+  const me = byId(meId);
+  if (me && pred.on) {
+    const ak = Array.isArray(m.ak) ? m.ak.find((a) => Array.isArray(a) && a[0] === meId) : null;
+    const i = ak ? pred.hist.findIndex((o) => o.s === ak[1]) : -1;
+    if (!me.alive || !wasAlive) pred.on = false;
+    else if (i >= 0) {
+      const o = pred.hist[i], ex = me.x - o.x, ey = me.y - o.y, e = Math.hypot(ex, ey);
+      pred.hist.splice(0, i + 1);
+      if (e > 160) pred.on = false;
+      else if (e > 5) {
+        pred.x += ex; pred.y += ey; pred.ox -= ex; pred.oy -= ey;
+        for (const q of pred.hist) { q.x += ex; q.y += ey; }
+      }
+    }
+  }
+  if (Array.isArray(m.fx)) for (const a of m.fx) if (Array.isArray(a) && typeof a[0] === 'string') doFx(a);
+}
+// A joiner predicts its own walking and dashing with the host's numbers; everything else (hits,
+// knockback, the lunges of moves) comes from the host.
+const pred = { on: false, x: 0, y: 0, vx: 0, vy: 0, ox: 0, oy: 0, hist: [], dashT: 0, dashA: 0, dSeen: 0, acc: 0 };
+const predFree = (me) => me.alive && me.stun <= 0 && S.phase === 'play' && (!me.act || me.act === 'dash' || !ACTS[me.act].lock);
+function predStep(me, dt) {
+  const inp = me.inp;
+  if (pred.dashT > 0) {
+    pred.vx = Math.cos(pred.dashA) * 1150; pred.vy = Math.sin(pred.dashA) * 1150;
+    if ((pred.dashT -= dt) <= 0) { pred.vx *= 0.3; pred.vy *= 0.3; }
+  } else {
+    let mx = inp.mx, my = inp.my;
+    const l = Math.hypot(mx, my);
+    if (l > 1) { mx /= l; my /= l; }
+    const A = me.act ? ACTS[me.act] : null, blk = inp.blk && !me.act && me.guard > 0;
+    const sp = CHARS[me.ch].spd * (blk ? 0.5 : 1) * (me.slow > 0 ? 0.6 : 1) * (A && A.slow != null ? A.slow : 1), k = 1 - Math.exp(-14 * dt);
+    pred.vx += (mx * sp - pred.vx) * k; pred.vy += (my * sp - pred.vy) * k;
+  }
+  pred.x += pred.vx * dt; pred.y += pred.vy * dt;
+  const c = collide(pred, FR);
+  if (c.hit) { const into = -(pred.vx * c.nx + pred.vy * c.ny); if (into > 0) { pred.vx += c.nx * into; pred.vy += c.ny * into; } }
+}
+// joiner frame: send input, coast and smooth everything toward the last snapshot, predict ourselves
+function joinTick(dt) {
+  if (!net) return;
+  const me = byId(meId);
+  if (!me) {          // the host has not made our fighter yet (or lost our hello): ask again
+    if ((helloT -= dt) <= 0) { helloT = 1.5; toHost(hello()); }
+  } else {
+    const v = me.inp;
+    if (v.d !== pred.dSeen) {      // a dash we can start ourselves
+      if (pred.on && me.cd.d <= 0 && pred.dashT <= 0 && (!me.act || me.act === 'swing' || me.act === 'cast')) {
+        const l = Math.hypot(v.mx, v.my);
+        pred.dashT = 0.19; pred.dashA = l > 0.2 ? Math.atan2(v.my, v.mx) : v.aim;
+      }
+      pred.dSeen = v.d;
+    }
+    // input: at once when a button is pressed, up to 30 times a second while it changes, 4 when idle
+    const keysSig = KEYS.map((k) => v[k]).join();
+    const sig = [r1(v.mx), r1(v.my), r1(v.aim), v.m1, v.blk].join() + '|' + keysSig;
+    inT -= dt;
+    if ((sig !== lastSent && (inT <= 0 || !lastSent.endsWith(keysSig))) || inT <= -0.22) {
+      const s = ++net.is;
+      stream({ t: 'i', s, mx: r2(v.mx), my: r2(v.my), aim: r2(v.aim), ad: v.ad | 0, m1: v.m1 ? 1 : 0, blk: v.blk ? 1 : 0, k: KEYS.map((k) => v[k]) });
+      if (pred.on) { pred.hist.push({ s, x: pred.x, y: pred.y }); if (pred.hist.length > 90) pred.hist.shift(); }
+      lastSent = sig; inT = 1 / 30;
+    }
+    // prediction on or off
+    if (!pred.on && predFree(me)) { pred.on = true; pred.x = me.x; pred.y = me.y; pred.vx = me.vx; pred.vy = me.vy; pred.hist = []; pred.ox = me.rx - me.x; pred.oy = me.ry - me.y; pred.dashT = 0; }
+    else if (pred.on && !predFree(me)) { pred.on = false; me.rx = pred.x + pred.ox; me.ry = pred.y + pred.oy; }
+    if (pred.on) {
+      pred.acc += dt;
+      while (pred.acc >= STEP) { predStep(me, STEP); pred.acc -= STEP; }
+      const k = Math.exp(-10 * dt);
+      pred.ox *= k; pred.oy *= k;
+      me.rx = pred.x + pred.ox; me.ry = pred.y + pred.oy; me.vx = pred.vx; me.vy = pred.vy;
+    }
+  }
+  const k = Math.min(1, dt * 14);
+  for (const f of S.f) {
+    if (f.alive && !(f === me && pred.on)) {
+      f.x += f.vx * dt; f.y += f.vy * dt;
+      f.rx += (f.x - f.rx) * k; f.ry += (f.y - f.ry) * k;
+    }
+    f.ra = f.ra + angD(f.ra, f.aim) * k;
+    if (f.act) f.actT += dt;
+    for (const q of KEYS) if (f.cd[q] > 0) f.cd[q] = Math.max(0, f.cd[q] - dt);
+    for (const q of ['stun', 'prot', 'resp', 'heal', 'iframe', 'slow']) if (f[q] > 0) f[q] = Math.max(0, f[q] - dt);
+  }
+  for (const m of S.maho) {
+    m.x += m.vx * dt; m.y += m.vy * dt; m.mt += dt; m.t -= dt;
+    m.rx += (m.x - m.rx) * k; m.ry += (m.y - m.ry) * k; m.ra = m.ra + angD(m.ra, m.aim) * k;
+  }
+  for (const r of S.rab) r.t += dt;
+  for (const b of S.sh) { b.x += Math.cos(b.a) * 1500 * dt; b.y += Math.sin(b.a) * 1500 * dt; b.rx = b.x; b.ry = b.y; }
+  for (const e of S.ele) e.t += dt;
+  if (S.phase === 'over') S.overT -= dt;
+}
+// heartbeats, timeouts and the link warning; a timer, not the frame loop, so a hidden tab still answers
+setInterval(() => {
+  // a hosting tab in the background gets no animation frames: keep the match running from here
+  if (S && S.mode !== 'join' && S.mode !== 'demo' && net && net.host && performance.now() - simWall > 300) {
+    const now = performance.now();
+    simAdvance(Math.min(2, (now - simWall) / 1000), 130);
+    simWall = now;
+  }
+  if (!net) return;
+  const now = performance.now();
+  let warn = '';
+  if (net.kind === 'peer') {
+    if (net.host) {
+      for (const h of humans) if (h.link && now - h.link.heard > NET_TIMEOUT) { const c = h.link.conn; dropHuman(h, false); try { c.close(); } catch (e) { /* gone */ } }
+      stream({ t: 'hb' });
+      return;
+    }
+    if (net.down) {
+      if (now - net.down > NET_GRACE) { toMenu('Lost the connection to the host.'); return; }
+      warn = 'RECONNECTING… ' + Math.max(0, Math.ceil((NET_GRACE - (now - net.down)) / 1000));
+    } else if (now - net.heard > NET_TIMEOUT) { const c = net.link && net.link.conn; linkLost(); try { c.close(); } catch (e) { /* gone */ } return; }
+    else { if (now - net.heard > 1200) warn = 'WEAK SIGNAL'; stream({ t: 'hb' }); }
+  } else if (!net.host && net.me != null) {
+    if (now - net.heard > 15000) { toMenu('The room stopped answering.'); return; }
+    if (now - net.heard > 1500) warn = 'WAITING FOR THE HOST…';
+  }
+  const nw = $('netwarn');
+  if (nw.textContent !== warn) nw.textContent = warn;
+  nw.classList.toggle('on', !!warn && screen !== 'menu');
+}, 250);
+addEventListener('pagehide', () => closeNet());
 
 // ───────────────────────── Main loop ─────────────────────────
-let last = performance.now(), acc = 0;
+let last = performance.now(), acc = 0, simWall = performance.now();
+function simAdvance(dt, max) {
+  acc += dt;
+  let n = 0;
+  while (acc >= STEP && n < max) { step(STEP); acc -= STEP; n++; }
+  if (n === max) acc = 0;
+  netHostTick(dt);
+}
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000);
@@ -2572,13 +3272,8 @@ function frame(now) {
     const me = S.mode === 'demo' ? null : byId(meId);
     if (me) Object.assign(me.inp, localInput(me));
     if (S.mode === 'join') joinTick(dt);
-    else if (!(paused && canPause())) {
-      acc += dt;
-      let n = 0;
-      while (acc >= STEP && n < 6) { step(STEP); acc -= STEP; n++; }
-      if (n === 6) acc = 0;
-      netHostTick(dt);
-    }
+    else if (!(paused && canPause())) simAdvance(dt, 6);
+    simWall = performance.now();
     if (!(paused && canPause())) updParts(dt);
     animate(dt, S.mode === 'join' ? 1 : clamp(acc / STEP, 0, 1));
     updCam(dt);
