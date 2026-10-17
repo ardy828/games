@@ -552,7 +552,7 @@ const SFX = {
   red(k) { osc('sine', 120, 30, 0.7, 0.8 * k); hiss(0.5, 3000, 200, 0.6, 0.6 * k, 0, 'lowpass'); osc('square', 900, 200, 0.15, 0.12 * k); },
   purpleCharge(k) { osc('triangle', 220, 660, 0.75, 0.14 * k); osc('triangle', 330, 990, 0.75, 0.1 * k); hiss(0.75, 300, 3000, 2, 0.12 * k); },
   purple(k) { osc('sine', 70, 40, 1.2, 0.8 * k); hiss(1.1, 1800, 120, 0.5, 0.55 * k, 0, 'lowpass'); osc('sawtooth', 140, 90, 0.9, 0.12 * k); },
-  domain() { osc('sine', 55, 30, 2.4, 0.8); [0, 3, 7, 10].forEach((n, i) => osc('triangle', 220 * Math.pow(2, n / 12), 0, 2.2, 0.06, 0.6 + i * 0.05)); hiss(2, 4000, 300, 0.5, 0.25, 0.55, 'lowpass'); },
+  domain(k) { osc('sine', 55, 30, 2.2, 0.8 * k); [0, 3, 7, 10].forEach((n, i) => osc('triangle', 220 * Math.pow(2, n / 12), 0, 2, 0.06 * k, 0.8 + i * 0.05)); hiss(1.6, 4000, 300, 0.5, 0.25 * k, 0.75, 'lowpass'); },
 };
 function setMute(m) {
   save.mute = m; persist();
@@ -1038,7 +1038,7 @@ const ACTS = {
     }
     if (f.actT >= PURPLE.wind + 0.3) f.act = '';
   } },
-  domain: { lock: true, armor: true, step(f) { f.vx = f.vy = 0; if (f.actT >= 0.8) f.act = ''; } },
+  domain: { lock: true, armor: true, step(f) { f.vx = f.vy = 0; if (f.actT >= DOM.form) f.act = ''; } },
   // cursed spirits
   pounce: { lock: true, step(f) {      // Fly Head: crouches, then leaps and bites the first one in the way
     if (f.actT < 0.22) { f.vx = f.vy = 0; f.actA = f.aim = f.inp.aim; return; }
@@ -1142,13 +1142,12 @@ const MOVES = {
     },
     e(f) { startAct(f, 'red'); fx(['snd', 'redCharge', r1(f.x), r1(f.y)]); },
     c(f) { startAct(f, 'purple'); fx(['snd', 'purpleCharge', r1(f.x), r1(f.y)]); },
-    u(f) {      // Infinite Void: everyone inside it now is frozen until it ends
-      const vic = targets(f.id).filter((t) => Math.hypot(t.x - f.x, t.y - f.y) < DOM.r + t.r);
-      S.dm.push({ id: S.nid++, own: f.id, x: r1(f.x), y: r1(f.y), t: DOM.dur, vic: vic.map((t) => t.id) });
-      for (const t of vic) { t.frz = DOM.dur; if (!t.isM) { t.act = ''; t.blk = false; t.vx = t.vy = 0; } }
+    u(f) {      // Infinite Void: a burst for DOM.form s, then it closes on whoever is still inside (updDomain)
+      S.dm.push({ id: S.nid++, own: f.id, x: r1(f.x), y: r1(f.y), t: DOM.form + DOM.dur, vic: [] });
       startAct(f, 'domain');
-      f.iframe = Math.max(f.iframe, CUTS.dom.dur);
-      event(['C', 'dom', f.id, null, f.name, vic.map((t) => t.id)]);
+      f.iframe = Math.max(f.iframe, CUT_T);
+      fx(['snd', 'domain', r1(f.x), r1(f.y)]);
+      event(['C', 'dom', f.id, null, f.name]);
     },
   },
   fly: { q(f) { startAct(f, 'pounce'); fx(['snd', 'buzz', r1(f.x), r1(f.y)]); } },
@@ -1538,13 +1537,13 @@ function updRain(dt) {
 // middle (they slide, as in a knockback, but a dash still breaks free) and hurting them every BLUE.dt,
 // then implodes. Red is a shot (SHOT kind 3) that bursts on whatever it meets and hurls everyone near
 // it away. Hollow Purple (S.pu) is a huge orb that goes through everyone and every wall, hitting each
-// once with no knockback. Infinite Void (S.dm) freezes everyone who was inside it when it opened
-// (f.frz) for DOM.dur s, or until he dies; it hangs DOM.lift above the street, and anyone outside can
-// walk under it unharmed.
+// once with no knockback. Infinite Void (S.dm, its d.t counting down from DOM.form + DOM.dur) first
+// bursts out of him for DOM.form s; then it closes on everyone inside it and freezes them (f.frz) for
+// DOM.dur s, or until he dies. It hangs DOM.lift above the street, and anyone outside can walk under it.
 const BLUE = { r: 230, T: 1.6, dt: 0.1, dmg: 9, pull: 330, pop: 70, popDmg: 60, range: 420 };
 const RED = { r: 125, dmg: 240, kb: 380, wind: 0.35 };
 const PURPLE = { wind: 0.75, spd: 950, r: 58, range: 1400, dmg: 420 };
-const DOM = { r: 430, dur: 5, lift: 70 };
+const DOM = { r: 430, dur: 5, lift: 70, form: 0.8 };
 function updBlue(dt) {
   for (const b of S.bl) {
     const was = b.t;
@@ -1593,8 +1592,14 @@ function updPurple(dt) {
 }
 function updDomain(dt) {
   for (const d of S.dm) {
+    const was = d.t;
     d.t -= dt;
     const o = byId(d.own);
+    if (was > DOM.dur && d.t <= DOM.dur && o && o.alive) {      // the burst is over: it closes on everyone inside
+      const vic = targets(d.own).filter((t) => Math.hypot(t.x - d.x, t.y - d.y) < DOM.r + t.r);
+      d.vic = vic.map((t) => t.id);
+      for (const t of vic) { t.frz = DOM.dur; if (!t.isM) { t.act = ''; t.blk = false; t.vx = t.vy = 0; } }
+    }
     if (d.t > 0 && o && o.alive) continue;
     d.dead = true;
     for (const id of d.vic) { const t = foeById(id); if (t) t.frz = 0; }
@@ -2657,7 +2662,7 @@ function reticle(x, y, r, p) {
 // Gojo's techniques in the air. Blue: a swirling blue sphere with rings closing in on it.
 function drawBlues() {
   for (const b of S.bl) {
-    if (!vis(b.x, b.y, BLUE.r + 20) || hidden(b.x, b.y)) continue;
+    if (!vis(b.x, b.y, BLUE.r + 20) || hidden(b.x, b.y) || outside(b.x, b.y)) continue;
     const k = Math.min(1, b.t / 0.15), end = Math.max(0, (b.t - BLUE.T + 0.25) / 0.25);
     g.fillStyle = `rgba(60,120,255,${0.07 * k})`; circ(b.x, b.y, BLUE.r);
     g.strokeStyle = 'rgba(140,200,255,.5)'; g.lineWidth = 2;
@@ -2674,7 +2679,7 @@ function drawBlues() {
 function drawPurples() {
   for (const p of S.pu) {
     const x = p.rx ?? p.x, y = p.ry ?? p.y;
-    if (!vis(x, y, 200) || hidden(x, y)) continue;
+    if (!vis(x, y, 200) || hidden(x, y) || outside(x, y)) continue;
     const c = Math.cos(p.a), s = Math.sin(p.a), tl = Math.min(p.d, 260);
     const tr = g.createLinearGradient(x, y, x - c * tl, y - s * tl);
     tr.addColorStop(0, 'rgba(190,110,255,.6)'); tr.addColorStop(1, 'rgba(190,110,255,0)');
@@ -2690,25 +2695,54 @@ function drawPurples() {
 // Infinite Void. Inside (Gojo and whoever is caught) the world goes black, splashed with white, round a
 // glowing ring, and only the people inside it are drawn again on top. Outside it is a black sphere
 // floating DOM.lift over the street with its shadow under it; whatever is under it is hidden.
-const inDomain = (d) => meId != null && (d.own === meId || (d.vic || []).includes(meId));
-function domGrow(d) { const age = DOM.dur - d.t; return clamp(age / 0.5, 0, 1) * clamp(d.t / 0.35, 0, 1); }
+// Before it closes (d.t > DOM.dur) everyone sees the burst. After, the people inside (Gojo and his
+// victims) see nothing but the void: black, white splatters spreading over it, a glowing ring, and the
+// people in it; everyone else sees the black sphere.
+const domOpen = (d) => d.t <= DOM.dur;
+const inDomain = (d) => meId != null && domOpen(d) && (d.own === meId || (d.vic || []).includes(meId));
+function domGrow(d) { return domOpen(d) ? clamp((DOM.dur - d.t) / 0.4, 0, 1) * clamp(d.t / 0.35, 0, 1) : 0; }
 function hidden(x, y) {
   for (const d of S.dm) if (!inDomain(d) && Math.hypot(x - d.x, y - d.y) < DOM.r * domGrow(d)) return true;
   return false;
 }
+// inside a domain you see nothing beyond its edge
+const myVoid = () => S.dm.find(inDomain);
+function outside(x, y) { const d = myVoid(); return !!d && Math.hypot(x - d.x, y - d.y) > DOM.r * domGrow(d) + 20; }
+function drawBurst(d) {
+  const p = clamp((DOM.form + DOM.dur - d.t) / DOM.form, 0, 1), age = DOM.form + DOM.dur - d.t, e = 1 - (1 - p) ** 3, R = DOM.r * (0.25 + 0.85 * e);
+  g.save();
+  g.fillStyle = 'rgba(7,4,12,.94)'; g.beginPath();
+  for (let i = 0; i <= 40; i++) { const q = i / 40 * TAU, rr = R * (0.75 + 0.35 * hash1(i * 3.7 + d.id)) * (i % 2 ? 0.85 : 1); g.lineTo(d.x + Math.cos(q) * rr, d.y + Math.sin(q) * rr); }
+  g.closePath(); g.fill();
+  const gr = g.createRadialGradient(d.x, d.y, 0, d.x, d.y, R * 0.8);
+  gr.addColorStop(0, 'rgba(120,70,220,.55)'); gr.addColorStop(1, 'rgba(40,10,80,0)');
+  g.fillStyle = gr; circ(d.x, d.y, R * 0.8);
+  for (let i = 0; i < 60; i++) {      // speed lines rushing out of him
+    const q = hash1(i * 1.3 + d.id) * TAU, r0 = 30 + ((hash1(i + 2) * DOM.r + age * DOM.r * 2.2 * (0.5 + hash1(i + 4))) % (DOM.r * 1.1)), len = DOM.r * (0.1 + 0.25 * hash1(i + 9));
+    g.strokeStyle = i % 4 === 0 ? '#ff4a7a' : i % 3 === 0 ? '#9b6bff' : 'rgba(255,255,255,.85)'; g.lineWidth = 1.5 + hash1(i + 6) * 3;
+    g.beginPath(); g.moveTo(d.x + Math.cos(q) * r0, d.y + Math.sin(q) * r0); g.lineTo(d.x + Math.cos(q) * (r0 + len), d.y + Math.sin(q) * (r0 + len)); g.stroke();
+  }
+  for (const f of S.f) if (f.alive && Math.hypot(f.rx - d.x, f.ry - d.y) < R + 20) drawFighter(f);      // so everyone can see to run
+  if (p > 0.8) { g.globalAlpha = (p - 0.8) / 0.2; g.fillStyle = '#ffffff'; circ(d.x, d.y, DOM.r); }      // a white flash as it closes
+  g.restore();
+}
 function drawDomains() {
   for (const d of S.dm) {
-    const k = domGrow(d), r = DOM.r * k;
+    if (!domOpen(d)) { if (vis(d.x, d.y, DOM.r)) drawBurst(d); continue; }
+    const k = domGrow(d), r = DOM.r * k, age = DOM.dur - d.t;
     if (k <= 0) continue;
     if (inDomain(d)) {
       g.save();
-      g.fillStyle = 'rgba(2,2,6,.93)'; g.fillRect(view.L - 50, view.T - 50, view.R - view.L + 100, view.B - view.T + 100);
-      g.fillStyle = '#000'; circ(d.x, d.y, r);
+      g.fillStyle = '#000'; g.fillRect(view.L - 50, view.T - 50, view.R - view.L + 100, view.B - view.T + 100);
       g.beginPath(); g.arc(d.x, d.y, r, 0, TAU); g.clip();
+      g.fillStyle = 'rgba(200,220,255,.5)';
+      for (let i = 0; i < 50; i++) circ(d.x + (hash1(i * 2.1 + d.id) - 0.5) * 2 * r, d.y + (hash1(i * 4.7 + d.id) - 0.5) * 2 * r, 0.8 + hash1(i) * 1.4);
       g.fillStyle = '#f2f2f6';
-      for (let i = 0; i < 26; i++) {
-        const a = hash1(d.id + i) * TAU, dd = r * Math.sqrt(hash1(d.id * 3 + i + 0.5)), bx = d.x + Math.cos(a) * dd, by = d.y + Math.sin(a) * dd, br = (10 + 30 * hash1(i + d.id * 7)) * k;
-        circ(bx, by, br);
+      for (let i = 0; i < 26; i++) {      // white splatters spreading out over the void as it opens
+        const sp = clamp((age - hash1(i + 30) * 0.6) / 0.35, 0, 1), sk = 1 - (1 - sp) ** 3;
+        if (sk <= 0) continue;
+        const a = hash1(d.id + i) * TAU, dd = DOM.r * (0.5 + 0.5 * Math.sqrt(hash1(d.id * 3 + i + 0.5))), bx = d.x + Math.cos(a) * dd, by = d.y + Math.sin(a) * dd, br = (8 + 26 * hash1(i + d.id * 7)) * sk;
+        circ(bx, by, br); ell(bx, by + br * 1.3, br * 0.18, br * 0.7);
         for (let j = 0; j < 4; j++) { const q = hash1(i * 9 + j) * TAU, qd = br * (1.3 + hash1(i + j * 5)); circ(bx + Math.cos(q) * qd, by + Math.sin(q) * qd, br * 0.22); }
       }
       const rr = r * 0.42;
@@ -2720,7 +2754,7 @@ function drawDomains() {
       g.shadowBlur = 0;
       g.fillStyle = '#000'; circ(d.x, d.y, rr * 0.8);
       g.restore();
-      for (const f of S.f) if (f.alive && Math.hypot(f.rx - d.x, f.ry - d.y) < r + 30) { drawFighter(f); if (f.nl && f.nl.length) nailsIn(f); }
+      for (const f of S.f) if (f.alive && Math.hypot(f.rx - d.x, f.ry - d.y) < r + 20) { drawFighter(f); if (f.nl && f.nl.length) nailsIn(f); }
       for (const m of S.maho) if (Math.hypot(m.rx - d.x, m.ry - d.y) < r + 40) drawMaho(m);
     } else {
       const y = d.y - DOM.lift * k, gr = g.createRadialGradient(d.x - r * 0.3, y - r * 0.35, r * 0.1, d.x, y, r);
@@ -2762,7 +2796,7 @@ function drawRain() {
 function drawShots() {
   for (const b of S.sh) {
     const x = b.rx ?? b.x, y = b.ry ?? b.y;
-    if (!vis(x, y, 80)) continue;
+    if (!vis(x, y, 80) || outside(x, y)) continue;
     g.save(); g.translate(x, y); g.rotate(b.a);
     if (b.k === 3) {       // Red: a crackling red orb
       g.fillStyle = 'rgba(255,60,60,.3)'; ell(-18, 0, 22, 9);
@@ -2801,7 +2835,7 @@ function bolt(p, al) {
 }
 function drawParts() {
   for (const p of parts) {
-    if (!vis(p.x, p.y, (p.len || p.r1 || 60) + 40) && p.k !== 'bm') continue;
+    if ((!vis(p.x, p.y, (p.len || p.r1 || 60) + 40) && p.k !== 'bm') || outside(p.x, p.y) || hidden(p.x, p.y)) continue;
     const q = p.t / p.life, al = 1 - q;
     switch (p.k) {
       case 'sp': {
@@ -2852,7 +2886,7 @@ function drawTags() {
   g.textAlign = 'center'; g.textBaseline = 'alphabetic';
   // a sorcerer's tag shows the points they carry (★), which is what killing them is worth
   for (const f of S.f) {
-    if (!f.alive || !vis(f.rx, f.ry, 60) || hidden(f.rx, f.ry)) continue;      // not through a domain's black sphere
+    if (!f.alive || !vis(f.rx, f.ry, 60) || hidden(f.rx, f.ry) || outside(f.rx, f.ry)) continue;      // not through a domain, either way
     const cu = cursed(f), x = f.rx, y = f.ry - 34 - ((CHARS[f.ch].r || FR) - FR), mine = f.id === meId, k = clamp(f.hp / maxHp(f), 0, 1);
     const tag = !cu && f.pts > 0 ? '  ★' + f.pts : '';
     g.font = '700 12px Barlow, sans-serif';
@@ -2875,7 +2909,7 @@ function drawTags() {
     g.beginPath(); g.arc(t.rx, t.ry, r, T * 2, T * 2 + TAU); g.stroke(); g.setLineDash([]);
   }
   for (const m of S.maho) {
-    if (!vis(m.rx, m.ry, 80) || m.mode === 'rise') continue;
+    if (!vis(m.rx, m.ry, 80) || m.mode === 'rise' || hidden(m.rx, m.ry) || outside(m.rx, m.ry)) continue;
     const x = m.rx, y = m.ry - 52, k = clamp(m.hp / MAHO.hp, 0, 1);
     g.font = '13px Anton, Impact, sans-serif'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)';
     const s = 'MAHORAGA' + (m.spins ? '  ⟳' + m.spins : '');
@@ -3014,11 +3048,13 @@ function drawMini() {
   mg.drawImage(miniBase, 0, 0);
   mg.strokeStyle = 'rgba(255,255,255,.45)'; mg.lineWidth = d;
   mg.strokeRect(view.L * k, view.T * k, (view.R - view.L) * k, (view.B - view.T) * k);
-  for (const e of S.ele) if (e.t < 0) { mg.fillStyle = 'rgba(95,176,255,.6)'; mg.beginPath(); mg.arc(e.x * k, e.y * k, 3 * d, 0, TAU); mg.fill(); }
-  for (const m of S.maho) { mg.fillStyle = '#f0c24f'; mg.beginPath(); mg.arc(m.rx * k, m.ry * k, 4 * d, 0, TAU); mg.fill(); }
+  const mv = myVoid();
+  if (mv) { mg.fillStyle = '#000'; mg.fillRect(0, 0, n, n); }        // inside a domain the map goes dark too
+  for (const e of S.ele) if (e.t < 0 && !mv) { mg.fillStyle = 'rgba(95,176,255,.6)'; mg.beginPath(); mg.arc(e.x * k, e.y * k, 3 * d, 0, TAU); mg.fill(); }
+  for (const m of S.maho) { if (outside(m.rx, m.ry)) continue; mg.fillStyle = '#f0c24f'; mg.beginPath(); mg.arc(m.rx * k, m.ry * k, 4 * d, 0, TAU); mg.fill(); }
   for (const dm of S.dm) { mg.fillStyle = 'rgba(0,0,0,.8)'; mg.strokeStyle = '#9b7bff'; mg.lineWidth = d; mg.beginPath(); mg.arc(dm.x * k, dm.y * k, DOM.r * k * domGrow(dm), 0, TAU); mg.fill(); mg.stroke(); }
   for (const f of S.f) {
-    if (!f.alive || f.id === meId) continue;
+    if (!f.alive || f.id === meId || outside(f.rx, f.ry)) continue;
     const cu = cursed(f);
     mg.fillStyle = cu ? '#a07cff' : f.ctl === 'bot' || f.bot ? '#ff9a5a' : '#ff4a66';
     mg.beginPath(); mg.arc(f.rx * k, f.ry * k, (cu ? 2 : 2.6) * d, 0, TAU); mg.fill();
@@ -3041,19 +3077,18 @@ const CUT_T = 1.05, INK = '#0b0710', cutG = cutCv.getContext('2d');
 let cut = null, cutOn = false;
 function startCutin(k, role, name) {
   cut = { k, role, name: String(name || '').toUpperCase(), t0: T };
-  if (k === 'dom') SFX.domain(); else { SFX.cutin(); if (role === 'target') SFX.alarm(); }
+  SFX.cutin(); if (role === 'target') SFX.alarm();
 }
-const cutDur = () => (cut && CUTS[cut.k] && CUTS[cut.k].dur) || CUT_T;
-const cutLeft = () => (cut ? Math.max(0, cutDur() - (T - cut.t0)) : 0);
+const cutLeft = () => (cut ? Math.max(0, CUT_T - (T - cut.t0)) : 0);
 function drawCutin() {
-  const p = cut && S && S.mode !== 'demo' ? (T - cut.t0) / cutDur() : -1;
+  const p = cut && S && S.mode !== 'demo' ? (T - cut.t0) / CUT_T : -1;
   if (p >= 1 || p < 0) cut = null;
   if (cutOn !== !!cut) { cutOn = !!cut; cutCv.classList.toggle('on', cutOn); if (!cutOn) cutG.clearRect(0, 0, cutCv.width, cutCv.height); }
   if (!cut) return;
   const old = g;
   g = cutG;
   g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cutCv.width, cutCv.height); g.setTransform(DPR, 0, 0, DPR, 0, 0);
-  try { if (CUTS[cut.k] && CUTS[cut.k].paint) CUTS[cut.k].paint(p); else paintCutin(p); } finally { g = old; }
+  try { paintCutin(p); } finally { g = old; }
 }
 function paintCutin(p) {
   const C = CUTS[cut.k] || CUTS.ss, yuji = cut.k === 'ss', e = (x) => 1 - (1 - x) ** 3;
@@ -3202,97 +3237,31 @@ function cutNobara(t) {
   g.fillStyle = '#e08a4c'; ell(-5, -30, 7, 3.5);
 }
 // what each ultimate's panel shows
-// Gojo making the domain sign, from the front: one hand up before him, index and middle fingers crossed
-// (the later look: a tight black T-shirt, bare arms, baggy light grey trousers with a dark sash)
+// Gojo making the domain sign, three-quarters on, in his black T-shirt with his arms bare: his hand up
+// beside his face, a fist with two fingers raised
 function cutGojo(t) {
-  g.fillStyle = '#b9bcc4'; ell(-18, 118, 22, 34); ell(18, 118, 22, 34);
-  g.fillStyle = '#111218'; ell(0, 52, 44, 42);
-  g.fillStyle = 'rgba(255,255,255,.06)'; ell(-14, 36, 13, 9); ell(14, 36, 13, 9);
-  g.fillStyle = '#2a2d38'; g.fillRect(-36, 88, 72, 8); ell(8, 98, 5, 9);
-  g.fillStyle = SKIN; g.fillRect(-6, -2, 12, 12);
-  g.fillStyle = '#111218'; ell(-30, 30, 11, 9); ell(30, 30, 11, 9);
-  limb([-32, 36, -36, 64], 12, SKIN);
-  limb([28, 36, 34, 18, 18, 4], 11, SKIN);
-  // the sign: index and middle fingers raised and crossed over each other
-  g.fillStyle = SKIN; ell(18, -2, 8, 9);
-  limb([15, -8, 23, -30], 5.5, '#e2b48f');
-  limb([22, -8, 14, -31], 5.5, SKIN);
-  g.fillStyle = '#e2b48f'; ell(25, 2, 4, 3);
-  g.fillStyle = SKIN; circ(0, -14, 15);
-  hair(0, -20, 12, 31, Math.PI * 0.95, Math.PI * 2.05, 13, 0, '#e9eef6');
-  hair(0, -20, 8, 22, Math.PI * 1.05, Math.PI * 1.95, 9, 0.1, '#ffffff');
-}
-// Infinite Void's cut-in, over the whole screen. First the burst: Gojo makes the sign before a black
-// and violet blast with speed lines rushing out of it. Then the void: white ink splatters across black
-// space round a glowing ring, and it fades into the domain as seen from inside.
-function paintDomain(p) {
-  const e = (x) => 1 - (1 - x) ** 3, cx = W * 0.5, cy = H * 0.46, M = Math.max(W, H);
-  g.save();
-  if (p < 0.42) {
-    const a = p / 0.42, inA = e(clamp(a / 0.15, 0, 1));
-    g.globalAlpha = inA; g.fillStyle = '#f3f0f6'; g.fillRect(0, 0, W, H);
-    const R0 = M * 0.62 * e(clamp(a / 0.45, 0, 1));
-    g.fillStyle = '#07040c'; g.beginPath();
-    for (let i = 0; i <= 48; i++) { const q = i / 48 * TAU, rr = R0 * (0.72 + 0.4 * hash1(i * 3.7)) * (i % 2 ? 0.86 : 1); g.lineTo(cx + Math.cos(q) * rr, cy + Math.sin(q) * rr); }
-    g.closePath(); g.fill();
-    const gr = g.createRadialGradient(cx, cy, 0, cx, cy, R0 * 0.8);
-    gr.addColorStop(0, 'rgba(110,60,200,.55)'); gr.addColorStop(1, 'rgba(40,10,80,0)');
-    g.fillStyle = gr; circ(cx, cy, R0 * 0.8);
-    for (let i = 0; i < 80; i++) {       // speed lines streaming out of the middle the whole time
-      const q = hash1(i * 1.3) * TAU, r0 = M * 0.04 + ((hash1(i + 2) * M * 0.6 + a * M * 1.6 * (0.5 + hash1(i + 4))) % (M * 0.65)), len = M * (0.08 + 0.22 * hash1(i + 9));
-      g.strokeStyle = i % 4 === 0 ? '#ff4a7a' : i % 3 === 0 ? '#9b6bff' : 'rgba(255,255,255,.85)'; g.lineWidth = 1 + hash1(i + 6) * 3;
-      g.beginPath(); g.moveTo(cx + Math.cos(q) * r0, cy + Math.sin(q) * r0); g.lineTo(cx + Math.cos(q) * (r0 + len), cy + Math.sin(q) * (r0 + len)); g.stroke();
-    }
-    const fs = Math.min(H / 270, W / 220) * (1 + a * 0.12);
-    g.save(); g.translate(cx, H * 0.62 + (1 - e(clamp(a / 0.3, 0, 1))) * H * 0.3); g.scale(fs, fs); cutGojo(a); g.restore();
-    g.globalAlpha = inA;
-    const ts = Math.round(clamp(W * 0.09, 34, 96));
-    g.font = `${ts}px "Yuji Syuku", serif`; g.textAlign = 'left'; g.textBaseline = 'top'; g.lineWidth = ts * 0.1; g.strokeStyle = INK;
-    const tx = W * 0.06 - (1 - e(clamp(a / 0.2, 0, 1))) * W * 0.4;
-    g.strokeText('領域展開', tx, H * 0.08); g.fillStyle = '#fff'; g.fillText('領域展開', tx, H * 0.08);
-    g.font = `800 ${Math.round(ts * 0.3)}px Barlow, sans-serif`; g.lineWidth = 4; g.strokeText('DOMAIN EXPANSION', tx + 4, H * 0.08 + ts * 1.1); g.fillText('DOMAIN EXPANSION', tx + 4, H * 0.08 + ts * 1.1);
-    if (a > 0.85) { g.globalAlpha = (a - 0.85) / 0.15; g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); }
-  } else {
-    const b = (p - 0.42) / 0.58, out = clamp((b - 0.8) / 0.2, 0, 1);
-    g.globalAlpha = 1 - out;
-    g.fillStyle = '#030308'; g.fillRect(0, 0, W, H);
-    g.fillStyle = 'rgba(200,220,255,.6)';
-    for (let i = 0; i < 90; i++) circ(hash1(i * 2.1) * W, hash1(i * 4.7) * H, 0.6 + hash1(i) * 1.4);
-    const rr = Math.min(W, H) * 0.3 * (0.8 + 0.2 * e(clamp(b / 0.4, 0, 1)));
-    g.shadowColor = '#d8ecff'; g.shadowBlur = 40;
-    g.strokeStyle = 'rgba(235,245,255,.9)'; g.lineWidth = rr * 0.12;
-    g.beginPath(); g.arc(cx, cy, rr, T * 1.2, T * 1.2 + TAU * 0.94); g.stroke();
-    g.strokeStyle = 'rgba(150,190,255,.55)'; g.lineWidth = rr * 0.05;
-    g.beginPath(); g.arc(cx, cy, rr * 1.18, -T, -T + TAU * 0.8); g.stroke();
-    g.shadowBlur = 0;
-    g.fillStyle = '#000'; circ(cx, cy, rr * 0.82);
-    g.fillStyle = 'rgba(220,236,255,.8)'; circ(cx, cy, Math.max(2, rr * 0.04));
-    g.fillStyle = '#f4f4f7';
-    for (let i = 0; i < 30; i++) {       // splatters round the edges, clear of the ring
-      let sx = hash1(i * 5.3 + 1) * W, sy = hash1(i * 7.9 + 2) * H;
-      const dd = Math.hypot(sx - cx, sy - cy), keep = rr * 1.45;
-      if (dd < keep) { const q = Math.atan2(sy - cy, sx - cx); sx = cx + Math.cos(q) * keep; sy = cy + Math.sin(q) * keep; }
-      const delay = hash1(i + 30) * 0.5, gr = e(clamp((b - delay) / 0.25, 0, 1));
-      if (gr <= 0) continue;
-      const br = (M * 0.012 + M * 0.04 * hash1(i + 3)) * gr;
-      circ(sx, sy, br);
-      for (let j = 0; j < 6; j++) { const q = hash1(i * 11 + j) * TAU, qd = br * (1.2 + 1.3 * hash1(i + j * 3)); circ(sx + Math.cos(q) * qd, sy + Math.sin(q) * qd, br * (0.12 + 0.2 * hash1(i * 2 + j))); }
-      ell(sx, sy + br * 1.3, br * 0.18, br * 0.7);
-    }
-    const ts = Math.round(clamp(W * 0.1, 40, 110));
-    g.font = `${ts}px "Yuji Syuku", serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = ts * 0.1; g.strokeStyle = '#000';
-    g.strokeText('無量空処', cx, H * 0.84); g.fillStyle = '#fff'; g.fillText('無量空処', cx, H * 0.84);
-    g.font = `800 ${Math.round(ts * 0.26)}px Barlow, sans-serif`; g.lineWidth = 4;
-    const sub = cut.role === 'target' ? 'INFINITE VOID · YOU CANNOT MOVE' : 'INFINITE VOID';
-    g.strokeText(sub, cx, H * 0.84 + ts * 0.75); g.fillText(sub, cx, H * 0.84 + ts * 0.75);
-  }
-  g.restore();
+  g.fillStyle = 'rgba(0,0,0,.35)'; ell(0, 42, 38, 38);
+  g.fillStyle = '#111218'; ell(0, 40, 36, 36);
+  g.fillStyle = 'rgba(255,255,255,.06)'; ell(-12, 25, 12, 9); ell(12, 25, 12, 9);
+  g.fillStyle = '#111218'; ell(-27, 20, 10, 9); ell(27, 20, 10, 9);
+  limb([-29, 26, -33, 60], 11, SKIN);
+  limb([30, 26, 37, 6, 29, -6], 10.5, SKIN);
+  g.fillStyle = SKIN; g.fillRect(-5, -4, 10, 10);
+  g.fillStyle = SKIN; circ(0, -16, 15);
+  hair(0, -22, 12, 30, Math.PI * 0.95, Math.PI * 2.05, 13, 0, '#e9eef6');
+  hair(0, -22, 8, 21, Math.PI * 1.05, Math.PI * 1.95, 9, 0.1, '#ffffff');
+  const gl = 0.35 + 0.15 * Math.sin(t * 12);
+  g.fillStyle = `rgba(170,150,255,${gl})`; circ(28, -18, 18);
+  limb([30.5, -12, 31, -31], 4.8, '#e9bf98');
+  limb([26, -12, 25.5, -32], 4.8, SKIN);
+  g.fillStyle = SKIN; ell(28.5, -7, 7, 6.5);
+  g.fillStyle = '#e9bf98'; ell(24, -4, 3.5, 2.5);
 }
 const CUTS = {
   ss: { pal: ['#ff5cb4', '#d4157e', '#5e17c4'], acc: ['#2fb4ff', '#38e07a'], big: '魂', title: 'SOUL STRIKE', sub: '魂を捉える一撃', subCol: '#ffd1ea', fig: (t) => cutYuji(t) },
   maho: { pal: ['#3fe0ff', '#1f5fff', '#18196a'], acc: ['#38e07a', '#ff4fae'], big: '影', title: 'MAHORAGA', sub: '八握剣 異戒神将 魔虚羅', subCol: '#cfe4ff', fig: (t) => cutMegumi(t) },
   nr: { pal: ['#ffb347', '#ff5a1f', '#7a1035'], acc: ['#ff4fae', '#2fb4ff'], big: '釘', title: 'RAINING NAILS', sub: '芻霊呪法 · 釘の雨', subCol: '#ffe0c2', fig: (t) => cutNobara(t) },
-  dom: { dur: 2.6, paint: (p) => paintDomain(p) },
+  dom: { pal: ['#a58bff', '#3b23a6', '#0c0a2e'], acc: ['#ffffff', '#3fe0ff'], big: '無', title: 'INFINITE VOID', sub: '領域展開 · 無量空処', subCol: '#e2dcff', fig: (t) => cutGojo(t) },
 };
 function cutMegumi(t) {
   g.save(); g.translate(-48, -6); g.rotate(t * 0.8);
@@ -3465,8 +3434,8 @@ function doEvent(a) {
   } else if (a[0] === 'C') {    // an ultimate starts: kind, caster id, target id, caster name
     const [, k, cid, tid, cn] = a, me = byId(meId), c = byId(cid);
     if (demoMode || !me) return;
-    const role = cid === meId ? 'you' : tid === meId || (k === 'dom' && Array.isArray(a[5]) && a[5].includes(meId)) ? 'target'
-      : (k === 'maho' || k === 'nr') && c && dist(c, me) < 900 ? 'near' : '';
+    const role = cid === meId ? 'you' : tid === meId ? 'target'
+      : (k === 'maho' || k === 'nr') && c && dist(c, me) < 900 ? 'near' : k === 'dom' && c && dist(c, me) < DOM.r + 80 ? 'near' : '';
     if (role) startCutin(k, role, cn);
   }
 }

@@ -645,13 +645,15 @@ mouse, touch), screens, multiplayer, main loop.
 - **Gojo**: Blue (`BLUE`, `S.bl`, `updBlue()`) pulls by setting velocity and `push` on everyone in range
   each step and ticks damage; Red is `SHOT` kind 3 and bursts through `redBlast()`; Hollow Purple
   (`PURPLE`, `S.pu`, `updPurple()`) ignores walls and keeps a host-only `hit` list. Infinite Void
-  (`DOM`, `S.dm`) records its victims in `vic` and sets their `frz`: a frozen fighter neither moves nor
-  acts (`control()`, `updFighter()`), a frozen Mahoraga stands still; it ends, and `frz` clears, after
-  `DOM.dur` or when Gojo dies. `inDomain(d)` says whether this device sees it from inside
-  (`drawDomains()` blacks out the view and redraws the people in it) or outside (a black sphere
-  `DOM.lift` up; `hidden()` keeps orbs and name tags under it out of sight). `CHARS.gojo.ur` slows his
-  ultimate meter. His cut-in is `CUTS.dom`: its own `dur` and `paint` (`paintDomain()`, full screen,
-  a burst with the hand sign, then the splattered void).
+  (`DOM`, `S.dm`) counts `d.t` down from `DOM.form + DOM.dur`: for `DOM.form` s it is a burst in the
+  world (`drawBurst()`), then `updDomain()` closes it on everyone inside, recording them in `vic` and
+  setting their `frz`: a frozen fighter neither moves nor acts (`control()`, `updFighter()`), a frozen
+  Mahoraga stands still; it ends, and `frz` clears, after `DOM.dur` or when Gojo dies. `inDomain(d)`
+  says whether this device sees it from inside (`drawDomains()` blacks out everything, splatters the
+  void and redraws the people in it; `outside()` drops orbs, shots, particles, tags and minimap dots
+  beyond its edge) or outside (a black sphere `DOM.lift` up; `hidden()` keeps what is under it out of
+  sight). `CHARS.gojo.ur` slows his ultimate meter. His banner is a band like the others (`CUTS.dom`,
+  `cutGojo()`: the sign, a fist with two fingers up).
 - **Rabbit Escape** is one entity per cast, not one per rabbit: the swarm runs from `x0,y0` to `x,y`
   over `T` s, bursts (`RAB.dmg` in `RAB.r`), then nibbles and slows for `RAB.linger` s. Each rabbit's
   path is worked out from the entity in `drawSwarm()`.

@@ -248,9 +248,10 @@ cursed energy: every move has its own cooldown.
   middle, hurting them all the while (dash to break free). *Red* bursts on whatever it hits, hurling
   everyone near it away. *Hollow Purple* winds up (a purple line shows its path), then a huge orb goes
   through everyone and every wall in its way, hitting each once, hard, with no knockback. His
-  ultimate, *Infinite Void*, takes about three times as long to charge: everyone inside it when it
-  opens is frozen for 5 seconds and sees only the void. From outside it is a black sphere hanging over
-  the street, which you can walk under without being caught.
+  ultimate, *Infinite Void*, takes about three times as long to charge. It bursts out of him in black
+  and violet for a moment (run!), then closes on everyone still inside: they are frozen for 5 seconds
+  and see nothing but the void, splashed with white, and the people in it. From outside it is a black
+  sphere hanging over the street, which you can walk under without being caught.
 - **Practice** — you against 1 to 10 cursed spirits (Easy, Normal or Hard), first to 10, 20 or 40 points.
 - **Private party** — HOST PARTY gives a four-digit code; friends type it and press JOIN. Up to 20, with
   as many cursed spirits as the host picks. If a player's connection drops, a bot plays for them while their browser
