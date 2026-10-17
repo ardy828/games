@@ -1,8 +1,8 @@
 # Games
 
 Browser games, each one a **single self-contained HTML file** — no build step, no dependencies,
-no bundler. Open the file in a browser and it runs. The one exception is Scrapline's co-op mode,
-which pulls PeerJS from a CDN when you press CO-OP.
+no bundler. Open the file in a browser and it runs. The exceptions are the online modes of
+Scrapline, Flatcraft and Bonk Arena, which pull PeerJS from a CDN when you host or join.
 
 **▶ Play them: <https://ardy828.github.io/games/>**
 
@@ -13,6 +13,7 @@ which pulls PeerJS from a CDN when you press CO-OP.
 | **Flappy Finch** | One-button arcade | [Play](https://ardy828.github.io/games/flappy/) | [`flappy/`](flappy/) |
 | **Flatcraft** | 3D survival sandbox with biomes, mobs and crafting | [Play](https://ardy828.github.io/games/flatcraft/) | [`flatcraft/`](flatcraft/) |
 | **Obito's Multiverse** | Story-driven ninja action adventure | [Play](https://ardy828.github.io/games/obito/) | [`obito/`](obito/) |
+| **Bonk Arena** | Sumo party brawler, solo or online with up to 8 | [Play](https://ardy828.github.io/games/bonk/) | [`bonk/`](bonk/) |
 
 Each game's menu has a button back to the landing page.
 
@@ -164,3 +165,34 @@ pushing to `main` deploys.
 
 Plain static HTML — any static host will serve it unchanged. Drop the folder on Cloudflare
 Pages or Netlify, or upload the files to the web root of any shared host.
+
+## Bonk Arena
+
+Balls on a floating platform. Roll into people, dash into them harder, and be the last one left on.
+The platform shrinks after ten seconds, so every round ends.
+
+- **Controls (keyboard)** — WASD or the arrow keys to roll, Space to dash (Shift, F and E also
+  work), 1–4 for emotes (😂 😡 👋 GG), Esc or P to pause, M to mute.
+- **Controls (touch)** — drag anywhere on the left half for a floating stick; tap anywhere on the
+  right half to dash.
+- **VS Bots** — you against 1 to 7 bots (Easy, Normal or Hard), first to 3, 5 or 7 round wins.
+  Once you are knocked out the rest of the round fast-forwards.
+- **Bonk Rush** — endless. Bots keep dropping in, more of them and smarter the more you knock off;
+  your best score is saved.
+- **2 Players** — two people on one keyboard: P1 is WASD + Space, P2 is arrows + Enter (or Right
+  Shift, `/` or `.`), with optional bots. Click a ball in the lobby to change its skin.
+- **Online** — HOST ONLINE gives a four-digit room code; friends type it and press JOIN. Up to 8
+  players, any mix of devices, with bots filling empty spots if the host adds them. Someone joining
+  mid-match plays from the next round. If a player's connection drops, a bot drives their ball
+  while their browser reconnects (for 30 seconds), then hands it back. The browsers talk directly
+  over WebRTC (PeerJS), and the match runs on the host's device, so the host should keep the tab
+  open.
+- **Round twists** — after round 1 about half the rounds get one: Ice Rink, Hyper (fast dash
+  recharge), Giants, Bomb Rain, Tiny Arena or Super Bouncy.
+- **Power-ups** — MEGA (huge and heavy), TURBO (faster, dash recharges quickly) and SHOCKWAVE
+  (blasts everyone near you away).
+- **Coins and skins** — knock-offs, round wins and match wins earn coins (Rush pays per
+  knock-off). 24 skins, six free; the rest have patterns and hats (crown, halo, propeller, viking
+  helmet…). Bots wear shop skins too. Coins, skins, your name and stats are kept in `localStorage`.
+- All drawing is canvas, all audio is synthesised with the Web Audio API, and there are no image
+  or sound files.

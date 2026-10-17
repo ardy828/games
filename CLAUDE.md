@@ -45,6 +45,10 @@ Piece arc: the Sunny (`ship` map), a Marine ambush on the `cove` map with Luffy,
 Mystical Palm) and the Kaido cutscene that ends in Luffy's throw. A cutscene actor with `rot` is drawn
 lying down.
 
+`bonk/index.html` (Bonk Arena, ~2100 lines) is a sumo party game in modern syntax: canvas world, DOM
+menus and HUD, Google Fonts, save in `localStorage` (`bonk-arena-save-v1`). Like Scrapline it injects
+PeerJS only when the player hosts or joins; see "Bonk Arena architecture" below.
+
 `flatcraft/index.html` is the other exception: it loads Three.js r128 (the last UMD build) from cdnjs at
 boot (and carries its texture art inline as one base64 PNG strip), since a voxel renderer without WebGL helpers is not worth hand-rolling. It also injects the same
 PeerJS build as Scrapline, only when the player hosts or joins a multiplayer room.
@@ -489,3 +493,65 @@ Every impact is an oscillator with an exponential envelope plus a filtered `nois
 a shared compressor so stacked line-clear voices cannot clip. `SCALE` is a C pentatonic — clears
 play one note per line and start higher as the combo climbs, which is why they resolve rather than
 just get louder.
+
+## Bonk Arena architecture
+
+Balls on a tilted disc; the last ball on wins the round, first to `toWin` rounds wins the match.
+One IIFE, sections in this order: save, skins, tuning, canvas, audio, drawing balls, the match
+(sim), effects, rendering, HUD, input, screens, multiplayer, main loop.
+
+- **`S` is the whole match.** `newState(mode)` makes it; modes are `demo` (six bots playing behind
+  the menu, silent), `solo`, `local` (two on one keyboard), `rush`, `host` and `join`. The sim
+  (`step()`, a fixed 60 Hz step from the loop's accumulator) only runs off a joiner; on a joiner
+  `S` is a mirror that `applySnap()` overwrites and `joinTick()` eases between snapshots.
+- **Balls** come from `mkBall()`. `ctl` says who drives one: `k0`/`k1` (local keyboard slots, touch
+  is `k0`), `net` (a joiner's input on the host) or `bot` (`ai` from `mkAI()`). Every driver
+  just writes `b.inp = {x, y, d}`; `d` is a dash *counter*, and `control()` dashes when it differs
+  from `b.dSeen`, so a lost input packet cannot eat a dash. Human ids are 0 (host or P1), 1 (P2)
+  and the joiners' ids; bots are 100+. `mine(id)` says whether a ball is played on this device.
+- **Physics** (`step()`): accelerate, exponential drag (`DRAG`, lower while dashing), then pairwise
+  collisions with restitution `REST`. A dashing ball counts as 2.2× heavier and adds `DASH_BONUS`,
+  which is what makes a dash hit knock someone off. A ball whose centre leaves `platR` starts
+  `fall`; `lastBy`/`lastT` credit the knock-off if it touched someone in the last `KO_WINDOW`
+  seconds. After `SHRINK_AT` the platform shrinks to `RMIN` over `SHRINK_LEN` and then keeps
+  going at a crawl, so a stand-off always ends.
+- **Balance was tuned by simulation**: `ACCEL`, `DRAG`, `DASH_V`, `DASH_BONUS` and `REST` set how
+  far a hit sends someone (a dash into a still ball slides it about 215 of the platform's 320
+  radius). Change them and re-measure round length with bots before shipping: rounds of 6
+  Normal bots should last about 15–20 s, Easy about 10 s, Hard about 30 s.
+- **Bots** (`botThink()`, tuned per `DIFF` row): pick a target near the edge, circle to its inside
+  and dash when a push would send it outward, run for the middle when their own momentum would
+  carry them off, sidestep incoming dashes (Normal and Hard), dodge bombs and fetch power-ups. They
+  never dash near the edge unless they are shoving someone just outward of them (`shove`), which
+  is what stops a player who parks on the rim from being safe.
+- **Rounds**: `startRound()` picks a twist from `MODS` (never in round 1), places everyone on a
+  ring and drops them in (`drop`), and the countdown is `COUNT_T` (a 1.1 s round banner, then 3, 2,
+  1). `endRound()` → `afterRound()` → next round or `phase = 'over'`. Rush has no rounds: bots spawn
+  through `spawnRushBot()` and the run ends when the player's ball finishes falling.
+- **Effects**: `fx(a)` is cosmetic (particles, sounds, flashes), rides in the next snapshot and may
+  be lost; `event(a)` must land (banners, countdown, knock-offs, round and match results, emotes)
+  and goes out reliably at once. Both call `doFx()` locally first, so solo and host share the path
+  and the joiner replays the same arrays. Coins are earned inside `doFx()` from `mine()`, on every
+  device for itself. Per-ball cosmetics (`flash`, `squash`, blink, trails, emotes) live in
+  `animBalls()` and are never read by the sim.
+- **Rendering**: world units, drawn with y scaled by `TILT` and balls lifted by `0.8 r` so they sit
+  on the disc; `camR` eases toward the platform size. Balls are depth-sorted by y; falling balls
+  behind the disc (y < 0) are drawn before it so it hides them. `drawBall()` is shared by the arena,
+  the shop and the lobby swatches (`paintSwatch()`); a pattern is drawn clipped and the outline is
+  stroked on a fresh circle path afterwards.
+- **Skins** are rows in `SKINS` (`c`, `c2`, pattern `p`, hat `h`, price `$`); the first six are free.
+  **Append new skins at the end**: saves and network messages store the index.
+- **Screens**: `show(name)` toggles `SCREENS` (`null` is playing); one `#lobby` serves every mode
+  (`lob.mode`), and `#over` serves both the match results and the Rush score.
+- **Multiplayer** is the same two-lane PeerJS scheme as Scrapline and Flatcraft (`stream()` for the
+  30 Hz snapshot and input on the negotiated fast channel, `broadcast()`/`toHost()` for the rest,
+  sequence numbers, non-fatal PeerJS errors, `bye`), star-shaped like Flatcraft for up to 8. The
+  room code is four digits (`bonkarena-` + code). The host keeps `humans` (`{id, name, skin, link,
+  tok}`); a joiner who joins mid-match gets a ball at the next `startRound()`, bumping a bot if the
+  arena is full. On a drop, `dropHuman()` turns the ball into a bot; the joiner `redial()`s with
+  `back: {id, tok}` for `NET_GRACE` and `welcome()` hands the ball back. Snapshot rows are listed in
+  `sendSnap()` and read in `applySnap()` in the same order: keep the two in step.
+- Testing: the sandbox cannot reach the PeerJS server, so the netcode was exercised with a mock
+  `Peer` (BroadcastChannel between pages in one browser) injected into a throwaway copy of the
+  file. The mock has no fast channel, so it covers the reliable-lane fallback only.
+
