@@ -1,7 +1,7 @@
 # Jujutsu Arena public server
 
 This folder is the game's public server: a small Cloudflare Worker (`worker.js`) with one Durable
-Object per public room (`pub-1` to `pub-4`, 8 players each). It does not run the match. The match runs
+Object per public room (`pub-1` to `pub-4`, 20 players each). It does not run the match. The match runs
 in one player's browser, as in a private party, and the server only relays messages between the
 players. When that player leaves, or their tab stops answering for 3 seconds, the server hands the room
 to the next player, so a room lives as long as anyone is in it.
@@ -90,9 +90,10 @@ answer under the menu buttons.
 
 Durable Objects are on the free Workers plan with the SQLite backend, which `wrangler.toml` uses.
 The free plan allows 100,000 requests a day, and every 20 WebSocket messages the server receives
-count as one request. A full room of 8 sends roughly 6 or 7 requests' worth a second (the host's
-20 snapshots a second plus everyone's input), so the free plan covers about four hours of a full
-room a day, and far more for smaller rooms. An open admin page adds about 100 requests a minute
+count as one request. A room sends roughly 1 request's worth a second for the host's 20 snapshots,
+plus about 0.75 a second for each other player's input, so a full room of 20 uses about 15 a second
+and the free plan covers about two hours of a full room a day; a room of 8, about five hours, and far
+more for smaller rooms. An open admin page adds about 100 requests a minute
 (it asks all four rooms every 3 seconds while its tab is visible). Past the limit, connections fail until the count resets at
 midnight UTC. Cloudflare's $5 a month Workers Paid plan removes the worry.
 

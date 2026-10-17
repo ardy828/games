@@ -167,6 +167,8 @@
   #board,#results{position:absolute;left:50%;top:50%;translate:-50% -50%;display:none;background:rgba(10,10,18,.92);border:1px solid var(--line);
     border-top:3px solid var(--purple);padding:14px 16px;min-width:min(420px,92vw)}
   #board.on,#results.on{display:block}
+  #board,#results{max-height:88vh;overflow-y:auto}
+  #results{pointer-events:auto}
   #results{border-top-color:var(--gold);text-align:center}
   #results h3{font-family:var(--disp);font-weight:400;font-size:clamp(30px,7vw,46px);letter-spacing:.04em;line-height:1;margin-bottom:4px}
   #results p{color:var(--muted);font-size:13px;margin-bottom:8px}
@@ -325,7 +327,7 @@ const FR = 20;                 // fighter radius
 const KB = 4;                  // knockback velocity decays at this rate, so a push of d units starts at d * KB
 const PROTECT = 1.5, CREDIT_T = 8;
 const ULT = { deal: 1 / 25, take: 1 / 50, idle: 0.3 };   // meter per point dealt, per point taken, per second
-const MAX_FIGHTERS = 8;       // sorcerers (people) in a room; cursed spirits come on top
+const MAX_FIGHTERS = 20;      // sorcerers (people) in a room or party; cursed spirits come on top
 const MAX_CURSES = 10, CURSE_PTS = 1;
 const CHARS = {
   yuji: {
@@ -3695,7 +3697,10 @@ let statT = 0;
 function netHostTick(dt) {
   if (!net || !net.host || !S || S.mode !== 'host') return;
   snapT -= dt;
-  if (snapT <= 0) { snapT = 1 / 20; sendSnap(); }
+  // 20 snapshots a second; a big PeerJS party sends fewer, since the host uploads one to every joiner
+  // (a full room's snapshot is about 8 kB). On the public server the relay copies one to everyone.
+  const n = net.kind === 'peer' ? links().length : 0;
+  if (snapT <= 0) { snapT = 1 / (n > 7 ? Math.max(12, Math.round(140 / n)) : 20); sendSnap(); }
   if (net.kind === 'ws' && (statT -= dt) <= 0) {      // the scoreboard, for the admin page
     statT = 2;
     wsSend('!', { t: 'stat', ph: S.phase, rl: Math.round(S.roundT), tw: S.toWin, f: ranked().map((f) => [f.id, f.name, f.ch, f.pts, f.kills, f.deaths, f.ctl === 'bot' ? 1 : 0, f.alive ? 1 : 0]) });
@@ -3794,7 +3799,7 @@ function dial(code, back) {
     };
     const onData = (m) => {
       if (!m || typeof m !== 'object' || peer !== me) return;
-      if (m.t === 'full') { closeNet(); toMenu('That party is full (8 players).'); return; }
+      if (m.t === 'full') { closeNet(); toMenu('That party is full (' + MAX_FIGHTERS + ' players).'); return; }
       if (m.t === 'hi') {
         if (net && net.down) {
           Object.assign(net, { link, heard: performance.now(), rq: 0, down: 0, me: m.id, tok: m.tok });

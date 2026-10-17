@@ -676,7 +676,9 @@ mouse, touch), screens, multiplayer, main loop.
   `back: {id, tok}`, a bot plays for a dropped player) and, for PLAY ONLINE, a WebSocket to the relay
   in `jujutsu/server/` (`SERVER`; messages are `to|json` out and `from|json` in, `!` being the
   server). Snapshot rows are arrays in the order of `SPEC`, written by `enc()` and read by `dec()`, so
-  sender and receiver cannot drift; add a synced field by adding it to `SPEC`. A joiner predicts only
+  sender and receiver cannot drift; add a synced field by adding it to `SPEC`. Rooms and parties hold
+  `MAX_FIGHTERS` (20) people; a full room's snapshot is about 8 kB, so `netHostTick()` sends a PeerJS
+  party of more than 7 joiners fewer than 20 a second (down to 12), since its host uploads one per joiner. A joiner predicts only
   its own walking and dashing (`pred`, reconciled against the input the host acknowledged in `ak`);
   everything else is coasted and smoothed between snapshots in `joinTick()`.
 - **Host migration** (public rooms only): when the server names a new host (`{sys:'host'}`), that
@@ -684,7 +686,7 @@ mouse, touch), screens, multiplayer, main loop.
   stalled old host `demote()`s itself. `syncCurses()` keeps `RULES.curses` cursed spirits in a public
   room. A hosting tab in the background keeps the sim running from the heartbeat timer.
 - **Server** (`jujutsu/server/worker.js`): one Durable Object per room `pub-1`…`pub-4`, WebSocket
-  Hibernation API, 8 players, only the host may send to `*`, to an id or to `!` (its scoreboard, every
+  Hibernation API, 20 players (`MAX_PLAYERS`), only the host may send to `*`, to an id or to `!` (its scoreboard, every
   2 s, for the admin page), a host silent for `STALL_MS` is replaced. Each room stores the admin's
   rules and sends them in `welcome` and as `{sys:'rules'}`; admin events go to the host as
   `{sys:'admin', ev}` (`adminEvent()` runs them), broadcasts to everyone as `{sys:'msg'}`, and a kick

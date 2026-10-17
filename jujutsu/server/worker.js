@@ -16,10 +16,10 @@
 import { DurableObject } from 'cloudflare:workers';
 import ADMIN_HTML from './admin.html';
 
-const VERSION = 5;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
+const VERSION = 6;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
 const ROOMS = ['pub-1', 'pub-2', 'pub-3', 'pub-4'];
-const MAX_PLAYERS = 8;
-const MAX_MSG = 16384;      // bytes; a snapshot is a few kB
+const MAX_PLAYERS = 20;
+const MAX_MSG = 32768;      // bytes; a full room's snapshot is about 8 kB
 const STALL_MS = 3000;      // a host silent this long hands the room on
 const EVENTS = ['heal', 'ults', 'cds', 'maho', 'end', 'restart'];
 
@@ -68,7 +68,7 @@ async function adminApi(req, env, what) {
   if (!same(req.headers.get('Authorization') || '', 'Bearer ' + env.ADMIN_KEY)) return json({ error: 'Wrong admin key.' }, 401);
   const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
   const where = ROOMS.includes(body.room) ? [body.room] : ROOMS;
-  if (what === 'status') return json({ rooms: await Promise.all(ROOMS.map(async (name) => ({ name, ...(await ask(env, name, 'status')) }))) });
+  if (what === 'status') return json({ max: MAX_PLAYERS, rooms: await Promise.all(ROOMS.map(async (name) => ({ name, ...(await ask(env, name, 'status')) }))) });
   if (what === 'rules') {
     const rules = cleanRules(body.rules);
     await Promise.all(ROOMS.map((name) => ask(env, name, 'rules', { rules })));

@@ -15,7 +15,7 @@ and Jujutsu Arena's public server, a small Cloudflare Worker in [`jujutsu/server
 | **Flatcraft** | 3D survival sandbox with biomes, mobs and crafting | [Play](https://ardy828.github.io/games/flatcraft/) | [`flatcraft/`](flatcraft/) |
 | **Obito's Multiverse** | Story-driven ninja action adventure | [Play](https://ardy828.github.io/games/obito/) | [`obito/`](obito/) |
 | **Bonk Arena** | Sumo party brawler, solo or online with up to 8 | [Play](https://ardy828.github.io/games/bonk/) | [`bonk/`](bonk/) |
-| **Jujutsu Arena** | Top-down sorcerer brawler on a city map, online up to 8 | [Play](https://ardy828.github.io/games/jujutsu/) | [`jujutsu/`](jujutsu/) |
+| **Jujutsu Arena** | Top-down sorcerer brawler on a city map, online up to 20 | [Play](https://ardy828.github.io/games/jujutsu/) | [`jujutsu/`](jujutsu/) |
 
 Each game's menu has a button back to the landing page.
 
@@ -245,7 +245,7 @@ cursed energy: every move has its own cooldown.
   nearby: the more nails, the bigger the blast. The ultimate, *Raining Nails*, drops nails out of the
   sky all round her for 4 seconds; they stick and mark for Resonance like any other nail.
 - **Practice** — you against 1 to 10 cursed spirits (Easy, Normal or Hard), first to 10, 20 or 40 points.
-- **Private party** — HOST PARTY gives a four-digit code; friends type it and press JOIN. Up to 8, with
+- **Private party** — HOST PARTY gives a four-digit code; friends type it and press JOIN. Up to 20, with
   as many cursed spirits as the host picks. If a player's connection drops, a bot plays for them while their browser
   reconnects. Runs over WebRTC (PeerJS, loaded only when you host or join) on the host's device.
 - **Play online** — joins a public room on the game's server, where anyone can drop in; cursed spirits

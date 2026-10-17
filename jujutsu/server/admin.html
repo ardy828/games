@@ -308,7 +308,7 @@ function render(s) {
   for (const r of rooms) {
     const card = el('div', 'room' + (r.players.length ? '' : ' empty'));
     const h = el('h3', '', r.name.toUpperCase());
-    h.append(el('span', '', r.players.length + ' / 8'));
+    h.append(el('span', '', r.players.length + ' / ' + (s.max || 20)));
     card.append(h);
     const host = r.players.find((p) => p.host), st = r.stat, rl = r.rules || DEFAULTS;
     let info = 'Empty';
