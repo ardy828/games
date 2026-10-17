@@ -2649,15 +2649,16 @@ function cutYuji(t) {
   const st = Math.sin(t * 26) * 4;
   g.fillStyle = 'rgba(191,234,255,.28)';
   for (let i = 1; i <= 3; i++) circ(-14 - i * 24, 2 + i * 3, 24 - i * 5);
-  limb([-4, 30, -28 - st, 46, -50 - st, 44], 13, '#121218');
-  limb([6, 30, 26 + st, 44, 20 + st, 66], 13, '#121218');
-  limb([12, -2, -6, 14, 2, 26], 11, '#22273d');
-  g.fillStyle = SKIN; circ(4, 28, 7);
-  g.fillStyle = 'rgba(0,0,0,.35)'; ell(6, 12, 20, 31, -0.45);
-  g.fillStyle = '#22273d'; ell(6, 10, 18, 29, -0.45);
-  g.fillStyle = 'rgba(255,255,255,.06)'; ell(12, 2, 9, 16, -0.45);
-  g.fillStyle = '#b8283a'; ell(6, -12, 12, 8, -0.5);
-  g.fillStyle = '#8a1b2b'; ell(5, -12, 6.5, 4.5, -0.5);
+  // the body leans forward along one line from the hips (bottom left) to the neck, under the head
+  limb([-10, 32, -32 - st, 46, -52 - st, 44], 13, '#121218');
+  limb([-2, 34, 20 + st, 46, 16 + st, 66], 13, '#121218');
+  limb([10, 2, -6, 16, -20, 18], 11, '#22273d');
+  g.fillStyle = SKIN; circ(-22, 18, 7);
+  g.fillStyle = 'rgba(0,0,0,.35)'; ell(4, 13, 17, 30, 0.6);
+  g.fillStyle = '#22273d'; ell(4, 12, 15.5, 28, 0.6);
+  g.fillStyle = 'rgba(255,255,255,.06)'; ell(9, 14, 7, 15, 0.6);
+  g.fillStyle = '#b8283a'; ell(12, -9, 5.5, 9, 0.6);
+  g.fillStyle = '#8a1b2b'; ell(12, -9, 3, 5.5, 0.6);
   const gl = 0.6 + 0.15 * Math.sin(t * 40);
   g.fillStyle = `rgba(191,234,255,${gl})`; circ(84, -8, 17);
   g.fillStyle = 'rgba(255,255,255,.7)'; circ(84, -8, 10);
