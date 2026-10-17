@@ -17,19 +17,32 @@ const MAX_PLAYERS = 8;
 const MAX_MSG = 16384;      // bytes; a snapshot is a few kB
 const STALL_MS = 3000;      // a host silent this long hands the room on
 
-// ALLOWED_ORIGINS is a comma-separated list; a * stands for any subdomain, e.g. https://*.example.workers.dev
+// ALLOWED_ORIGINS is a comma-separated list of sites the game may connect from. "*" alone allows any
+// site; inside an address a * stands for any subdomain, e.g. https://*.example.workers.dev
 function allowed(origin, env) {
   if (!origin) return true;    // not a browser
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
-  return String(env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean).some((p) =>
+  const list = String(env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (list.includes('*')) return true;
+  return list.some((p) =>
     new RegExp('^' + p.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[\\w-]+(\\.[\\w-]+)*') + '$').test(origin));
 }
 
+const OPEN = { 'access-control-allow-origin': '*', 'cache-control': 'no-store' };
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    // /check: is the server up, are the rooms working, and would this page be let in? The game asks
+    // this when it cannot join, to say why.
+    if (url.pathname === '/check') {
+      const origin = req.headers.get('Origin');
+      const out = { up: true, origin, allowed: allowed(origin, env), rooms: null, error: null };
+      try { out.rooms = await (await env.ROOMS.get(env.ROOMS.idFromName('pub-1')).fetch('https://room/check')).json(); }
+      catch (e) { out.error = String((e && e.message) || e); }
+      return new Response(JSON.stringify(out), { headers: { 'content-type': 'application/json', ...OPEN } });
+    }
     const m = url.pathname.match(/^\/room\/([\w-]+)$/);
-    if (!m) return new Response('Jujutsu Arena server is up.\n', { headers: { 'content-type': 'text/plain' } });
+    if (!m) return new Response('Jujutsu Arena server is up.\n', { headers: { 'content-type': 'text/plain', ...OPEN } });
     if (!ROOM.test(m[1])) return new Response('No such room.\n', { status: 404 });
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket.\n', { status: 426 });
     if (!allowed(req.headers.get('Origin'), env)) return new Response('Forbidden.\n', { status: 403 });
@@ -77,6 +90,7 @@ export class Room extends DurableObject {
   }
   async fetch(req) {
     const url = new URL(req.url);
+    if (req.headers.get('Upgrade') !== 'websocket') return Response.json({ players: this.players().length });
     const name = (url.searchParams.get('name') || '').replace(/\s+/g, ' ').trim().slice(0, 14) || 'Sorcerer';
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);

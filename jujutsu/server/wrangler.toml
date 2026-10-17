@@ -3,9 +3,10 @@ name = "jujutsu-arena"
 main = "worker.js"
 compatibility_date = "2025-09-01"
 
-# Pages allowed to connect, besides localhost. Add your own site here if you host the game elsewhere.
+# Sites the game may connect from, besides localhost: "*" lets the game connect from any site. To
+# limit it, list addresses instead, e.g. "https://ardy828.github.io,https://*.ardychan828.workers.dev".
 [vars]
-ALLOWED_ORIGINS = "https://ardy828.github.io,https://*.ardychan828.workers.dev"
+ALLOWED_ORIGINS = "*"
 
 [[durable_objects.bindings]]
 name = "ROOMS"

@@ -3015,8 +3015,19 @@ function wsConnect(i) {
   ws.onclose = () => {
     if (net !== n) return;
     if (n.full) { net = null; if (i + 1 < PUBLIC_ROOMS.length) wsConnect(i + 1); else toMenu('Every public room is full. Try again soon, or host a party.'); return; }
-    toMenu(n.me == null ? 'Could not reach the server.' : 'Lost the connection to the server.');
+    if (n.me == null) diagnose(); else toMenu('Lost the connection to the server.');
   };
+}
+// joining failed: ask the server's /check why, and say so
+function diagnose() {
+  closeNet();
+  $('menuNote').textContent = 'Could not join. Checking the server…';
+  fetch(SERVER.replace(/\/+$/, '') + '/check', { cache: 'no-store' }).then((r) => r.json()).then((j) => {
+    if (!j || !j.up) throw new Error('no answer');
+    toMenu(j.error ? 'The server is up, but its rooms are not working: ' + j.error
+      : j.allowed === false ? 'The server does not accept games from ' + location.origin + '. Add it to ALLOWED_ORIGINS in jujutsu/server/wrangler.toml.'
+        : 'The server is up, but joining a room failed. Try again in a moment.');
+  }).catch(() => toMenu('Could not reach the server at ' + SERVER + '. Check your connection, or whether the server is deployed.'));
 }
 function onSys(m) {
   const n = net;

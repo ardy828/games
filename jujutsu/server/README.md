@@ -37,10 +37,17 @@ If you would rather use a terminal: install Node, then in this folder run `npx w
 
 ## Allowed sites
 
-The server only accepts players from the sites in `ALLOWED_ORIGINS` in `wrangler.toml` (now
-`https://ardy828.github.io` and any `https://*.ardychan828.workers.dev` Worker) and from `localhost`
-for testing. If you host the game somewhere else as well, add that address to the comma-separated list,
-e.g. `"https://ardy828.github.io,https://games.example.com"`; a `*` stands for any subdomain.
+`ALLOWED_ORIGINS` in `wrangler.toml` lists the sites the game may connect from. It is `"*"`, so the
+game works wherever it is hosted. To stop other websites from using your rooms, replace it with a
+comma-separated list, e.g. `"https://ardy828.github.io,https://*.ardychan828.workers.dev"` (a `*`
+inside an address stands for any subdomain). `localhost` is always allowed, for testing.
+
+## Checking it
+
+Open `/check` on the server (e.g. `https://jujutsu-arena.NAME.workers.dev/check`). It answers with
+`"up": true`, whether the rooms work (`"rooms": {"players": …}`, or an `"error"`), and whether the
+page asking would be let in. The game asks the same thing when it cannot join a room and shows the
+answer under the menu buttons.
 
 ## Free plan limits
 
