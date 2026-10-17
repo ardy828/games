@@ -226,11 +226,13 @@ cursed energy: every move has its own cooldown.
   front until its guard meter breaks, and RCT, which heals a third of your health on a long cooldown.
 - **Ultimates** have a meter instead of a cooldown (a gold bar under your health): it charges as you deal
   damage, a little as you take it and slowly over time, and keeps its charge when you die. F works
-  only when it is full.
+  only when it is full. Using one slides a manga-style panel across the top of the screen for you and
+  whoever it is aimed at, and you cannot be hurt until it has gone.
 - **Yuji** is fast and hits hard up close. *Black Flash* lunges into a punch that breaks guard and hits
   very hard, *Piercing Blood* fires a line of blood after a short charge (watch for the red line),
-  *Dismantle* throws a slash that always does the same damage, and the ultimate, *Soul Strike*, dashes
-  forward into a huge blow.
+  *Dismantle* throws a slash that always does the same damage, and the ultimate, *Soul Strike*, locks
+  on to the enemy nearest your aim (red brackets close in on them), then dashes in, steering after
+  them, for a huge blow.
 - **Megumi** fights through shikigami. *Nue* carries him forward and shocks anyone in the way, *Rabbit
   Escape* sends a swarm of rabbits to where you aim, where it bursts and then nibbles and slows, *Max
   Elephant* drops on the spot you aim at after a shadow warning, and the ultimate summons *Mahoraga*,

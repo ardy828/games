@@ -22,6 +22,8 @@
   body{color:var(--ink);font-family:var(--body);font-weight:600}
   canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
   body.playing:not(.tui):not(.dead) canvas#c{cursor:none}
+  canvas#cutin{position:fixed;inset:0;width:100%;height:100%;display:none;pointer-events:none}
+  canvas#cutin.on{display:block}
   button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   button:disabled{cursor:default;opacity:.4}
   input{font:inherit}
@@ -239,6 +241,8 @@ img,svg,canvas,a{-webkit-user-drag:none}
   <div id="netwarn"></div>
 </div>
 
+<canvas id="cutin"></canvas>
+
 <div id="pad">
   <div id="stickZone"></div>
   <div class="stk" id="stk"><i id="stkKnob"></i></div>
@@ -410,13 +414,14 @@ const TIPS = [
 ];
 
 // ───────────────────────── Canvas ─────────────────────────
-const cv = $('c');
+const cv = $('c'), cutCv = $('cutin');
 let g = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1, T = 0;
 function fit() {
   W = innerWidth; H = innerHeight;
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  cutCv.width = cv.width; cutCv.height = cv.height;
   sizeMini();
 }
 
@@ -497,6 +502,8 @@ const SFX = {
   spawn(k) { osc('sine', 300, 900, 0.3, 0.12 * k); },
   win() { [0, 4, 7, 12, 16, 19, 24].forEach((n, i) => osc('triangle', 523 * Math.pow(2, n / 12), 0, 0.22, 0.16, i * 0.07)); },
   click() { osc('triangle', 740, 520, 0.05, 0.12); },
+  cutin() { hiss(0.32, 300, 5000, 0.9, 0.3); osc('sawtooth', 110, 55, 0.45, 0.12, 0.08); osc('triangle', 880, 0, 0.25, 0.1, 0.1); },
+  alarm() { osc('square', 700, 0, 0.09, 0.08); osc('square', 700, 0, 0.09, 0.08, 0.13); },
   // cursed spirits
   buzz(k) { osc('sawtooth', 210, 330, 0.3, 0.07 * k); osc('sawtooth', 217, 344, 0.3, 0.05 * k); },
   roar(k) { osc('sawtooth', 75, 42, 0.6, 0.16 * k); hiss(0.6, 500, 140, 0.7, 0.28 * k, 0, 'lowpass'); },
@@ -810,7 +817,7 @@ function mkFighter(id, name, ch, ctl) {
     id, name, ch, nch: ch, ctl, r: CHARS[ch].r || FR,
     x: MID, y: MID, vx: 0, vy: 0, aim: 0, hp: CHARS[ch].hp, alive: false, resp: 0.3, prot: 0,
     guard: 100, gdT: 0, blk: false, stun: 0, iframe: 0, slow: 0, heal: 0, slamT: 0,
-    act: '', actT: 0, actA: 0, actD: 0, hitDone: false, hitL: [], combo: 3, comboT: 9, swCd: 0,
+    act: '', actT: 0, actA: 0, actD: 0, lk: null, hitDone: false, hitL: [], combo: 3, comboT: 9, swCd: 0,
     cd: { q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 }, ult: 0, pts: 0, kills: 0, deaths: 0, lastBy: null, lastT: -99,
     inp: { mx: 0, my: 0, aim: 0, ad: 300, m1: false, blk: false, q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 },
     seen: { q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 }, fresh: true, buf: null, bufT: 0, ai: null,
@@ -820,6 +827,7 @@ function mkFighter(id, name, ch, ctl) {
 }
 const byId = (id) => { for (const f of S.f) if (f.id === id) return f; return null; };
 const mahoById = (id) => { for (const m of S.maho) if (m.id === id) return m; return null; };
+const foeById = (id) => (id >= 1e6 ? mahoById(id) : byId(id));
 const maxHp = (f) => Math.round(CHARS[f.ch].hp * RULES.hp);
 // everything a hit can land on: live fighters and Mahoraga, except the one with id skip
 function targets(skip) {
@@ -901,9 +909,13 @@ const ACTS = {
     }
     if (f.actT >= 0.62) f.act = '';
   } },
-  ss: { lock: true, armor: true, step(f) {
-    if (f.actT < 0.28) { f.vx = f.vy = 0; f.actA = f.aim = f.inp.aim; return; }    // the crouch still aims
-    if (f.actT < 0.53 && !f.hitDone) {
+  // Soul Strike: a crouch (f.actD long), then a dash into a huge blow. Locked on (f.lk), the crouch
+  // faces the target and the dash steers into them, for a little longer.
+  ss: { lock: true, armor: true, step(f, dt) {
+    const tg = f.lk != null ? foeById(f.lk) : null, on = !!tg && (tg.isM ? tg.hp > 0 : tg.alive);
+    if (f.actT < f.actD) { f.vx = f.vy = 0; f.actA = f.aim = on ? ang(f, tg) : f.inp.aim; return; }    // the crouch still aims
+    if (f.actT < f.actD + (on ? 0.36 : 0.25) && !f.hitDone) {
+      if (on) { f.actA += clamp(angD(f.actA, ang(f, tg)), -SS.turn * dt, SS.turn * dt); f.aim = f.actA; }
       const a = f.actA;
       f.vx = Math.cos(a) * 1800; f.vy = Math.sin(a) * 1800;
       for (const t of targets(f.id)) {
@@ -916,7 +928,7 @@ const ACTS = {
       return;
     }
     f.vx *= 0.6; f.vy *= 0.6;
-    if (f.actT >= 0.8) f.act = '';
+    if (f.actT >= f.actD + 0.52) f.act = '';
   } },
   // Megumi
   nue: { lock: true, step(f) {
@@ -986,7 +998,13 @@ const MOVES = {
       S.sh.push({ id: S.nid++, own: f.id, k: 0, x: f.x + c * 24, y: f.y + s * 24, a: f.aim, d: 0 });
       fx(['snd', 'slash', r1(f.x), r1(f.y)]);
     },
-    u(f) { startAct(f, 'ss'); fx(['snd', 'crouch', r1(f.x), r1(f.y)]); },
+    u(f) {
+      const t = lockOn(f);
+      f.lk = t ? t.id : null;
+      startAct(f, 'ss', t ? SS.lockCrouch : SS.crouch); fx(['snd', 'crouch', r1(f.x), r1(f.y)]);
+      f.iframe = Math.max(f.iframe, CUT_T);      // untouchable while the cut-in plays
+      event(['C', 'ss', f.id, f.lk, f.name]);
+    },
   },
   megumi: {
     q(f) { startAct(f, 'nue'); fx(['snd', 'nue', r1(f.x), r1(f.y)]); },
@@ -1006,17 +1024,33 @@ const MOVES = {
     u(f) {
       if (S.maho.some((m) => m.own === f.id)) return false;
       startAct(f, 'summon'); fx(['snd', 'summon', r1(f.x), r1(f.y)]);
+      f.iframe = Math.max(f.iframe, CUT_T);
+      event(['C', 'maho', f.id, null, f.name]);
     },
   },
   fly: { q(f) { startAct(f, 'pounce'); fx(['snd', 'buzz', r1(f.x), r1(f.y)]); } },
   spitter: { q(f) { startAct(f, 'spit'); } },
   brute: { q(f) { startAct(f, 'slam'); fx(['snd', 'roar', r1(f.x), r1(f.y)]); } },
 };
+// Soul Strike locks on to whoever is nearest the aim, within SS.range and in sight: someone in front
+// beats someone behind, and a sorcerer beats a curse or Mahoraga
+const SS = { range: 560, turn: 10, crouch: 0.28, lockCrouch: 0.5 };
+function lockOn(f) {
+  let best = null, bs = 1e9;
+  for (const t of targets(f.id)) {
+    if (t.prot > 0) continue;
+    const d = dist(f, t);
+    if (d > SS.range || !los(f, t)) continue;
+    const s = d * (1 + 1.5 * Math.abs(angD(f.aim, ang(f, t)))) * (t.isM || cursed(t) ? 1.6 : 1);
+    if (s < bs) { bs = s; best = t; }
+  }
+  return best;
+}
 function dash(f) {
   const l = Math.hypot(f.inp.mx, f.inp.my);
   startAct(f, 'dash');
   f.actA = l > 0.2 ? Math.atan2(f.inp.my, f.inp.mx) : f.aim;
-  f.iframe = 0.16; f.cd.d = cdOf(f.ch, 'd');
+  f.iframe = Math.max(f.iframe, 0.16); f.cd.d = cdOf(f.ch, 'd');
   fx(['dash', r1(f.x), r1(f.y), r2(f.actA)]);
 }
 // a press that cannot happen yet (stunned, mid-move) waits briefly; one on cooldown is dropped
@@ -1459,7 +1493,7 @@ function think(f, ai) {
   for (const o of S.f) {
     if (o === f || !o.alive) continue;
     if (o.act === 'slam' && o.actT < SLAM.wind && dist(o, f) < SLAM.r + FR + 20) { threat = ang(o, f); continue; }
-    const charging = (o.act === 'pb' && o.actT < 0.42) || (o.act === 'ss' && o.actT < 0.28) || (o.act === 'bf' && o.actT < 0.1);
+    const charging = (o.act === 'pb' && o.actT < 0.42) || (o.act === 'ss' && o.actT < o.actD) || (o.act === 'bf' && o.actT < 0.1);
     if (!charging) continue;
     const d = dist(o, f), a = ang(o, f), reach = o.act === 'pb' ? 900 : o.act === 'ss' ? 480 : 200;
     if (d < reach && Math.abs(angD(o.aim, a)) < Math.atan2(FR + 16, d) + 0.06 && los(o, f)) threat = o.aim + Math.PI / 2 * (angD(o.aim, a) > 0 ? 1 : -1);
@@ -1614,7 +1648,6 @@ function doFx(a) {
       part({ k: 'gh', x, y, a: a[3], life: 0.55 });
       txt(x, y - 70, 'SOUL STRIKE', '#bfeaff', 26, 1.2, -26);
       if (v > 0.55) { cam.flash = 0.5; cam.flashC = '#d6f2ff'; }
-      if (a[4] === meId) banner('SOUL STRIKE', '', '#4fb8ff', 1.1);
       break;
     }
     case 'zap': SFX.zap(v); for (let i = 0; i < 3; i++) part({ k: 'bl', x, y, a: Math.random() * TAU, len: rnd(24, 46), life: 0.2, seed: Math.random() * 1e4, col: '#bfe0ff', w: 2 }); break;
@@ -1915,7 +1948,7 @@ function arms(f, sleeve) {
   } else if (f.blk) { L = [14, -7]; R = [15, 6]; }
   else if (act === 'bf') { if (t < 0.1) R = [0, 15]; else R = [30, 3]; L = [6, -13]; }
   else if (act === 'pb') { L = [15, -5]; R = [15, 5]; }
-  else if (act === 'ss') { if (t < 0.28) { L = [-3, -15]; R = [-3, 15]; } else { R = [30, 2]; L = [4, -14]; } }
+  else if (act === 'ss') { if (t < f.actD) { L = [-3, -15]; R = [-3, 15]; } else { R = [30, 2]; L = [4, -14]; } }
   else if (act === 'dash') { L = [-4, -15]; R = [-4, 15]; }
   else if (act === 'nue') { L = [-2, -12]; R = [-2, 12]; }
   else if (act === 'summon' || (act === 'cast' && f.ch === 'megumi')) { L = [15, -3]; R = [16, 3]; }
@@ -1966,7 +1999,7 @@ function drawFighter(f) {
   } else if (f.act === 'pb' && f.actT < 0.45) {
     const k = clamp(f.actT / 0.42, 0, 1);
     g.fillStyle = '#7a0a1c'; circ(21, 0, 3 + 5 * k); g.fillStyle = '#e0203e'; circ(21, 0, 1.5 + 3 * k);
-  } else if (f.act === 'ss' && f.actT >= 0.28) { g.fillStyle = 'rgba(191,234,255,.6)'; circ(R[0], R[1], 11); }
+  } else if (f.act === 'ss' && f.actT >= f.actD) { g.fillStyle = 'rgba(191,234,255,.6)'; circ(R[0], R[1], 11); }
   g.restore();
   if (f.flash > 0) { g.globalAlpha = f.flash * 0.55; g.fillStyle = '#fff'; circ(x, y, 24); g.globalAlpha = 1; }
   if (f.blk) {
@@ -1977,7 +2010,7 @@ function drawFighter(f) {
     g.fillStyle = '#ffe14d';
     for (let i = 0; i < 3; i++) { const t = T * 6 + i * TAU / 3; circ(x + Math.cos(t) * 15, y - 6 + Math.sin(t) * 7, 2.6); }
   }
-  if (f.act === 'ss' && f.actT < 0.28) {
+  if (f.act === 'ss' && f.actT < f.actD) {
     g.strokeStyle = `rgba(191,234,255,${0.4 + 0.4 * Math.sin(T * 40)})`; g.lineWidth = 3;
     g.beginPath(); g.arc(x, y, 26 + f.actT * 30, 0, TAU); g.stroke();
   }
@@ -2230,9 +2263,16 @@ function drawTelegraphs() {
       const sx = f.rx + Math.cos(f.ra) * 24, sy = f.ry + Math.sin(f.ra) * 24, len = rayLen(sx, sy, f.ra, 900);
       g.strokeStyle = `rgba(255,40,70,${0.25 + 0.35 * f.actT / 0.42})`; g.lineWidth = 2 + 3 * f.actT / 0.42; g.setLineDash([14, 8]);
       g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.cos(f.ra) * len, sy + Math.sin(f.ra) * len); g.stroke(); g.setLineDash([]);
-    } else if (f.act === 'ss' && f.actT < 0.28) {
+    } else if (f.act === 'ss' && f.actT < f.actD) {
+      const tg = f.lk != null ? foeById(f.lk) : null;
       g.strokeStyle = 'rgba(191,234,255,.4)'; g.lineWidth = 34;
-      g.beginPath(); g.moveTo(f.rx, f.ry); g.lineTo(f.rx + Math.cos(f.ra) * 450, f.ry + Math.sin(f.ra) * 450); g.stroke();
+      g.beginPath(); g.moveTo(f.rx, f.ry);
+      if (tg) g.lineTo(tg.rx, tg.ry); else g.lineTo(f.rx + Math.cos(f.ra) * 450, f.ry + Math.sin(f.ra) * 450);
+      g.stroke();
+    }
+    if (f.act === 'ss' && f.lk != null) {      // the lock-on: brackets closing in on the target
+      const tg = foeById(f.lk);
+      if (tg) reticle(tg.rx, tg.ry, (tg.r || FR) + 14, clamp(f.actT / Math.max(0.1, f.actD), 0, 1));
     } else if (f.act === 'slam' && f.actT < SLAM.wind) {       // a Brute Curse winding up: get out of the ring
       const p = f.actT / SLAM.wind;
       g.fillStyle = `rgba(150,70,255,${0.08 + 0.22 * p})`; circ(f.rx, f.ry, SLAM.r * p);
@@ -2247,6 +2287,16 @@ function drawTelegraphs() {
     g.fillStyle = `rgba(240,194,79,${0.12 + 0.2 * m.mt / 0.34})`;
     g.beginPath(); g.moveTo(m.rx, m.ry); g.arc(m.rx, m.ry, m.r + 62, m.ra - 0.95, m.ra + 0.95); g.closePath(); g.fill();
   }
+}
+function reticle(x, y, r, p) {
+  const s = r * (1.7 - 0.7 * p), rot = T * 3;
+  g.lineWidth = 3; g.lineCap = 'round';
+  for (const [col, w] of [['rgba(0,0,0,.6)', 6], ['#ff3355', 3]]) {
+    g.strokeStyle = col; g.lineWidth = w;
+    for (let i = 0; i < 4; i++) { const a = rot + i * TAU / 4; g.beginPath(); g.arc(x, y, s, a - 0.32, a + 0.32); g.stroke(); }
+  }
+  g.fillStyle = '#ff3355'; circ(x, y, 3);
+  g.lineCap = 'butt';
 }
 function drawShots() {
   for (const b of S.sh) {
@@ -2346,6 +2396,7 @@ function drawTags() {
 const VIEW = 920;    // the zoom fits about this many units across the geometric mean of the screen's sides
 let aimPreview = null;
 function render() {
+  drawCutin();
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.fillStyle = '#0b0b12'; g.fillRect(0, 0, cv.width, cv.height);
   if (!S) return;
@@ -2481,6 +2532,166 @@ function drawMini() {
     mg.fillStyle = '#fff'; mg.strokeStyle = '#000'; mg.lineWidth = d;
     mg.beginPath(); mg.arc(me.rx * k, me.ry * k, 3.6 * d, 0, TAU); mg.fill(); mg.stroke();
   }
+}
+
+// ───────────────────────── Ultimate cut-ins ─────────────────────────
+// When an ultimate starts, a manga-style panel slides across the upper screen for the people it is
+// about (and the caster cannot be hurt until it has gone, CUT_T s): Soul Strike for Yuji and whoever he locked on to (Yuji dashing in, fist first), Mahoraga for
+// Megumi and anyone near him (Megumi making the summoning sign, one fist held at the wrist by the other
+// hand). The panel is a slanted neon band between two thin ones, with rain and speed lines; the figures
+// are drawn in panel units (100 = the band's height), clipped to the band. It has its own
+// canvas over the HUD, cleared and hidden when no cut-in is playing.
+const CUT_T = 1.05, INK = '#0b0710', cutG = cutCv.getContext('2d');
+let cut = null, cutOn = false;
+function startCutin(k, role, name) {
+  cut = { k, role, name: String(name || '').toUpperCase(), t0: T };
+  SFX.cutin(); if (role === 'target') SFX.alarm();
+}
+const cutLeft = () => (cut ? Math.max(0, CUT_T - (T - cut.t0)) : 0);
+function drawCutin() {
+  const p = cut && S && S.mode !== 'demo' ? (T - cut.t0) / CUT_T : -1;
+  if (p >= 1 || p < 0) cut = null;
+  if (cutOn !== !!cut) { cutOn = !!cut; cutCv.classList.toggle('on', cutOn); if (!cutOn) cutG.clearRect(0, 0, cutCv.width, cutCv.height); }
+  if (!cut) return;
+  const old = g;
+  g = cutG;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cutCv.width, cutCv.height); g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  try { paintCutin(p); } finally { g = old; }
+}
+function paintCutin(p) {
+  const yuji = cut.k === 'ss', e = (x) => 1 - (1 - x) ** 3;
+  const pin = e(clamp(p / 0.14, 0, 1)), pout = clamp((p - 0.8) / 0.2, 0, 1) ** 2;
+  const h = clamp(Math.min(H * 0.27, W * 0.42), 96, 230), cy = H * (TOUCH ? 0.34 : 0.31), sk = h * 0.14, span = W + sk * 4;
+  const dx = (1 - pin) * -span + pout * span, k = h / 100, tt = T - cut.t0;
+  const pal = yuji ? ['#ff5cb4', '#d4157e', '#5e17c4'] : ['#3fe0ff', '#1f5fff', '#18196a'];
+  const acc = yuji ? ['#2fb4ff', '#38e07a'] : ['#38e07a', '#ff4fae'];
+  const band = (y0, y1, x0) => {
+    g.beginPath(); g.moveTo(x0 - sk * 2, y0 + sk); g.lineTo(x0 + W + sk * 2, y0 - sk); g.lineTo(x0 + W + sk * 2, y1 - sk); g.lineTo(x0 - sk * 2, y1 + sk); g.closePath();
+  };
+  g.save();
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  // the thin bands above and below slide in from the other side
+  for (const [i, y0, y1] of [[0, cy - h * 0.86, cy - h * 0.6], [1, cy + h * 0.6, cy + h * 0.86]]) {
+    band(y0 - 4, y1 + 4, -dx * 0.8); g.fillStyle = INK; g.fill();
+    band(y0, y1, -dx * 0.8); g.fillStyle = acc[i]; g.fill();
+    g.save(); band(y0, y1, -dx * 0.8); g.clip();
+    g.strokeStyle = 'rgba(10,8,30,.35)'; g.lineWidth = 2;
+    for (let j = 0; j < 40; j++) { const x = (hash1(j + i * 50) * W * 1.2 - tt * 300 * (i ? 1 : -1) % W + W * 2) % (W * 1.2) - W * 0.1; g.beginPath(); g.moveTo(x - dx * 0.8, y0 - sk); g.lineTo(x - dx * 0.8 - 20, y1 + sk); g.stroke(); }
+    g.restore();
+  }
+  // the main band: a black gutter, then neon
+  band(cy - h / 2 - 6, cy + h / 2 + 6, dx); g.fillStyle = INK; g.fill();
+  band(cy - h / 2, cy + h / 2, dx);
+  const gr = g.createLinearGradient(dx, 0, dx + W, 0);
+  gr.addColorStop(0, pal[2]); gr.addColorStop(0.45, pal[1]); gr.addColorStop(0.85, pal[0]); gr.addColorStop(1, pal[1]);
+  g.fillStyle = gr; g.fill();
+  g.save(); band(cy - h / 2, cy + h / 2, dx); g.clip();
+  // rain: dark vertical streaks like the manga panel, and for Yuji white speed lines rushing past
+  g.lineWidth = 2;
+  for (let j = 0; j < 70; j++) {
+    const x = dx + hash1(j * 1.7) * W, len = h * (0.25 + 0.6 * hash1(j + 7)), y = cy - h + ((hash1(j + 3) * h * 2 + tt * h * 3) % (h * 2));
+    g.strokeStyle = j % 3 ? 'rgba(20,0,40,.32)' : 'rgba(255,255,255,.18)';
+    g.lineWidth = 1 + hash1(j + 11) * 2.5;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + len); g.stroke();
+  }
+  if (yuji) {
+    for (let j = 0; j < 26; j++) {
+      const y = cy - h / 2 + hash1(j * 3.3) * h, len = W * (0.1 + 0.25 * hash1(j + 1)), x = dx + W - ((hash1(j + 9) * W + tt * W * 2.2) % (W + len));
+      g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1 + hash1(j) * 2;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + len, y); g.stroke();
+    }
+  }
+  // the big kanji behind, then the figure on the right
+  g.font = `${h * 0.95}px "Yuji Syuku", serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = 'rgba(10,0,20,.2)'; g.fillText(yuji ? '魂' : '影', dx + W * 0.4, cy + h * 0.04);
+  g.save();
+  g.translate(dx + W * (W < 600 ? 0.6 : 0.7) + tt * 14 * (yuji ? 1 : 0.4), cy);
+  const fk = Math.min(k, W / 300);
+  g.scale(fk, fk);
+  if (yuji) cutYuji(tt); else cutMegumi(tt);
+  g.restore();
+  g.restore();
+  // the move's name on the left, and who it is about
+  const tx = dx + Math.max(18, W * 0.05), fs = Math.round(clamp(Math.min(h * 0.3, W * 0.075), 24, 64));
+  g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  const tag = cut.role === 'target' ? 'LOCKED ON · YOU' : cut.role === 'near' ? 'WATCH OUT · ' + cut.name : cut.name;
+  g.font = `800 ${Math.round(fs * 0.34)}px Barlow, sans-serif`;
+  const tw = g.measureText(tag).width + 14;
+  g.fillStyle = cut.role === 'you' ? INK : '#e01e3c'; g.fillRect(tx, cy - fs * 0.95, tw, fs * 0.46);
+  g.fillStyle = '#fff'; g.fillText(tag, tx + 7, cy - fs * 0.6);
+  g.font = `${fs}px Anton, Impact, sans-serif`;
+  g.lineWidth = Math.max(4, fs * 0.12); g.strokeStyle = INK;
+  const title = yuji ? 'SOUL STRIKE' : 'MAHORAGA';
+  g.strokeText(title, tx, cy + fs * 0.42); g.fillStyle = '#fff'; g.fillText(title, tx, cy + fs * 0.42);
+  g.font = `700 ${Math.round(fs * 0.3)}px "Yuji Syuku", serif`; g.lineWidth = 3;
+  const sub = yuji ? '魂を捉える一撃' : '八握剣 異戒神将 魔虚羅';
+  g.strokeText(sub, tx + 2, cy + fs * 0.82); g.fillStyle = yuji ? '#ffd1ea' : '#cfe4ff'; g.fillText(sub, tx + 2, cy + fs * 0.82);
+  g.restore();
+}
+// The figures are drawn the way the game draws its fighters: flat shapes, no outlines and no faces.
+// hair(): a crown of spikes over the arc a0..a1 (radians), each tip swept back by sweep
+function hair(cx, cy, r0, r1, a0, a1, n, sweep, col) {
+  g.fillStyle = col; g.beginPath();
+  for (let i = 0; i <= n; i++) {
+    const a = a0 + (a1 - a0) * i / n, L = r1 * (0.85 + 0.3 * hash1(i * 7.3 + n));
+    g.lineTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+    if (i < n) { const m = a + (a1 - a0) / n / 2 + sweep; g.lineTo(cx + Math.cos(m) * L, cy + Math.sin(m) * L); }
+  }
+  g.lineTo(cx, cy); g.closePath(); g.fill();
+}
+function limb(pts, w, col) {
+  g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.stroke();
+}
+// Yuji side on, leaning into the dash: pink hair over a dark undercut, the red hood at his neck, the
+// front fist thrown out and glowing, Soul Strike's pale trail behind him
+function cutYuji(t) {
+  const st = Math.sin(t * 26) * 4;
+  g.fillStyle = 'rgba(191,234,255,.28)';
+  for (let i = 1; i <= 3; i++) circ(-14 - i * 24, 2 + i * 3, 24 - i * 5);
+  limb([-4, 30, -28 - st, 46, -50 - st, 44], 13, '#121218');
+  limb([6, 30, 26 + st, 44, 20 + st, 66], 13, '#121218');
+  limb([12, -2, -6, 14, 2, 26], 11, '#22273d');
+  g.fillStyle = SKIN; circ(4, 28, 7);
+  g.fillStyle = 'rgba(0,0,0,.35)'; ell(6, 12, 20, 31, -0.45);
+  g.fillStyle = '#22273d'; ell(6, 10, 18, 29, -0.45);
+  g.fillStyle = 'rgba(255,255,255,.06)'; ell(12, 2, 9, 16, -0.45);
+  g.fillStyle = '#b8283a'; ell(6, -12, 12, 8, -0.5);
+  g.fillStyle = '#8a1b2b'; ell(5, -12, 6.5, 4.5, -0.5);
+  const gl = 0.6 + 0.15 * Math.sin(t * 40);
+  g.fillStyle = `rgba(191,234,255,${gl})`; circ(84, -8, 17);
+  g.fillStyle = 'rgba(255,255,255,.7)'; circ(84, -8, 10);
+  limb([22, -4, 50, -6, 76, -8], 12, '#22273d');
+  g.fillStyle = SKIN; circ(84, -8, 9);
+  g.fillStyle = SKIN; circ(26, -26, 15);
+  g.fillStyle = '#4a2a22'; circ(22, -27, 13.5);
+  hair(24, -28, 11, 27, Math.PI * 0.9, Math.PI * 2.05, 9, -0.35, '#f39ab5');
+  g.fillStyle = '#ffc6d6'; circ(26, -34, 4);
+}
+// Megumi three-quarters on, making the summoning sign (one arm out in a fist, the other hand gripping
+// its wrist), shadow pooling at his feet and the Divine General's wheel turning behind him
+function cutMegumi(t) {
+  g.save(); g.translate(-48, -6); g.rotate(t * 0.8);
+  g.globalAlpha = 0.5; g.fillStyle = '#e8c35a'; g.strokeStyle = '#e8c35a'; g.lineWidth = 4;
+  g.beginPath(); g.arc(0, 0, 30, 0, TAU); g.stroke();
+  for (let i = 0; i < 8; i++) { const a = i * TAU / 8; circ(Math.cos(a) * 34, Math.sin(a) * 34, 4.5); }
+  circ(0, 0, 7); g.restore(); g.globalAlpha = 1;
+  g.fillStyle = 'rgba(5,4,10,.75)'; ell(0, 64, 70, 16);
+  for (let i = 0; i < 6; i++) { const x = -40 + i * 18, r = 8 + 4 * Math.sin(t * 6 + i); g.fillStyle = 'rgba(20,18,28,.6)'; circ(x, 52 - (t * 30 + i * 9) % 30, r); }
+  g.fillStyle = 'rgba(0,0,0,.35)'; ell(0, 40, 36, 38);
+  g.fillStyle = '#1b1e30'; ell(0, 38, 33, 36);
+  g.fillStyle = '#10121e'; ell(0, 40, 22, 26);
+  g.fillStyle = 'rgba(255,255,255,.05)'; ell(10, 22, 12, 16);
+  limb([-22, 16, 8, 26, 34, 12], 11, '#1b1e30');
+  limb([20, 10, 36, 6, 50, 2], 12, '#1b1e30');
+  g.fillStyle = 'rgba(20,18,28,.55)';
+  for (let i = 0; i < 4; i++) circ(44 + Math.sin(t * 8 + i * 2) * 8, 4 - ((t * 40 + i * 10) % 40), 5 + i);
+  g.fillStyle = SKIN; circ(58, 0, 10.5);
+  g.fillStyle = SKIN; circ(42, 6, 8);
+  g.fillStyle = '#10121e'; ell(0, 2, 13, 7);
+  g.fillStyle = SKIN; circ(0, -16, 16);
+  hair(0, -22, 12, 30, Math.PI * 0.95, Math.PI * 2.05, 11, 0, '#15151d');
+  hair(0, -22, 8, 20, Math.PI * 1.05, Math.PI * 1.95, 8, 0.1, '#262634');
 }
 
 // ───────────────────────── HUD ─────────────────────────
@@ -2623,7 +2834,16 @@ function doEvent(a) {
     fillTable($('resBody'), rows);
     if (!demoMode && wid === meId) { save.wins++; persist(); SFX.win(); }
   } else if (a[0] === 'N') { if (!demoMode) feed([[a[1], 1]]); }
-  else if (a[0] === 'B') { if (!demoMode) banner(a[1], a[2], '#8b5cff', 2.4); }
+  else if (a[0] === 'B') {     // a banner waits for a cut-in to finish
+    if (demoMode) return;
+    const w = cutLeft();
+    if (w > 0) setTimeout(() => banner(a[1], a[2], '#8b5cff', 2.4), w * 1000); else banner(a[1], a[2], '#8b5cff', 2.4);
+  } else if (a[0] === 'C') {    // an ultimate starts: kind, caster id, target id, caster name
+    const [, k, cid, tid, cn] = a, me = byId(meId), c = byId(cid);
+    if (demoMode || !me) return;
+    const role = cid === meId ? 'you' : tid === meId ? 'target' : k === 'maho' && c && dist(c, me) < 900 ? 'near' : '';
+    if (role) startCutin(k, role, cn);
+  }
 }
 
 // ───────────────────────── Input ─────────────────────────
@@ -2995,7 +3215,7 @@ let peer = null, nextId = 1, snapT = 0, inT = 0, lastSent = '', helloT = 0;
 // dec(), so the two sides cannot drift. Types: 1 / 2 = rounded to 1 or 2 decimals, s = string,
 // b = boolean, B = bot or not, c = the cooldown table, none = a plain value.
 const SPEC = {
-  f: 'id name:s ch:s nch:s bot:B x:1 y:1 vx:1 vy:1 aim:2 hp:1 alive:b resp:2 prot:2 guard:1 gdT:2 blk:b stun:2 iframe:2 slow:2 heal:2 slamT:2 act:s actT:2 actA:2 actD:2 hitDone:b hitL combo comboT:2 swCd:2 cd:c ult:1 pts kills deaths lastBy lastT:2',
+  f: 'id name:s ch:s nch:s bot:B x:1 y:1 vx:1 vy:1 aim:2 hp:1 alive:b resp:2 prot:2 guard:1 gdT:2 blk:b stun:2 iframe:2 slow:2 heal:2 slamT:2 act:s actT:2 actA:2 actD:2 lk hitDone:b hitL combo comboT:2 swCd:2 cd:c ult:1 pts kills deaths lastBy lastT:2',
   m: 'id own x:1 y:1 vx:1 vy:1 aim:2 hp:1 spins adapt mode:s mt:2 cd:2 lcd:2 tg rt:2 stun:2 hitDone:b pc',
   e: 'id own x:1 y:1 t:2 a:2',
   r: 'id own x0:1 y0:1 x:1 y:1 a:2 t:2 T:2 burst:b nt:2',

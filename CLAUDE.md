@@ -49,7 +49,7 @@ lying down.
 menus and HUD, Google Fonts, save in `localStorage` (`bonk-arena-save-v1`). Like Scrapline it injects
 PeerJS only when the player hosts or joins; see "Bonk Arena architecture" below.
 
-`jujutsu/index.html` (Jujutsu Arena, ~3800 lines) is a top-down brawler in modern syntax: canvas world,
+`jujutsu/index.html` (Jujutsu Arena, ~4000 lines) is a top-down brawler in modern syntax: canvas world,
 DOM menus and HUD, Google Fonts, save in `localStorage` (`jujutsu-arena-save-v1`). It injects PeerJS
 for private parties and opens a WebSocket to its own server for PLAY ONLINE; `jujutsu/server/` is that
 server, a Cloudflare Worker deployed from this repository (not served by Pages). See "Jujutsu Arena
@@ -588,7 +588,16 @@ mouse, touch), screens, multiplayer, main loop.
   through `cdOf(ch, k)` (which applies `RULES.cd`); `CHARS` holds each fighter's stats and move names and
   `COMMON` the shared two. The ultimate `u` has a meter instead, `f.ult` 0–100, filled by `charge()`:
   `ULT.deal` per point of damage dealt (not by your own Mahoraga), `ULT.take` per point taken and
-  `ULT.idle` per second, times `RULES.ur`. It survives death and empties at a new match.
+  `ULT.idle` per second, times `RULES.ur`. It survives death and empties at a new match. Starting an
+  ultimate sends a `'C'` event (kind, caster, target, name): `doEvent()` runs `startCutin()` for the
+  caster, the target and (for Mahoraga) anyone within 900, and the caster's `iframe` covers `CUT_T`.
+  Soul Strike's `lockOn()` picks a target into `f.lk` (synced); `ACTS.ss` crouches for `f.actD` (longer
+  when locked) and steers its dash at `SS.turn`, and `reticle()` marks the target.
+- **Cut-ins** (the section after the minimap) are drawn on their own canvas, `#cutin`, over the HUD:
+  `drawCutin()` clears and hides it when none plays; `paintCutin()` draws the slanted neon bands, rain
+  and speed lines, the title, and the figure (`cutYuji`, `cutMegumi`) in panel units. The figures use
+  the game's own flat style (`hair()`, `limb()`, ellipses and circles, no outlines and no faces).
+  Banners wait for a cut-in to finish (`cutLeft()`).
 - **Rules**: `RULES` (`RULES0` defaults, `cleanRules()` to validate) holds points to win, round time,
   rounds on/off (off = endless), break, respawn, cursed spirits per room and their skill, multipliers (`dmg`, `hp`,
   `spd`, `cd`, `ur`), allowed fighters and whether ultimates work. Practice and parties start from
