@@ -230,7 +230,7 @@ cursed energy: every move has its own cooldown.
   whoever it is aimed at, and you cannot be hurt until it has gone.
 - **Yuji** is fast and hits hard up close. *Black Flash* lunges into a punch that breaks guard and hits
   very hard, *Piercing Blood* fires a line of blood after a short charge (watch for the red line),
-  *Dismantle* throws a slash that always does the same damage, and the ultimate, *Soul Strike*, locks
+  *Dismantle* throws a wide slash that always does the same damage, and the ultimate, *Soul Strike*, locks
   on to the enemy nearest your aim (red brackets close in on them), then dashes in, steering after
   them, for a huge blow.
 - **Megumi** fights through shikigami. *Nue* carries him forward and shocks anyone in the way, *Rabbit

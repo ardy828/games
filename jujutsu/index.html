@@ -1342,7 +1342,7 @@ function updMaho(dt) {
 }
 // Shots in flight, by k: 0 is Dismantle (one slash, always the same damage), 1 a Spitter's bile (slows)
 // and 2 one of Nobara's nails (sticks in whoever it hits)
-const SHOT = [{ spd: 1500, range: 760, w: 12 }, { spd: 640, range: 640, w: 10 }, { spd: 1250, range: 720, w: 8 }];
+const SHOT = [{ spd: 1500, range: 760, w: 34 }, { spd: 640, range: 640, w: 10 }, { spd: 1250, range: 720, w: 8 }];
 function shotHit(b, t) {
   if (b.k === 2) {
     if (!hurt(t, NAIL.dmg, { by: b.own, a: b.a, kb: 40, kind: 'nail' })) return false;
@@ -1780,7 +1780,7 @@ function doFx(a) {
       sparks(x, y, 8, '#d9d4c8', 220, 0.3, 2, a[3] + Math.PI, 0.9); puffs(x, y, 3, '#9c968a', 60, 4, 14, 0.5, 0.5);
       break;
     }
-    case 'dsh': part({ k: 'sl', x, y, a: a[3] + Math.PI / 2, life: 0.22, r: 30, col: '#ffffff' }); sparks(x, y, 8, '#ffffff', 300, 0.25, 2); break;
+    case 'dsh': part({ k: 'sl', x, y, a: a[3] + Math.PI / 2, life: 0.26, r: 52, col: '#ffffff' }); sparks(x, y, 12, '#ffffff', 360, 0.28, 2.5); break;
     case 'ss': {
       SFX.soul(v); shake(x, y, 22);
       ring(x, y, 10, 170, 0.5, '#bfeaff', 10); ring(x, y, 10, 110, 0.4, '#ffffff', 4); ring(x, y, 30, 230, 0.7, '#4fb8ff', 3);
@@ -2055,7 +2055,7 @@ function drawDecals(top) {
     g.globalAlpha = fade;
     if (d.k === 'cut') {
       g.strokeStyle = '#121218'; g.lineWidth = 3; g.beginPath();
-      g.moveTo(d.x - Math.cos(d.a) * 22, d.y - Math.sin(d.a) * 22); g.lineTo(d.x + Math.cos(d.a) * 22, d.y + Math.sin(d.a) * 22); g.stroke();
+      g.moveTo(d.x - Math.cos(d.a) * 42, d.y - Math.sin(d.a) * 42); g.lineTo(d.x + Math.cos(d.a) * 42, d.y + Math.sin(d.a) * 42); g.stroke();
       g.strokeStyle = 'rgba(255,255,255,.3)'; g.lineWidth = 1; g.stroke();
     } else if (d.k === 'scorch') {
       const gr = g.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.r);
@@ -2509,7 +2509,7 @@ function drawRain() {
 function drawShots() {
   for (const b of S.sh) {
     const x = b.rx ?? b.x, y = b.ry ?? b.y;
-    if (!vis(x, y, 40)) continue;
+    if (!vis(x, y, 80)) continue;
     g.save(); g.translate(x, y); g.rotate(b.a);
     if (b.k === 2) {       // a nail, point first, with an orange streak of cursed energy behind it
       g.strokeStyle = 'rgba(255,140,60,.55)'; g.lineWidth = 4; g.beginPath(); g.moveTo(-34, 0); g.lineTo(-10, 0); g.stroke();
@@ -2522,10 +2522,12 @@ function drawShots() {
       g.fillStyle = '#7fb84a'; circ(0, 0, 8); g.fillStyle = '#b8e36a'; circ(2, -2, 3.8);
       g.restore(); continue;
     }
-    g.strokeStyle = 'rgba(220,240,255,.35)'; g.lineWidth = 2;
-    g.beginPath(); g.moveTo(-40, -10); g.lineTo(-8, -10); g.moveTo(-50, 10); g.lineTo(-10, 10); g.stroke();
-    g.strokeStyle = '#ffffff'; g.lineWidth = 3.5; g.shadowColor = '#bfe0ff'; g.shadowBlur = 10;
-    g.beginPath(); g.arc(-16, 0, 26, -1.05, 1.05); g.stroke();
+    // Dismantle: a wide white crescent with streaks trailing it
+    g.strokeStyle = 'rgba(220,240,255,.35)'; g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(-70, -24); g.lineTo(-18, -24); g.moveTo(-90, 0); g.lineTo(-24, 0); g.moveTo(-76, 24); g.lineTo(-20, 24); g.stroke();
+    g.strokeStyle = '#ffffff'; g.lineWidth = 6; g.shadowColor = '#bfe0ff'; g.shadowBlur = 14;
+    g.beginPath(); g.arc(-32, 0, 52, -1.05, 1.05); g.stroke();
+    g.lineWidth = 2.5; g.beginPath(); g.arc(-40, 0, 46, -0.9, 0.9); g.stroke();
     g.restore();
   }
 }
