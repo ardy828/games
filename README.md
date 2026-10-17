@@ -202,7 +202,7 @@ The platform shrinks after ten seconds, so every round ends.
 ## Jujutsu Arena
 
 A top-down brawler on a big city map: streets, rooftops, parks, a shrine and a scramble crossing in the
-middle. Pick Yuji, Megumi or Nobara and score points; the first to the points target wins and a new match
+middle. Pick Yuji, Megumi, Nobara or Gojo and score points; the first to the points target wins and a new match
 starts. You respawn a few seconds after going down and can switch fighter while you wait. There is no
 cursed energy: every move has its own cooldown.
 
@@ -244,6 +244,13 @@ cursed energy: every move has its own cooldown.
   wherever they are (an orange ring shows who). *Hairpin* bursts every nail of hers stuck in anyone
   nearby: the more nails, the bigger the blast. The ultimate, *Raining Nails*, drops nails out of the
   sky all round her for 4 seconds; they stick and mark for Resonance like any other nail.
+- **Gojo** has the Limitless. *Blue* sits where you aim for a moment and drags everyone near it into its
+  middle, hurting them all the while (dash to break free). *Red* bursts on whatever it hits, hurling
+  everyone near it away. *Hollow Purple* winds up (a purple line shows its path), then a huge orb goes
+  through everyone and every wall in its way, hitting each once, hard, with no knockback. His
+  ultimate, *Infinite Void*, takes about three times as long to charge: everyone inside it when it
+  opens is frozen for 5 seconds and sees only the void. From outside it is a black sphere hanging over
+  the street, which you can walk under without being caught.
 - **Practice** — you against 1 to 10 cursed spirits (Easy, Normal or Hard), first to 10, 20 or 40 points.
 - **Private party** — HOST PARTY gives a four-digit code; friends type it and press JOIN. Up to 20, with
   as many cursed spirits as the host picks. If a player's connection drops, a bot plays for them while their browser

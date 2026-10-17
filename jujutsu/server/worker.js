@@ -16,7 +16,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import ADMIN_HTML from './admin.html';
 
-const VERSION = 6;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
+const VERSION = 7;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
 const ROOMS = ['pub-1', 'pub-2', 'pub-3', 'pub-4'];
 const MAX_PLAYERS = 20;
 const MAX_MSG = 32768;      // bytes; a full room's snapshot is about 8 kB
@@ -25,7 +25,7 @@ const EVENTS = ['heal', 'ults', 'cds', 'maho', 'end', 'restart'];
 
 // The rules the admin sets for the public rooms. Keep RULES0 and cleanRules() in step with the copies
 // in ../index.html, which applies them.
-const RULES0 = { rounds: true, points: 20, time: 0, brk: 7, resp: 4, curses: 6, skill: 1, dmg: 1, cd: 1, ur: 1, spd: 1, hp: 1, yuji: true, megumi: true, nobara: true, ults: true };
+const RULES0 = { rounds: true, points: 20, time: 0, brk: 7, resp: 4, curses: 6, skill: 1, dmg: 1, cd: 1, ur: 1, spd: 1, hp: 1, yuji: true, megumi: true, nobara: true, gojo: true, ults: true };
 function cleanRules(c) {
   c = c && typeof c === 'object' ? c : {};
   const n = (k, a, b, step) => { const v = +c[k]; return Number.isFinite(v) ? Math.round(Math.min(b, Math.max(a, v)) / step) * step : RULES0[k]; };
@@ -33,9 +33,9 @@ function cleanRules(c) {
   const r = {
     rounds: b('rounds'), points: n('points', 0, 200, 1), time: n('time', 0, 30, 0.5), brk: n('brk', 3, 30, 1), resp: n('resp', 0.5, 15, 0.5),
     curses: n('curses', 0, 10, 1), skill: n('skill', 0, 2, 1), dmg: n('dmg', 0.25, 4, 0.05), cd: n('cd', 0.1, 3, 0.05), ur: n('ur', 0.25, 4, 0.05), spd: n('spd', 0.5, 2, 0.05),
-    hp: n('hp', 0.25, 4, 0.05), yuji: b('yuji'), megumi: b('megumi'), nobara: b('nobara'), ults: b('ults'),
+    hp: n('hp', 0.25, 4, 0.05), yuji: b('yuji'), megumi: b('megumi'), nobara: b('nobara'), gojo: b('gojo'), ults: b('ults'),
   };
-  if (!r.yuji && !r.megumi && !r.nobara) r.yuji = true;
+  if (!r.yuji && !r.megumi && !r.nobara && !r.gojo) r.yuji = true;
   return r;
 }
 

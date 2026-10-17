@@ -49,7 +49,7 @@ lying down.
 menus and HUD, Google Fonts, save in `localStorage` (`bonk-arena-save-v1`). Like Scrapline it injects
 PeerJS only when the player hosts or joins; see "Bonk Arena architecture" below.
 
-`jujutsu/index.html` (Jujutsu Arena, ~4250 lines) is a top-down brawler in modern syntax: canvas world,
+`jujutsu/index.html` (Jujutsu Arena, ~4600 lines) is a top-down brawler in modern syntax: canvas world,
 DOM menus and HUD, Google Fonts, save in `localStorage` (`jujutsu-arena-save-v1`). It injects PeerJS
 for private parties and opens a WebSocket to its own server for PLAY ONLINE; `jujutsu/server/` is that
 server, a Cloudflare Worker deployed from this repository (not served by Pages). See "Jujutsu Arena
@@ -564,7 +564,7 @@ One IIFE, sections in this order: save, skins, tuning, canvas, audio, drawing ba
 
 ## Jujutsu Arena architecture
 
-Free-for-all on a city map: Yuji, Megumi or Nobara against each other and the cursed spirits, first to
+Free-for-all on a city map: Yuji, Megumi, Nobara or Gojo against each other and the cursed spirits, first to
 `toWin` points, respawns after `RULES.resp` s. One IIFE, sections in this order: save, tuning, canvas,
 audio, city, the match (sim), bots and curses, effects, rendering, minimap, HUD, input (keyboard,
 mouse, touch), screens, multiplayer, main loop.
@@ -613,19 +613,20 @@ mouse, touch), screens, multiplayer, main loop.
 - **`S` is the whole match** and is plain data: entities refer to each other by id, never by reference
   (`own`, `tg`, `lastBy`, `hitL`), so a snapshot can carry all of it and any joiner can take over as
   host. `S.f` fighters (curses included), `S.maho` Mahoraga, `S.ele` Max Elephants, `S.rab` Rabbit
-  Escape swarms, `S.sh` shots (Dismantle slashes, bile and Nobara's nails), `S.rn` Raining Nails. Bots and curses have negative ids, Mahoraga
+  Escape swarms, `S.sh` shots (Dismantle slashes, bile, Nobara's nails and Gojo's Red), `S.rn` Raining Nails,
+  `S.bl` Blues, `S.pu` Hollow Purples, `S.dm` domains. Bots and curses have negative ids, Mahoraga
   ids from 1e6, humans the host's or the server's.
 - **Input** is `f.inp`: move vector, `aim` (radians), `ad` (distance to the cursor, for moves that
   land where you point), `m1`/`blk` held, and a press *counter* per key, so a lost packet cannot eat a
   press. `control()` turns counter changes into presses, buffered for 0.3 s while busy.
 - **Actions**: `ACTS` is what a fighter is busy doing (`swing`, `dash`, `cast`, `bf`, `pb`, `ss`,
-  `nue`, `summon`, `nail`, `res`, `pin`, `rain`, and the curses' `pounce`, `slam`, `spit`), each a `step(f)` over `f.actT`. `lock` means the action drives the velocity,
+  `nue`, `summon`, `nail`, `res`, `pin`, `rain`, `red`, `purple`, `domain`, and the curses' `pounce`, `slam`, `spit`), each a `step(f)` over `f.actT`. `lock` means the action drives the velocity,
   `slow` scales walking while it runs, `armor` means hits damage but do not interrupt. `MOVES[ch][k]`
   starts one and returns `false` to refuse (Mahoraga already out).
 - **`hurt(t, dmg, o)`** is the only way damage happens: `o.by` (attacker's fighter id; Mahoraga's hits
   use his owner's), `o.a` (direction, which decides blocking: front 150°), `kb` in units (velocity is
   `kb * KB`, decaying at `KB`), `kind` (for Mahoraga's adaptation), `gb` breaks a block, `ub` ignores
-  it, `fixed` is not reduced by it (Dismantle). **There are no stuns**: a hit never cancels an action
+  it, `fixed` is not reduced by it (Dismantle). **There are no stuns** (Infinite Void's freeze is the one exception): a hit never cancels an action
   or stops input. A hard knockback sets `f.push` (until the slide is down to walking speed), during
   which the fighter slides instead of walking but can still attack, block, dash and cast. Kill credit
   goes to `lastBy` within `CREDIT_T` s; your own Mahoraga never earns kills on you. A target's
@@ -641,6 +642,16 @@ mouse, touch), screens, multiplayer, main loop.
   `mark()` in `hurt()`, keeping her `f.rm` (a flat list: target id, time the mark ends; `marked()`
   reads it, `die()` strips the dead). `ACTS.res` (Resonance) hurts everyone `marked()`, `hairpin()`
   bursts her nails (`PIN.base + PIN.per` per nail) and removes them. `nl`, `rm` and `rain` are synced.
+- **Gojo**: Blue (`BLUE`, `S.bl`, `updBlue()`) pulls by setting velocity and `push` on everyone in range
+  each step and ticks damage; Red is `SHOT` kind 3 and bursts through `redBlast()`; Hollow Purple
+  (`PURPLE`, `S.pu`, `updPurple()`) ignores walls and keeps a host-only `hit` list. Infinite Void
+  (`DOM`, `S.dm`) records its victims in `vic` and sets their `frz`: a frozen fighter neither moves nor
+  acts (`control()`, `updFighter()`), a frozen Mahoraga stands still; it ends, and `frz` clears, after
+  `DOM.dur` or when Gojo dies. `inDomain(d)` says whether this device sees it from inside
+  (`drawDomains()` blacks out the view and redraws the people in it) or outside (a black sphere
+  `DOM.lift` up; `hidden()` keeps orbs and name tags under it out of sight). `CHARS.gojo.ur` slows his
+  ultimate meter. His cut-in is `CUTS.dom`: its own `dur` and `paint` (`paintDomain()`, full screen,
+  a burst with the hand sign, then the splattered void).
 - **Rabbit Escape** is one entity per cast, not one per rabbit: the swarm runs from `x0,y0` to `x,y`
   over `T` s, bursts (`RAB.dmg` in `RAB.r`), then nibbles and slows for `RAB.linger` s. Each rabbit's
   path is worked out from the entity in `drawSwarm()`.
