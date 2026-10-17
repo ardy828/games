@@ -1897,6 +1897,15 @@ function drawMaho(m) {
   g.fillStyle = '#d9d2c3'; ell(6, -13, 9, 10); ell(6, 13, 9, 10);
   g.fillStyle = '#ece6d8'; circ(6, 0, 13);
   g.restore(); g.globalAlpha = 1;
+  // where his eyes would be, two pairs of white wings (under the wheel, which floats above his head)
+  g.save(); g.translate(x, y); g.rotate(a); g.scale(sc, sc); g.globalAlpha = rise;
+  for (const sd of [-1, 1]) {
+    feather(13, sd * 6, sd * 1.2, 24, 4.2, '#e4e0d6');
+    feather(14, sd * 5, sd * 0.78, 30, 4.8, '#f8f6f0');
+    feather(15, sd * 4, sd * 0.42, 20, 3.6, '#fdfcf8');
+    g.strokeStyle = 'rgba(150,140,125,.6)'; g.lineWidth = 1; g.beginPath(); g.moveTo(14, sd * 5); g.lineTo(14 + Math.cos(sd * 0.78) * 26, sd * 5 + Math.sin(sd * 0.78) * 26); g.stroke();
+  }
+  g.restore(); g.globalAlpha = 1;
   if (m.flash > 0) { g.globalAlpha = m.flash * 0.5; g.fillStyle = '#fff'; circ(x, y, 36); g.globalAlpha = 1; }
   // the wheel floats over his head and turns a notch with every adaptation
   g.save(); g.translate(x, y - 6 * rise); g.rotate(m.wa || 0); g.globalAlpha = rise;
@@ -1907,15 +1916,6 @@ function drawMaho(m) {
   g.fillStyle = '#e8c35a';
   for (let i = 0; i < 8; i++) { const t = i * TAU / 8; circ(Math.cos(t) * 33, Math.sin(t) * 33, 4); }
   circ(0, 0, 6);
-  g.restore();
-  // where his eyes would be, two pairs of white wings (drawn over the wheel so they show)
-  g.save(); g.translate(x, y); g.rotate(a); g.scale(sc, sc); g.globalAlpha = rise;
-  for (const sd of [-1, 1]) {
-    feather(13, sd * 6, sd * 1.2, 24, 4.2, '#e4e0d6');
-    feather(14, sd * 5, sd * 0.78, 30, 4.8, '#f8f6f0');
-    feather(15, sd * 4, sd * 0.42, 20, 3.6, '#fdfcf8');
-    g.strokeStyle = 'rgba(150,140,125,.6)'; g.lineWidth = 1; g.beginPath(); g.moveTo(14, sd * 5); g.lineTo(14 + Math.cos(sd * 0.78) * 26, sd * 5 + Math.sin(sd * 0.78) * 26); g.stroke();
-  }
   g.restore(); g.globalAlpha = 1;
 }
 function drawTelegraphs() {
