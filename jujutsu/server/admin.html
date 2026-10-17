@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Jujutsu Arena Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@500;600;700;800&family=Yuji+Syuku&display=swap">
+<style>
+  /* The admin page for Jujutsu Arena's public rooms, served by the server at /admin. It talks to
+     /admin/api/ with the ADMIN_KEY it asks for (kept in this browser's localStorage). */
+  :root{
+    --bg:#0b0b12; --panel:#13131d; --panel2:#1c1c2a; --line:#2d2d42; --ink:#f3efe6; --muted:#9a96ad;
+    --red:#e2364f; --blue:#4d7dff; --purple:#8b5cff; --gold:#f0c24f; --green:#57d68d;
+    --disp:"Anton","Impact","Arial Narrow",sans-serif;
+    --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --jp:"Yuji Syuku","Hiragino Mincho ProN","Yu Mincho",serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--body);font-weight:600;padding:0 16px 40px}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  button:disabled{opacity:.45;cursor:default}
+  input,select,textarea{font:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line);padding:7px 9px;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--purple)}
+  header{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:18px 0 14px;border-bottom:1px solid var(--line)}
+  .logo{font-family:var(--disp);font-weight:400;font-size:28px;letter-spacing:.05em;line-height:1}
+  .logo i{font-family:var(--jp);font-style:normal;color:var(--red);margin-right:8px}
+  .logo span{color:var(--gold);margin-left:8px;font-size:18px;letter-spacing:.2em}
+  .live{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+  .dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .dot.bad{background:var(--red)}
+  .ghost{font-family:var(--disp);letter-spacing:.08em;color:var(--muted);padding:4px 8px}
+  .ghost:hover{color:var(--ink)}
+  main{max-width:1180px;margin:18px auto 0;display:grid;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--purple);padding:16px}
+  .card.red{border-top-color:var(--red)}.card.gold{border-top-color:var(--gold)}.card.blue{border-top-color:var(--blue)}
+  h2{font-family:var(--disp);font-weight:400;font-size:22px;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:baseline;gap:10px}
+  h2 small{font-family:var(--body);font-size:13px;letter-spacing:0;color:var(--muted);font-weight:600}
+  .note{font-size:13px;color:var(--muted);line-height:1.5}
+  .big{font-family:var(--disp);font-weight:400;font-size:17px;letter-spacing:.06em;color:#fff;padding:9px 16px;background:var(--purple);
+    clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);transition:filter 100ms}
+  .big:hover:not(:disabled){filter:brightness(1.15)}
+  .big.red{background:var(--red)}.big.gold{background:#b8891f}.big.blue{background:var(--blue)}.big.dark{background:#2a2a3d}
+  .cols{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start}
+  @media (max-width:900px){.cols{grid-template-columns:1fr}}
+
+  /* login */
+  #login{max-width:440px;margin:60px auto 0}
+  #login form{display:flex;gap:8px;margin:12px 0 8px}
+  #login input{flex:1;min-width:0}
+  #loginNote{color:var(--red);min-height:1.3em}
+
+  /* rooms */
+  .summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{background:var(--panel2);border:1px solid var(--line);padding:6px 12px;font-size:14px}
+  .chip b{font-family:var(--disp);font-weight:400;font-size:20px;letter-spacing:.04em;margin-right:6px;color:var(--gold)}
+  .rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .room{background:var(--panel2);border:1px solid var(--line);padding:10px 12px}
+  .room.empty{opacity:.6}
+  .room h3{font-family:var(--disp);font-weight:400;font-size:18px;letter-spacing:.06em;display:flex;justify-content:space-between}
+  .room h3 span{color:var(--muted)}
+  .room .info{font-size:12.5px;color:var(--muted);margin:2px 0 8px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{font-size:10.5px;letter-spacing:.12em;color:var(--muted);text-align:left;padding:2px 4px}
+  td{padding:4px;border-top:1px solid var(--line)}
+  td.n,th.n{text-align:right;width:28px}
+  .tag{font-size:10px;letter-spacing:.08em;padding:1px 5px;margin-left:5px;border:1px solid var(--line);color:var(--muted);vertical-align:1px}
+  .tag.host{color:var(--gold);border-color:#6b5a26}
+  .tag.dead{color:var(--red);border-color:#5c2430}
+  .kick{font-size:11px;letter-spacing:.06em;color:var(--red);padding:1px 6px;border:1px solid #5c2430}
+  .kick:hover{background:#3a1820}
+
+  /* rules */
+  .presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .presets button{font-size:13px;padding:4px 10px;border:1px solid var(--line);background:var(--panel2)}
+  .presets button:hover{border-color:var(--purple)}
+  .fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 16px}
+  .field{display:grid;gap:4px}
+  .field label{font-size:13px;display:flex;justify-content:space-between;gap:8px}
+  .field label output{font-family:var(--disp);font-weight:400;letter-spacing:.04em;color:var(--gold)}
+  .field small{font-size:11.5px;color:var(--muted)}
+  .field input[type=range]{padding:0;accent-color:var(--purple)}
+  .field label.switch{justify-content:flex-start}
+  .switch{display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer;background:var(--panel2);border:1px solid var(--line);padding:7px 9px}
+  .switch input{accent-color:var(--purple);width:16px;height:16px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+  .dirty{font-size:12.5px;color:var(--gold)}
+
+  /* broadcast and events */
+  textarea{width:100%;resize:vertical;min-height:62px}
+  .events{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .ev{display:grid;gap:2px;text-align:left;background:var(--panel2);border:1px solid var(--line);padding:9px 10px}
+  .ev:hover{border-color:var(--gold)}
+  .ev b{font-family:var(--disp);font-weight:400;font-size:16px;letter-spacing:.05em}
+  .ev span{font-size:11.5px;color:var(--muted)}
+  .ev i{font-family:var(--jp);font-style:normal;color:var(--gold);font-size:15px}
+
+  #log{list-style:none;display:grid;gap:4px;font-size:13px;max-height:220px;overflow:auto}
+  #log li{display:flex;gap:8px}
+  #log time{color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
+  #log li.err{color:#ff8a9a}
+  #toast{position:fixed;left:50%;bottom:22px;translate:-50% 0;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--green);
+    padding:9px 14px;font-size:14px;opacity:0;transition:opacity 200ms;pointer-events:none}
+  #toast.on{opacity:1}
+  #toast.err{border-left-color:var(--red)}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><i lang="ja">呪術</i>JUJUTSU ARENA<span>ADMIN</span></div>
+  <div class="live" id="live" hidden><i class="dot" id="dot"></i><span id="liveTxt">Connecting…</span><button class="ghost" id="logout">LOG OUT</button></div>
+</header>
+
+<section id="login" class="card">
+  <h2>ADMIN LOGIN</h2>
+  <p class="note">Type the admin key you saved as the <b>ADMIN_KEY</b> secret on this Worker in Cloudflare.</p>
+  <form id="loginForm"><input id="key" type="password" autocomplete="current-password" placeholder="Admin key"><button class="big" type="submit">OPEN</button></form>
+  <p class="note" id="loginNote"></p>
+</section>
+
+<main id="dash" hidden>
+  <section class="card red">
+    <h2>WHO'S ON <small>public rooms, updated every few seconds</small></h2>
+    <div class="summary" id="summary"></div>
+    <div class="rooms" id="rooms"></div>
+  </section>
+
+  <div class="cols">
+    <section class="card">
+      <h2>RULES <small>for every public room; private parties and practice are not affected</small></h2>
+      <div class="presets" id="presets"></div>
+      <div class="fields" id="fields"></div>
+      <div class="row">
+        <button class="big" id="saveRules">SAVE RULES</button>
+        <button class="big dark" id="resetRules">DEFAULTS</button>
+        <span class="dirty" id="dirty" hidden>Unsaved changes</span>
+      </div>
+    </section>
+
+    <div style="display:grid;gap:16px">
+      <section class="card gold">
+        <h2>BROADCAST <small>a banner in the game</small></h2>
+        <textarea id="msg" maxlength="140" placeholder="Double kill Fridays start now!"></textarea>
+        <div class="row" style="margin-top:8px">
+          <select id="msgRoom"></select>
+          <button class="big gold" id="sendMsg">SEND</button>
+          <span class="note" id="msgLeft">140 left</span>
+        </div>
+      </section>
+
+      <section class="card blue">
+        <h2>EVENTS <small>happen at once</small></h2>
+        <div class="row" style="margin:0 0 10px"><span class="note">In</span><select id="evRoom"></select></div>
+        <div class="events" id="events"></div>
+      </section>
+
+      <section class="card">
+        <h2>LOG</h2>
+        <ul id="log"></ul>
+      </section>
+    </div>
+  </div>
+</main>
+<div id="toast"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const KEY_STORE = 'jujutsu-arena-admin-key';
+const ROOMS = ['pub-1', 'pub-2', 'pub-3', 'pub-4'];
+const DEFAULTS = { rounds: true, kills: 10, time: 0, brk: 7, resp: 4, bots: 4, skill: 1, dmg: 1, cd: 1, ur: 1, spd: 1, hp: 1, yuji: true, megumi: true, ults: true };
+const FIELDS = [
+  { k: 'rounds', t: 'bool', n: 'Rounds', h: 'Off: one endless free-for-all with no winner' },
+  { k: 'ults', t: 'bool', n: 'Ultimates allowed' },
+  { k: 'yuji', t: 'bool', n: 'Yuji allowed' },
+  { k: 'megumi', t: 'bool', n: 'Megumi allowed' },
+  { k: 'kills', t: 'num', n: 'Kills to win', min: 0, max: 100, step: 1, h: '0 = no kill limit' },
+  { k: 'time', t: 'num', n: 'Round time (minutes)', min: 0, max: 30, step: 0.5, h: '0 = no time limit; when time runs out, most kills wins' },
+  { k: 'brk', t: 'num', n: 'Break between rounds (s)', min: 3, max: 30, step: 1 },
+  { k: 'resp', t: 'num', n: 'Respawn time (s)', min: 0.5, max: 15, step: 0.5 },
+  { k: 'bots', t: 'num', n: 'Bots fill rooms up to', min: 0, max: 7, step: 1, h: 'fighters in total; bots leave as people join' },
+  { k: 'skill', t: 'sel', n: 'Bot skill', opts: [[0, 'Easy'], [1, 'Normal'], [2, 'Hard']] },
+  { k: 'dmg', t: 'mult', n: 'Damage', min: 0.25, max: 4 },
+  { k: 'hp', t: 'mult', n: 'Health', min: 0.25, max: 4 },
+  { k: 'spd', t: 'mult', n: 'Move speed', min: 0.5, max: 2 },
+  { k: 'cd', t: 'mult', n: 'Cooldowns', min: 0.1, max: 3, h: 'lower: moves come back faster' },
+  { k: 'ur', t: 'mult', n: 'Ultimate charge speed', min: 0.25, max: 4 },
+];
+const PRESETS = [
+  ['Chaos', { dmg: 1.5, cd: 0.3, ur: 3 }],
+  ['Glass cannons', { dmg: 2.5, hp: 0.6 }],
+  ['Tanks', { hp: 3, dmg: 0.75 }],
+  ['Speed demons', { spd: 1.8, resp: 1.5 }],
+  ['Ult spam', { ur: 4 }],
+  ['3-minute rounds', { rounds: true, time: 3, kills: 0 }],
+  ['Endless', { rounds: false }],
+  ['Yuji only', { yuji: true, megumi: false }],
+  ['Megumi only', { yuji: false, megumi: true }],
+];
+const EVENTS = [
+  ['heal', '反転', 'Heal everyone', 'Full health for every fighter'],
+  ['ults', '魂', 'Ultimates ready', 'Fill every ultimate meter'],
+  ['cds', '疾', 'Reset cooldowns', 'Every move ready at once'],
+  ['maho', '魔虚羅', 'Wild Mahoraga', 'Drops one with no master for 30 s'],
+  ['end', '終', 'End round', 'Most kills wins right now'],
+  ['restart', '始', 'Restart round', 'Scores back to zero'],
+];
+
+let key = '';
+try { key = localStorage.getItem(KEY_STORE) || ''; } catch (e) { /* storage blocked */ }
+let rules = { ...DEFAULTS }, dirty = false, timer = 0, lastStatus = null;
+
+async function api(what, body) {
+  const r = await fetch('/admin/api/' + what, {
+    method: body ? 'POST' : 'GET',
+    headers: { Authorization: 'Bearer ' + key, 'content-type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let j = null;
+  try { j = await r.json(); } catch (e) { /* not JSON */ }
+  if (!r.ok || !j) throw new Error((j && j.error) || 'The server answered ' + r.status + '.');
+  if (j.ok === false && j.error) throw new Error(j.error);
+  return j;
+}
+function toast(s, err) {
+  const t = $('toast');
+  t.textContent = s; t.classList.toggle('err', !!err); t.classList.add('on');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2600);
+}
+function log(s, err) {
+  const li = document.createElement('li'), tm = document.createElement('time'), sp = document.createElement('span');
+  tm.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  sp.textContent = s;
+  if (err) li.className = 'err';
+  li.append(tm, sp);
+  $('log').prepend(li);
+  while ($('log').children.length > 40) $('log').lastChild.remove();
+}
+async function act(label, what, body) {
+  try { await api(what, body); toast(label); log(label); return true; }
+  catch (e) { toast(e.message, true); log(label + ': ' + e.message, true); return false; }
+}
+
+// login
+async function login(k) {
+  key = k.trim();
+  $('loginNote').textContent = 'Checking…';
+  try {
+    const s = await api('status');
+    try { localStorage.setItem(KEY_STORE, key); } catch (e) { /* not kept */ }
+    $('login').hidden = true; $('dash').hidden = false; $('live').hidden = false;
+    $('loginNote').textContent = '';
+    fillRules(s.rooms[0] && s.rooms[0].rules);
+    render(s);
+    log('Logged in');
+    schedule();
+  } catch (e) {
+    $('loginNote').textContent = e.message;
+    key = '';
+  }
+}
+$('loginForm').onsubmit = (e) => { e.preventDefault(); login($('key').value); };
+$('logout').onclick = () => {
+  try { localStorage.removeItem(KEY_STORE); } catch (e) { /* not kept */ }
+  key = ''; clearTimeout(timer);
+  $('dash').hidden = true; $('live').hidden = true; $('login').hidden = false; $('key').value = '';
+};
+
+// who's on
+function schedule() {
+  clearTimeout(timer);
+  timer = setTimeout(async () => {
+    if (!key) return;
+    if (document.visibilityState === 'visible') {
+      try { render(await api('status')); setLive(true); }
+      catch (e) { setLive(false, e.message); }
+    }
+    schedule();
+  }, 3000);
+}
+function setLive(ok, why) {
+  $('dot').className = 'dot ' + (ok ? 'on' : 'bad');
+  $('liveTxt').textContent = ok ? 'Live' : why || 'Offline';
+}
+const mmss = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function render(s) {
+  lastStatus = s;
+  setLive(true);
+  const rooms = s.rooms || [];
+  const people = rooms.reduce((n, r) => n + r.players.length, 0), active = rooms.filter((r) => r.players.length).length;
+  const sum = $('summary');
+  sum.textContent = '';
+  for (const [n, t] of [[people, people === 1 ? 'player online' : 'players online'], [active, active === 1 ? 'room in use' : 'rooms in use']]) {
+    const c = el('div', 'chip'); c.append(el('b', '', String(n)), t); sum.append(c);
+  }
+  const box = $('rooms');
+  box.textContent = '';
+  for (const r of rooms) {
+    const card = el('div', 'room' + (r.players.length ? '' : ' empty'));
+    const h = el('h3', '', r.name.toUpperCase());
+    h.append(el('span', '', r.players.length + ' / 8'));
+    card.append(h);
+    const host = r.players.find((p) => p.host), st = r.stat, rl = r.rules || DEFAULTS;
+    let info = 'Empty';
+    if (r.players.length && !st) info = 'Waiting for the host… (' + (host ? host.name : 'none') + ')';
+    else if (st) {
+      info = st.ph === 'over' ? 'Between rounds' : !rl.rounds ? 'Endless' : (st.tw > 0 ? 'First to ' + st.tw : 'Most kills') + (rl.time > 0 ? ' · ' + mmss(Math.max(0, st.rl)) + ' left' : '');
+      if (host) info += ' · hosted by ' + host.name;
+    }
+    card.append(el('div', 'info', info));
+    if (r.players.length) {
+      const t = el('table'), hd = el('tr');
+      for (const [s2, c] of [['NAME', ''], ['FIGHTER', ''], ['K', 'n'], ['D', 'n'], ['', 'n']]) hd.append(el('th', c, s2));
+      t.append(hd);
+      const rows = st ? st.f : r.players.map((p) => [p.id, p.name, '', '', '', 0, 1]);
+      for (const [id, name, ch, k, d, bot, alive] of rows) {
+        const tr = el('tr'), nm = el('td', '', name), human = r.players.find((p) => p.id === id);
+        if (bot) nm.append(el('span', 'tag', 'BOT'));
+        if (human && human.host) nm.append(el('span', 'tag host', 'HOST'));
+        if (st && !alive) nm.append(el('span', 'tag dead', 'DOWN'));
+        tr.append(nm, el('td', '', ch ? ch.toUpperCase() : ''), el('td', 'n', String(k)), el('td', 'n', String(d)));
+        const kc = el('td', 'n');
+        if (human) {
+          const b = el('button', 'kick', 'KICK');
+          b.onclick = () => { if (confirm('Remove ' + name + ' from ' + r.name + '?')) act('Kicked ' + name + ' from ' + r.name, 'kick', { room: r.name, id }); };
+          kc.append(b);
+        }
+        tr.append(kc);
+        t.append(tr);
+      }
+      card.append(t);
+    }
+    box.append(card);
+  }
+}
+
+// rules
+function buildFields() {
+  const box = $('fields');
+  for (const f of FIELDS) {
+    if (f.t === 'bool') {
+      const l = el('label', 'switch'), i = el('input');
+      i.type = 'checkbox'; i.id = 'r-' + f.k;
+      l.append(i, f.n);
+      if (f.h) l.title = f.h;
+      const w = el('div', 'field'); w.append(l);
+      if (f.h) w.append(el('small', '', f.h));
+      box.append(w);
+      i.onchange = () => { rules[f.k] = i.checked; changed(); };
+      continue;
+    }
+    const w = el('div', 'field'), l = el('label'), o = el('output');
+    l.htmlFor = 'r-' + f.k; l.append(f.n, o);
+    let i;
+    if (f.t === 'sel') {
+      i = el('select');
+      for (const [v, n] of f.opts) { const op = el('option', '', n); op.value = v; i.append(op); }
+    } else {
+      i = el('input');
+      i.type = f.t === 'mult' ? 'range' : 'number';
+      i.min = f.min; i.max = f.max; i.step = f.step || 0.05;
+    }
+    i.id = 'r-' + f.k;
+    i.oninput = () => { rules[f.k] = +i.value; showVal(f); changed(); };
+    w.append(l, i);
+    if (f.h) w.append(el('small', '', f.h));
+    box.append(w);
+  }
+  const pb = $('presets');
+  for (const [n, p] of PRESETS) {
+    const b = el('button', '', n);
+    b.onclick = () => { rules = { ...rules, ...p }; putRules(); changed(); };
+    pb.append(b);
+  }
+}
+function showVal(f) {
+  const out = document.querySelector('label[for="r-' + f.k + '"] output');
+  if (!out) return;
+  const v = rules[f.k];
+  out.textContent = f.t === 'mult' ? 'x' + v.toFixed(2) : f.k === 'kills' && !v ? 'no limit' : f.k === 'time' && !v ? 'no limit' : '';
+}
+function putRules() {
+  for (const f of FIELDS) {
+    const i = $('r-' + f.k);
+    if (f.t === 'bool') i.checked = !!rules[f.k]; else i.value = rules[f.k];
+    showVal(f);
+  }
+}
+function fillRules(r) { rules = { ...DEFAULTS, ...(r || {}) }; putRules(); dirty = false; $('dirty').hidden = true; }
+function changed() { dirty = true; $('dirty').hidden = false; }
+$('saveRules').onclick = async () => {
+  if (!rules.yuji && !rules.megumi) { toast('At least one fighter has to be allowed.', true); return; }
+  try {
+    const j = await api('rules', { rules });
+    fillRules(j.rules);
+    toast('Rules saved for every public room'); log('Saved rules: ' + describe(j.rules));
+  } catch (e) { toast(e.message, true); log('Saving rules: ' + e.message, true); }
+};
+$('resetRules').onclick = () => { rules = { ...DEFAULTS }; putRules(); changed(); };
+function describe(r) {
+  const out = [!r.rounds ? 'endless' : (r.kills ? 'first to ' + r.kills : 'most kills') + (r.time ? ' in ' + r.time + ' min' : '')];
+  for (const [k, n] of [['dmg', 'damage'], ['hp', 'health'], ['spd', 'speed'], ['cd', 'cooldowns'], ['ur', 'ult charge']]) if (r[k] !== 1) out.push(n + ' ×' + r[k]);
+  if (!r.ults) out.push('no ultimates');
+  if (!r.yuji) out.push('no Yuji');
+  if (!r.megumi) out.push('no Megumi');
+  out.push(r.bots + ' bots');
+  return out.join(', ');
+}
+
+// broadcast and events
+for (const id of ['msgRoom', 'evRoom']) {
+  const s = $(id);
+  for (const [v, n] of [['all', 'All rooms']].concat(ROOMS.map((r) => [r, r.toUpperCase()]))) { const o = el('option', '', n); o.value = v; s.append(o); }
+}
+$('msg').oninput = () => { $('msgLeft').textContent = (140 - $('msg').value.length) + ' left'; };
+$('sendMsg').onclick = async () => {
+  const text = $('msg').value.trim(), room = $('msgRoom').value;
+  if (!text) { toast('Type a message first.', true); return; }
+  if (await act('Broadcast to ' + (room === 'all' ? 'all rooms' : room) + ': "' + text + '"', 'msg', { room, text })) { $('msg').value = ''; $('msg').oninput(); }
+};
+for (const [ev, kj, n, h] of EVENTS) {
+  const b = el('button', 'ev'), top = el('b');
+  const k = el('i', '', kj); k.lang = 'ja';
+  top.append(k, ' ', n);
+  b.append(top, el('span', '', h));
+  b.onclick = () => {
+    const room = $('evRoom').value;
+    act(n + ' in ' + (room === 'all' ? 'all rooms' : room), 'event', { room, ev });
+  };
+  $('events').append(b);
+}
+
+buildFields();
+fillRules(DEFAULTS);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && key && !$('dash').hidden) schedule(); });
+if (key) login(key); else $('key').focus();
+})();
+</script>
+</body>
+</html>

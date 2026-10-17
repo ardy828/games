@@ -568,9 +568,18 @@ Free-for-all on a city map: Yuji or Megumi, first to `toWin` kills, respawns aft
 IIFE, sections in this order: save, tuning, canvas, audio, city, the match (sim), bots, effects,
 rendering, minimap, HUD, input (keyboard, mouse, touch), screens, multiplayer, main loop.
 
-- **No cursed energy.** Each move has a cooldown in `f.cd` keyed `q e c` (techniques), `u` (ultimate),
-  `r` (RCT) and `d` (dash); `CHARS` holds each fighter's stats and move names and `COMMON` the shared
-  two. `cdOf(ch, k)` reads them.
+- **No cursed energy.** `q e c` (techniques), `r` (RCT) and `d` (dash) have cooldowns in `f.cd`, read
+  through `cdOf(ch, k)` (which applies `RULES.cd`); `CHARS` holds each fighter's stats and move names and
+  `COMMON` the shared two. The ultimate `u` has a meter instead, `f.ult` 0–100, filled by `charge()`:
+  `ULT.deal` per point of damage dealt (not by your own Mahoraga), `ULT.take` per point taken and
+  `ULT.idle` per second, times `RULES.ur`. It survives death and empties at a new match.
+- **Rules**: `RULES` (`RULES0` defaults, `cleanRules()` to validate) holds kills to win, round time,
+  rounds on/off (off = endless), break, respawn, bots and their skill, multipliers (`dmg`, `hp`,
+  `spd`, `cd`, `ur`), allowed fighters and whether ultimates work. Practice and parties start from
+  `RULES0` with the lobby's choices; public rooms get theirs from the server (`welcome`, `rules`).
+  **`RULES0` and `cleanRules()` are duplicated in `server/worker.js`; change both together.** The sim
+  reads `RULES` directly (`hurt`, `maxHp`, `cdOf`, walking speed, `respawn`, `die`, `matchOver`, the
+  round clock `S.roundT` in `step`).
 - **`S` is the whole match** and is plain data: entities refer to each other by id, never by reference
   (`own`, `tg`, `lastBy`, `hitL`), so a snapshot can carry all of it and any joiner can take over as
   host. `S.f` fighters, `S.maho` Mahoraga, `S.ele` Max Elephants, `S.rab` Rabbit Escape swarms, `S.sh`
@@ -633,8 +642,15 @@ rendering, minimap, HUD, input (keyboard, mouse, touch), screens, multiplayer, m
   stalled old host `demote()`s itself. Bots keep a public room at `PUBLIC_FILL` fighters
   (`syncBots()`). A hosting tab in the background keeps the sim running from the heartbeat timer.
 - **Server** (`jujutsu/server/worker.js`): one Durable Object per room `pub-1`…`pub-4`, WebSocket
-  Hibernation API, 8 players, only the host may send to `*` or to an id, a host silent for
-  `STALL_MS` is replaced. Its README has the deploy steps (Cloudflare Workers Builds from this repo,
+  Hibernation API, 8 players, only the host may send to `*`, to an id or to `!` (its scoreboard, every
+  2 s, for the admin page), a host silent for `STALL_MS` is replaced. Each room stores the admin's
+  rules and sends them in `welcome` and as `{sys:'rules'}`; admin events go to the host as
+  `{sys:'admin', ev}` (`adminEvent()` runs them), broadcasts to everyone as `{sys:'msg'}`, and a kick
+  is `{sys:'kick'}` then a close.
+- **Admin page** (`jujutsu/server/admin.html`, served by the Worker at `/admin`, imported as a text
+  module): talks to `/admin/api/{status,rules,event,msg,kick}` with `Authorization: Bearer
+  ADMIN_KEY` (a Cloudflare secret; without it the API answers 503). It is not a game page and is not
+  on GitHub Pages, so it has no lockdown block. Its README has the deploy steps (Cloudflare Workers Builds from this repo,
   root `jujutsu/server`). Test it with `npx wrangler dev` and a copy of the game with `SERVER` set to
   `http://127.0.0.1:8787`.
 - Testing: the sandbox cannot reach cdnjs or the PeerJS cloud, so parties were tested with the

@@ -35,6 +35,34 @@ to `jujutsu/server/*`.
 If you would rather use a terminal: install Node, then in this folder run `npx wrangler login` and
 `npx wrangler deploy`.
 
+## The admin page
+
+`/admin` on the server (e.g. `https://jujutsu-arena.NAME.workers.dev/admin`) is a control panel for
+the public rooms:
+
+- **Who's on**: every room's players, who is hosting, the scoreboard and the round clock, updated every
+  few seconds, with a button to kick someone.
+- **Rules** for every public room: rounds on or off (off is one endless free-for-all), kills to win,
+  round time limit, break between rounds, respawn time, how many fighters bots fill a room up to and
+  how good they are, damage, health, speed, cooldown and ultimate-charge multipliers, which fighters
+  can be picked, and whether ultimates work at all. A few presets (Chaos, Tanks, Ult spam…) fill them
+  in. Private parties and practice keep their usual rules.
+- **Broadcast**: a message shown as a banner in every room, or in one.
+- **Events**: heal everyone, fill every ultimate, reset every cooldown, drop a wild Mahoraga that
+  attacks anyone, end the round now, restart the round.
+
+It needs a password, which you set once in Cloudflare:
+
+1. In the Cloudflare dashboard, open **Workers & Pages → jujutsu-arena → Settings → Variables and
+   Secrets**.
+2. Click **Add**, choose type **Secret**, name it `ADMIN_KEY`, and give it a long password only you
+   know. Click **Deploy** (or **Save**).
+3. Open `/admin` on the server and type that password. The browser remembers it until you press
+   LOG OUT.
+
+The secret stays when the server redeploys from GitHub. Until it is set, the admin page says so and
+does nothing.
+
 ## Allowed sites
 
 `ALLOWED_ORIGINS` in `wrangler.toml` lists the sites the game may connect from. It is `"*"`, so the
@@ -55,7 +83,8 @@ Durable Objects are on the free Workers plan with the SQLite backend, which `wra
 The free plan allows 100,000 requests a day, and every 20 WebSocket messages the server receives
 count as one request. A full room of 8 sends roughly 6 or 7 requests' worth a second (the host's
 20 snapshots a second plus everyone's input), so the free plan covers about four hours of a full
-room a day, and far more for smaller rooms. Past the limit, connections fail until the count resets at
+room a day, and far more for smaller rooms. An open admin page adds about 100 requests a minute
+(it asks all four rooms every 3 seconds while its tab is visible). Past the limit, connections fail until the count resets at
 midnight UTC. Cloudflare's $5 a month Workers Paid plan removes the worry.
 
 ## Testing locally

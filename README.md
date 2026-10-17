@@ -215,6 +215,9 @@ is no cursed energy: every move has its own cooldown.
   Tap a technique to cast it at the nearest enemy, or drag it to aim and release. Landscape is best.
 - **Everyone** has a dash with a moment of invulnerability, a block that soaks 75% of a hit from the
   front until its guard meter breaks, and RCT, which heals a third of your health on a long cooldown.
+- **Ultimates** have a meter instead of a cooldown (the F slot fills up): it charges as you deal
+  damage, a little as you take it and slowly over time, and keeps its charge when you die. F works
+  only when it is full.
 - **Yuji** is fast and hits hard up close. *Black Flash* lunges into a punch that breaks guard and hits
   very hard, *Piercing Blood* fires a line of blood after a short charge (watch for the red line),
   *Dismantle* throws a slash that always does the same damage, and the ultimate, *Soul Strike*, dashes
@@ -235,5 +238,10 @@ is no cursed energy: every move has its own cooldown.
   [`jujutsu/server/`](jujutsu/server/); [its README](jujutsu/server/README.md) explains how to deploy it
   from this repository and what the free plan covers. Until it is deployed and its address is set in
   the game, PLAY ONLINE says so.
+- **Admin page** — the server also has a password-protected control panel at `/admin` for the public
+  rooms: who is on (with a kick button), the rules (round length or endless, kills to win, respawn time,
+  bots, damage / health / speed / cooldown / ultimate-charge multipliers, which fighters are allowed),
+  broadcast messages and events (heal everyone, fill every ultimate, a wild Mahoraga, end or restart
+  the round). [The server's README](jujutsu/server/README.md) explains how to set its password.
 - All drawing is canvas (the city is built from a fixed seed, so everyone gets the same map) and all
   audio is synthesised. Your name, fighter, kills and wins are kept in `localStorage`.
