@@ -49,7 +49,7 @@ the public rooms:
   in. Private parties and practice keep their usual rules.
 - **Broadcast**: a message shown as a banner in every room, or in one.
 - **Events**: heal everyone, fill every ultimate, reset every cooldown, drop a wild Mahoraga that
-  attacks anyone, end the round now, restart the round.
+  attacks anyone until it is killed, end the round now, restart the round.
 
 It needs a password, which you set once in Cloudflare:
 

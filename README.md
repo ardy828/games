@@ -225,9 +225,9 @@ is no cursed energy: every move has its own cooldown.
 - **Megumi** fights through shikigami. *Nue* carries him forward and shocks anyone in the way, *Rabbit
   Escape* sends a swarm of rabbits to where you aim, where it bursts and then nibbles and slows, *Max
   Elephant* drops on the spot you aim at after a shadow warning, and the ultimate summons *Mahoraga*,
-  who kicks Megumi away and then attacks whoever he can see, Megumi included. Each new move that hurts
-  Mahoraga turns his wheel: he adapts to it and takes far less from it after that, and every punch he
-  lands makes the next one harder.
+  who kicks Megumi away and then attacks whoever he can see, Megumi included, until someone kills him
+  or the match ends. Each new move that hurts Mahoraga turns his wheel: he adapts to it and takes far
+  less from it after that, and every punch he lands makes the next one harder.
 - **Practice** — you against 1 to 7 bots (Easy, Normal or Hard), first to 5, 10 or 20 kills.
 - **Private party** — HOST PARTY gives a four-digit code; friends type it and press JOIN. Up to 8, with
   bots if the host adds them. If a player's connection drops, a bot plays for them while their browser

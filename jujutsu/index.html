@@ -1024,7 +1024,6 @@ function die(t) {
 function matchOver(w, why) {
   S.phase = 'over'; S.overT = RULES.brk; S.win = w.name;
   for (const f of S.f) { f.act = ''; f.blk = false; f.heal = 0; }
-  for (const m of S.maho) m.t = Math.min(m.t, 0.4);
   event(['M', w.id, w.name, standings(), why]);
 }
 const ranked = () => S.f.slice().sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
@@ -1041,11 +1040,12 @@ function newMatch() {
 // Mahoraga: rises from Megumi's shadow, kicks Megumi away, then hunts whoever is nearest and in
 // sight, Megumi included. Each move that hurts him for the first time spins the wheel and he
 // adapts to it (60% less from then on); every hit he lands spins it too, and each spin (up to five)
-// makes his punches hit 20% harder.
-const MAHO = { hp: 1200, r: 34, spd: 255, life: 16, dmg: 110 };
-function spawnMaho(x, y, aim, own, life) {
+// makes his punches hit 20% harder. He has no time limit: he stays until he is killed or a new
+// match clears the board.
+const MAHO = { hp: 3600, r: 34, spd: 255, dmg: 110 };
+function spawnMaho(x, y, aim, own) {
   const m = { isM: true, id: 1e6 + S.nid++, own, x, y, vx: 0, vy: 0,
-    aim, hp: MAHO.hp, r: MAHO.r, t: life, spins: 0, adapt: [], mode: 'rise', mt: 0, cd: 0, lcd: 0, pc: 0,
+    aim, hp: MAHO.hp, r: MAHO.r, spins: 0, adapt: [], mode: 'rise', mt: 0, cd: 0, lcd: 0, pc: 0,
     tg: null, rt: 0, stun: 0, hitDone: false, px: 0, py: 0, rx: 0, ry: 0, ra: 0, flash: 0 };
   collide(m, m.r);
   m.px = m.rx = m.x; m.py = m.ry = m.y;
@@ -1055,7 +1055,7 @@ function spawnMaho(x, y, aim, own, life) {
 }
 function summonMaho(f) {
   const a = f.aim;
-  spawnMaho(f.x + Math.cos(a) * 72, f.y + Math.sin(a) * 72, a + Math.PI, f.id, MAHO.life);
+  spawnMaho(f.x + Math.cos(a) * 72, f.y + Math.sin(a) * 72, a + Math.PI, f.id);
   event(['B', 'MAHORAGA', 'With this treasure, ' + f.name + ' summons the Divine General']);
 }
 function spinWheel(m) { m.spins++; fx(['wh', m.id]); }
@@ -1090,10 +1090,10 @@ function mahoTarget(m) {
 }
 function updMaho(dt) {
   for (const m of S.maho) {
-    m.t -= dt; m.mt += dt;
+    m.mt += dt;
     if (m.cd > 0) m.cd -= dt;
     if (m.lcd > 0) m.lcd -= dt;
-    if (m.t <= 0 || m.hp <= 0) { m.dead = true; fx(['mgone', r1(m.x), r1(m.y)]); continue; }
+    if (m.hp <= 0) { m.dead = true; fx(['mgone', r1(m.x), r1(m.y)]); continue; }
     if (m.stun > 0) { m.stun -= dt; const k = Math.exp(-KB * dt); m.vx *= k; m.vy *= k; mmove(m, dt); continue; }
     if (m.mode === 'rise') { m.vx = m.vy = 0; if (m.mt >= 0.7) { m.mode = 'kick'; m.mt = 0; } continue; }
     if (m.mode === 'kick') {
@@ -2736,7 +2736,7 @@ let peer = null, nextId = 1, snapT = 0, inT = 0, lastSent = '', helloT = 0;
 // b = boolean, B = bot or not, c = the cooldown table, none = a plain value.
 const SPEC = {
   f: 'id name:s ch:s nch:s bot:B x:1 y:1 vx:1 vy:1 aim:2 hp:1 alive:b resp:2 prot:2 guard:1 gdT:2 blk:b stun:2 iframe:2 slow:2 heal:2 slamT:2 act:s actT:2 actA:2 actD:2 hitDone:b hitL combo comboT:2 swCd:2 cd:c ult:1 kills deaths lastBy lastT:2',
-  m: 'id own x:1 y:1 vx:1 vy:1 aim:2 hp:1 t:2 spins adapt mode:s mt:2 cd:2 lcd:2 tg rt:2 stun:2 hitDone:b pc',
+  m: 'id own x:1 y:1 vx:1 vy:1 aim:2 hp:1 spins adapt mode:s mt:2 cd:2 lcd:2 tg rt:2 stun:2 hitDone:b pc',
   e: 'id own x:1 y:1 t:2 a:2',
   r: 'id own x0:1 y0:1 x:1 y:1 a:2 t:2 T:2 burst:b nt:2',
   h: 'id own x:1 y:1 a:2 d:1',
@@ -3228,7 +3228,7 @@ function adminEvent(ev) {
     const near = live.length ? pick(live) : { x: MID, y: MID };
     const spots = city.spawns.filter((p) => { const d = Math.hypot(p.x - near.x, p.y - near.y); return d > 220 && d < 600; });
     const p = spots.length ? pick(spots) : near;
-    spawnMaho(p.x, p.y, Math.random() * TAU, null, 30);
+    spawnMaho(p.x, p.y, Math.random() * TAU, null);
     event(['B', 'A WILD MAHORAGA', 'It attacks anyone it sees']);
   }
   else if (ev === 'end') { const w = ranked()[0]; if (S.phase === 'play' && w) matchOver(w, 'admin'); }
@@ -3383,7 +3383,7 @@ function joinTick(dt) {
     for (const q of ['stun', 'prot', 'resp', 'heal', 'iframe', 'slow']) if (f[q] > 0) f[q] = Math.max(0, f[q] - dt);
   }
   for (const m of S.maho) {
-    m.x += m.vx * dt; m.y += m.vy * dt; m.mt += dt; m.t -= dt;
+    m.x += m.vx * dt; m.y += m.vy * dt; m.mt += dt;
     m.rx += (m.x - m.rx) * k; m.ry += (m.y - m.ry) * k; m.ra = m.ra + angD(m.ra, m.aim) * k;
   }
   for (const r of S.rab) r.t += dt;

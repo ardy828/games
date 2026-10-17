@@ -597,7 +597,8 @@ rendering, minimap, HUD, input (keyboard, mouse, touch), screens, multiplayer, m
   ignores it, `fixed` is not reduced by it (Dismantle). A stun cancels the current action. Kill credit
   goes to `lastBy` within `CREDIT_T` s; your own Mahoraga never earns kills on you.
 - **Mahoraga** (`updMaho`, modes `rise kick hunt swing lunge`) kicks his summoner first, then hunts
-  the nearest fighter he can see, his summoner included. `hurtMaho()` adapts: the first hit of each
+  the nearest fighter he can see, his summoner included. He has `MAHO.hp` and no lifetime: he stays
+  until killed, and `newMatch()` clears `S.maho`. `hurtMaho()` adapts: the first hit of each
   `kind` spins the wheel and later ones take 60% less; each punch he lands spins it and adds 20%
   damage (up to five spins). He punches with alternate fists (`pc` counts punches for the drawing).
 - **Rabbit Escape** is one entity per cast, not one per rabbit: the swarm runs from `x0,y0` to `x,y`
