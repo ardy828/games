@@ -132,6 +132,11 @@
   .bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#6be39f,#2fae67);transition:width 120ms}
   .bar span{position:absolute;inset:0;font-size:12px;font-weight:800;line-height:14px;text-align:center;text-shadow:0 1px 2px #000}
   .bar.g{height:6px}
+  .bar.u{height:13px}
+  .bar.u i{background:linear-gradient(#ffdc73,#cf9218)}
+  .bar.u span{font-size:10px;line-height:11px;letter-spacing:.08em}
+  .bar.u.full{border-color:#f0c24f;animation:full 1.1s ease-in-out infinite}
+  .bar.u.off i{background:#3a3a48}
   .bar.g i{background:#8fb6ff}
   .bar.low i{background:linear-gradient(#ff7a85,#d1263d)}
   #abil{position:absolute;left:50%;bottom:14px;translate:-50% 0;display:flex;gap:6px}
@@ -144,8 +149,6 @@
   .slot .t{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--disp);font-size:20px;z-index:1;text-shadow:0 1px 3px #000}
   .slot.ready{animation:ready 360ms ease}
   .slot.held{border-color:var(--c,#fff);box-shadow:inset 0 0 12px -2px var(--c,#fff)}
-  .slot.ult::after,.pb.ult::after{background:linear-gradient(to top,transparent calc(var(--f,0) * 100%),rgba(4,4,10,.78) 0)}
-  .slot.ult::before,.pb.ult::before{content:"";position:absolute;left:0;right:0;bottom:0;height:calc(var(--f,0) * 100%);background:linear-gradient(to top,rgba(240,194,79,.55),rgba(240,194,79,.12))}
   .slot.full,.pb.full{border-color:#f0c24f;animation:full 1.1s ease-in-out infinite}
   @keyframes full{50%{box-shadow:0 0 16px 2px rgba(240,194,79,.7)}}
   @keyframes ready{40%{background:rgba(255,255,255,.35)}}
@@ -213,6 +216,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
   <div id="me">
     <div id="meName"><span id="meN"></span><span id="meK"></span></div>
     <div class="bar" id="hpBar"><i id="hpFill"></i><span id="hpTxt"></span></div>
+    <div class="bar u" id="ultBar"><i id="ultFill"></i><span id="ultTxt"></span></div>
     <div class="bar g"><i id="gdFill"></i></div>
   </div>
   <div id="abil"></div>
@@ -2260,14 +2264,19 @@ function setSlot(o, p, s) {
   if (o.s !== s) { o.s = s; o.t.textContent = s; }
 }
 const esc = (s) => String(s);
-// the ultimate's slot: a meter filling from the bottom, glowing when full (or OFF if the rules forbid it)
-function setUlt(o, v) {
-  const f = RULES.ults ? clamp(v / 100, 0, 1) : 0, full = RULES.ults && f >= 1;
-  if (!o.el.classList.contains('ult')) o.el.classList.add('ult');
-  if (Math.abs((o.f ?? -1) - f) > 0.004) { o.f = f; o.el.style.setProperty('--f', f.toFixed(3)); }
-  if (o.full !== full) { o.full = full; o.el.classList.toggle('full', full); }
-  const s = !RULES.ults ? 'OFF' : full ? '' : Math.floor(f * 100) + '%';
-  if (o.s !== s) { o.s = s; o.t.textContent = s; }
+// the ultimate: a gold bar under the health bar shows the meter; the F slot (and touch button) is dim
+// while it charges and glows when it is ready
+function setUlt(v) {
+  const f = RULES.ults ? clamp(v / 100, 0, 1) : 0, full = RULES.ults && f >= 1, bar = $('ultBar');
+  $('ultFill').style.width = (f * 100).toFixed(1) + '%';
+  bar.classList.toggle('full', full); bar.classList.toggle('off', !RULES.ults);
+  const t = !RULES.ults ? 'ULTIMATE OFF' : full ? (TOUCH ? 'ULTIMATE READY' : 'ULTIMATE READY · F') : 'ULTIMATE ' + Math.floor(f * 100) + '%';
+  if ($('ultTxt').textContent !== t) $('ultTxt').textContent = t;
+  for (const o of [slots.u, pads.u]) {
+    if (!o) continue;
+    setSlot(o, full ? 0 : 1, RULES.ults ? '' : 'OFF');
+    if (o.full !== full) { o.full = full; o.el.classList.toggle('full', full); }
+  }
 }
 let shownBoard = false, shownRes = false;
 function hud() {
@@ -2290,7 +2299,7 @@ function hud() {
   if ($('meN').textContent !== nm) $('meN').textContent = nm;
   if ($('meK').textContent !== kd) $('meK').textContent = kd;
   for (const kk of KEYS) {
-    if (kk === 'u') { for (const o of [slots.u, pads.u]) if (o) setUlt(o, me.ult); continue; }
+    if (kk === 'u') { setUlt(me.ult); continue; }
     const o = slots[kk], cd = me.cd[kk] || 0, tot = cdOf(me.ch, kk);
     const s = cd > 0 ? (cd < 1 ? cd.toFixed(1) : String(Math.ceil(cd))) : '';
     setSlot(o, clamp(cd / tot, 0, 1), s);

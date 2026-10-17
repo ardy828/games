@@ -2,6 +2,8 @@
 name = "jujutsu-arena"
 main = "worker.js"
 compatibility_date = "2025-09-01"
+# Keep variables set in the Cloudflare dashboard when this deploys from GitHub (secrets are kept anyway).
+keep_vars = true
 
 # Sites the game may connect from, besides localhost: "*" lets the game connect from any site. To
 # limit it, list addresses instead, e.g. "https://ardy828.github.io,https://*.ardychan828.workers.dev".

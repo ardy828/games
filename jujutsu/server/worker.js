@@ -16,6 +16,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import ADMIN_HTML from './admin.html';
 
+const VERSION = 3;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
 const ROOMS = ['pub-1', 'pub-2', 'pub-3', 'pub-4'];
 const MAX_PLAYERS = 8;
 const MAX_MSG = 16384;      // bytes; a snapshot is a few kB
@@ -103,13 +104,13 @@ export default {
     // this when it cannot join, to say why.
     if (url.pathname === '/check') {
       const origin = req.headers.get('Origin');
-      const out = { up: true, origin, allowed: allowed(origin, env), rooms: null, error: null };
+      const out = { up: true, version: VERSION, origin, allowed: allowed(origin, env), rooms: null, error: null };
       try { out.rooms = await (await room(env, 'pub-1').fetch('https://room/check')).json(); }
       catch (e) { out.error = String((e && e.message) || e); }
       return new Response(JSON.stringify(out), { headers: { 'content-type': 'application/json', ...OPEN } });
     }
     const m = url.pathname.match(/^\/room\/([\w-]+)$/);
-    if (!m) return new Response('Jujutsu Arena server is up.\n', { headers: { 'content-type': 'text/plain', ...OPEN } });
+    if (!m) return new Response('Jujutsu Arena server is up (version ' + VERSION + '). Admin page: /admin\n', { headers: { 'content-type': 'text/plain', ...OPEN } });
     if (!ROOMS.includes(m[1])) return new Response('No such room.\n', { status: 404 });
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket.\n', { status: 426 });
     if (!allowed(req.headers.get('Origin'), env)) return new Response('Forbidden.\n', { status: 403 });

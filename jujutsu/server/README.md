@@ -63,6 +63,12 @@ It needs a password, which you set once in Cloudflare:
 The secret stays when the server redeploys from GitHub. Until it is set, the admin page says so and
 does nothing.
 
+Add the secret only once the latest build has finished (its **Deployments** entry says Ready).
+Adding it makes a new version from what is live at that moment, so doing it mid-build can put older
+code back. If `/admin` just says "server is up", the live version is older than the code: open
+**Deployments**, find the newest entry that says **Build**, and deploy it from its menu, or push any
+change to `jujutsu/server/` to build again.
+
 ## Allowed sites
 
 `ALLOWED_ORIGINS` in `wrangler.toml` lists the sites the game may connect from. It is `"*"`, so the
@@ -72,8 +78,11 @@ inside an address stands for any subdomain). `localhost` is always allowed, for 
 
 ## Checking it
 
+The server's main address says which version of the code is live (`VERSION` in `worker.js`, bumped
+with each change), and where the admin page is.
+
 Open `/check` on the server (e.g. `https://jujutsu-arena.NAME.workers.dev/check`). It answers with
-`"up": true`, whether the rooms work (`"rooms": {"players": …}`, or an `"error"`), and whether the
+`"up": true`, the `"version"`, whether the rooms work (`"rooms": {"players": …}`, or an `"error"`), and whether the
 page asking would be let in. The game asks the same thing when it cannot join a room and shows the
 answer under the menu buttons.
 

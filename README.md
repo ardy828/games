@@ -215,7 +215,7 @@ is no cursed energy: every move has its own cooldown.
   Tap a technique to cast it at the nearest enemy, or drag it to aim and release. Landscape is best.
 - **Everyone** has a dash with a moment of invulnerability, a block that soaks 75% of a hit from the
   front until its guard meter breaks, and RCT, which heals a third of your health on a long cooldown.
-- **Ultimates** have a meter instead of a cooldown (the F slot fills up): it charges as you deal
+- **Ultimates** have a meter instead of a cooldown (a gold bar under your health): it charges as you deal
   damage, a little as you take it and slowly over time, and keeps its charge when you die. F works
   only when it is full.
 - **Yuji** is fast and hits hard up close. *Black Flash* lunges into a punch that breaks guard and hits
