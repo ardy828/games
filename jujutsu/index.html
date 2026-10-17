@@ -34,10 +34,10 @@
   #menu{background:linear-gradient(90deg,rgba(6,6,12,.88),rgba(6,6,12,.35) 70%,rgba(6,6,12,.1))}
   .card{
     margin:auto;width:min(460px,100%);background:var(--panel);border:1px solid var(--line);
-    border-top:3px solid var(--red);padding:20px 20px 16px;display:grid;gap:12px;text-align:center;
+    border-top:3px solid var(--red);padding:20px 20px 16px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;text-align:center;
     box-shadow:0 24px 60px rgba(0,0,0,.55);animation:rise 280ms ease both;
   }
-  #menu .card{margin:auto auto auto max(0px,4vw);width:min(560px,100%)}
+  #menu .card{margin:auto auto auto 4vw;width:min(560px,calc(100% - 4vw))}
   @keyframes rise{from{transform:translateY(14px);opacity:0}}
   h2{font-family:var(--disp);font-weight:400;font-size:34px;letter-spacing:.05em;line-height:1}
   .note{font-size:14px;color:var(--muted);min-height:1.2em}
@@ -55,7 +55,7 @@
   .name label{font-size:11px;letter-spacing:.16em;color:var(--muted);white-space:nowrap}
   .name input{flex:1;min-width:0;border:0;background:none;font-size:20px;font-weight:800;color:var(--ink);outline:none}
 
-  .pick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .fcard{position:relative;display:grid;grid-template-columns:64px 1fr;gap:4px 10px;align-items:center;text-align:left;
     background:var(--panel2);border:1px solid var(--line);padding:8px;transition:border-color 120ms,box-shadow 120ms}
   .fcard canvas{width:64px;height:64px;grid-row:span 2}
@@ -66,7 +66,7 @@
   .fcard li b{font-family:var(--jp);font-size:13px;color:var(--c);margin-right:4px;letter-spacing:0}
   @media (max-width:520px){.fcard{grid-template-columns:48px 1fr}.fcard canvas{width:48px;height:48px}.fcard ul{grid-template-columns:1fr}}
 
-  .btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .btns .full{grid-column:1/-1}
   .big{
     display:block;width:100%;font-family:var(--disp);font-weight:400;font-size:21px;letter-spacing:.06em;line-height:1.05;color:#fff;
@@ -85,8 +85,7 @@
   }
   .join input::placeholder{color:#55526a;letter-spacing:.12em}
   .join .big{width:auto;flex:none;padding:10px 18px}
-  .back{display:block;font-family:var(--disp);font-size:18px;letter-spacing:.08em;color:var(--muted);text-decoration:none;padding:4px}
-  .back:hover{color:var(--ink)}
+  .back{margin-top:12px;text-align:center;text-decoration:none;font-size:23px;padding:13px 12px}
 
   /* lobby */
   .code{font-family:var(--disp);font-size:58px;letter-spacing:.16em;line-height:1;color:var(--ink);background:var(--panel2);border:1px dashed var(--muted);padding:10px 0 6px}
@@ -262,7 +261,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     </div>
     <p class="note" id="menuNote"></p>
     <p class="keys"><b>WASD</b> move · <b>Mouse</b> aim · <b>LMB</b> melee · <b>RMB</b> block · <b>Shift</b> dash<br><b>Q</b> <b>E</b> <b>C</b> techniques · <b>R</b> reverse cursed technique · <b>F</b> ultimate · <b>Tab</b> scores · <b>M</b> mute</p>
-    <a class="back" href="../">← ALL GAMES</a>
+    <a class="big b-dark back" href="../">← ALL GAMES</a>
   </div>
 </div>
 
@@ -816,7 +815,7 @@ function mkFighter(id, name, ch, ctl) {
   return {
     id, name, ch, nch: ch, ctl, r: CHARS[ch].r || FR,
     x: MID, y: MID, vx: 0, vy: 0, aim: 0, hp: CHARS[ch].hp, alive: false, resp: 0.3, prot: 0,
-    guard: 100, gdT: 0, blk: false, stun: 0, iframe: 0, slow: 0, heal: 0, slamT: 0,
+    guard: 100, gdT: 0, blk: false, push: 0, iframe: 0, slow: 0, heal: 0, slamT: 0,
     act: '', actT: 0, actA: 0, actD: 0, lk: null, hitDone: false, hitL: [], combo: 3, comboT: 9, swCd: 0,
     cd: { q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 }, ult: 0, pts: 0, kills: 0, deaths: 0, lastBy: null, lastT: -99,
     inp: { mx: 0, my: 0, aim: 0, ad: 300, m1: false, blk: false, q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 },
@@ -857,7 +856,7 @@ function respawn(f) {
   f.ch = f.nch; f.r = CHARS[f.ch].r || FR;
   if (cursed(f)) f.name = CHARS[f.ch].n;
   Object.assign(f, { x: p.x + rnd(-12, 12), y: p.y + rnd(-12, 12), vx: 0, vy: 0, hp: maxHp(f), alive: true, prot: PROTECT,
-    guard: 100, gdT: 0, stun: 0, act: '', heal: 0, slow: 0, blk: false, iframe: 0, lastBy: null, buf: null, combo: 3, comboT: 9 });
+    guard: 100, gdT: 0, push: 0, act: '', heal: 0, slow: 0, blk: false, iframe: 0, lastBy: null, buf: null, combo: 3, comboT: 9 });
   for (const k of KEYS) f.cd[k] = 0;
   f.px = f.rx = f.x; f.py = f.ry = f.y;
   fx(['sp', r1(f.x), r1(f.y)]);
@@ -886,7 +885,7 @@ const ACTS = {
       const hx = f.x + Math.cos(a) * 18, hy = f.y + Math.sin(a) * 18;
       for (const t of targets(f.id)) {
         if (Math.hypot(t.x - hx, t.y - hy) > t.r + FR + 10) continue;
-        if (!hurt(t, 200, { by: f.id, a, kb: 300, stun: 0.65, gb: true, kind: 'bf' })) continue;
+        if (!hurt(t, 200, { by: f.id, a, kb: 300, gb: true, kind: 'bf' })) continue;
         f.hitDone = true; f.vx = f.vy = 0;
         fx(['bf', r1(t.x), r1(t.y), r2(a), f.id]);
         break;
@@ -903,7 +902,7 @@ const ACTS = {
       const len = rayLen(sx, sy, a, 900);
       for (const t of targets(f.id)) {
         const dx = t.x - sx, dy = t.y - sy, along = dx * c + dy * s, perp = Math.abs(-dx * s + dy * c);
-        if (along > -t.r && along < len + t.r && perp < t.r + 9) hurt(t, 140, { by: f.id, a, kb: 130, stun: 0.3, kind: 'pb' });
+        if (along > -t.r && along < len + t.r && perp < t.r + 9) hurt(t, 140, { by: f.id, a, kb: 130, kind: 'pb' });
       }
       fx(['pb', r1(sx), r1(sy), r2(a), r1(len)]);
     }
@@ -920,7 +919,7 @@ const ACTS = {
       f.vx = Math.cos(a) * 1800; f.vy = Math.sin(a) * 1800;
       for (const t of targets(f.id)) {
         if (dist(t, f) > t.r + FR + 12) continue;
-        if (!hurt(t, 380, { by: f.id, a, kb: 420, stun: 1, ub: true, gb: true, kind: 'ss' })) continue;
+        if (!hurt(t, 380, { by: f.id, a, kb: 420, ub: true, gb: true, kind: 'ss' })) continue;
         f.hitDone = true; f.vx = f.vy = 0;
         fx(['ss', r1(t.x), r1(t.y), r2(a), f.id]);
         break;
@@ -939,7 +938,7 @@ const ACTS = {
       for (const t of targets(f.id)) {
         if (f.hitL.includes(t.id) || dist(t, f) > t.r + FR + 22) continue;
         f.hitL.push(t.id);
-        if (hurt(t, 110, { by: f.id, a, kb: 160, stun: 0.45, kind: 'nue' })) fx(['zap', r1(t.x), r1(t.y)]);
+        if (hurt(t, 110, { by: f.id, a, kb: 160, kind: 'nue' })) fx(['zap', r1(t.x), r1(t.y)]);
       }
       return;
     }
@@ -958,7 +957,7 @@ const ACTS = {
       f.vx = Math.cos(a) * 820; f.vy = Math.sin(a) * 820;
       for (const t of targets(f.id)) {
         if (dist(t, f) > t.r + f.r + 10) continue;
-        if (!hurt(t, 50, { by: f.id, a, kb: 120, stun: 0.35, kind: 'cu' })) continue;
+        if (!hurt(t, 50, { by: f.id, a, kb: 120, kind: 'cu' })) continue;
         f.hitDone = true; f.vx *= 0.2; f.vy *= 0.2;
         break;
       }
@@ -971,7 +970,7 @@ const ACTS = {
     f.vx *= 0.8; f.vy *= 0.8;
     if (!f.hitDone && f.actT >= SLAM.wind) {
       f.hitDone = true;
-      for (const t of targets(f.id)) if (dist(t, f) < SLAM.r + t.r) hurt(t, SLAM.dmg, { by: f.id, a: ang(f, t), kb: 240, stun: 0.6, kind: 'cu' });
+      for (const t of targets(f.id)) if (dist(t, f) < SLAM.r + t.r) hurt(t, SLAM.dmg, { by: f.id, a: ang(f, t), kb: 240, kind: 'cu' });
       fx(['smash', r1(f.x), r1(f.y)]);
     }
     if (f.actT >= SLAM.wind + 0.35) f.act = '';
@@ -1053,10 +1052,10 @@ function dash(f) {
   f.iframe = Math.max(f.iframe, 0.16); f.cd.d = cdOf(f.ch, 'd');
   fx(['dash', r1(f.x), r1(f.y), r2(f.actA)]);
 }
-// a press that cannot happen yet (stunned, mid-move) waits briefly; one on cooldown is dropped
+// a press that cannot happen yet (mid-move) waits briefly; one on cooldown is dropped
 function tryMove(f, k) {
   if (f.cd[k] > 0 || (k === 'u' && (f.ult < 100 || !RULES.ults))) return true;
-  if (f.stun > 0 || S.phase !== 'play') return false;
+  if (S.phase !== 'play') return false;
   if (k === 'd') { if (f.act && f.act !== 'swing' && f.act !== 'cast') return false; dash(f); return true; }
   if (k === 'r') { f.heal = 2.5; f.cd.r = cdOf(f.ch, 'r'); fx(['heal', f.id]); return true; }
   if (f.act) return false;
@@ -1080,7 +1079,7 @@ function meleeHit(f) {
     const d = dist(f, t) - t.r - FR;
     if (d > C.reach - FR + 4) continue;
     if (Math.abs(angD(a, ang(f, t))) > 0.96 && d > 4) continue;
-    hurt(t, C.m1[f.combo], { by: f.id, a: ang(f, t), kb: fin ? (C.curse ? 120 : 230) : 25, stun: fin ? 0.55 : 0.38, kind: C.curse ? 'cu' : 'm1' });
+    hurt(t, C.m1[f.combo], { by: f.id, a: ang(f, t), kb: fin ? (C.curse ? 120 : 230) : 25, kind: C.curse ? 'cu' : 'm1' });
   }
 }
 function control(f, dt) {
@@ -1089,17 +1088,19 @@ function control(f, dt) {
   f.fresh = false;
   if (!f.alive) return;
   if (!LOCKED(f)) f.aim = Number.isFinite(inp.aim) ? inp.aim : f.aim;
-  f.blk = !!inp.blk && f.stun <= 0 && !f.act && f.guard > 0 && S.phase === 'play';
+  f.blk = !!inp.blk && !f.act && f.guard > 0 && S.phase === 'play';
   if (f.buf) { if (tryMove(f, f.buf)) f.buf = null; else if ((f.bufT -= dt) <= 0) f.buf = null; }
-  if (inp.m1 && !f.blk && f.stun <= 0 && !f.act && f.swCd <= 0 && S.phase === 'play') startSwing(f);
+  if (inp.m1 && !f.blk && !f.act && f.swCd <= 0 && S.phase === 'play') startSwing(f);
 }
 function guardBreak(t) {
-  t.guard = 0; t.gdT = 1.8; t.blk = false; t.stun = Math.max(t.stun, 1);
+  t.guard = 0; t.gdT = 1.8; t.blk = false;
   fx(['gb', r1(t.x), r1(t.y)]);
 }
 const KIND_CODE = { m1: 0, bf: 1, pb: 2, dis: 3, ss: 4, nue: 5, rab: 6, ele: 7, maho: 8, wall: 9, cu: 10 };
-// o: by (attacker's fighter id), a (direction of the hit), kb (push in units), stun (s), kind,
-// gb (breaks a block), ub (ignores a block), fixed (a block does not shrink it)
+// o: by (attacker's fighter id), a (direction of the hit), kb (push in units), kind, gb (breaks a
+// block), ub (ignores a block), fixed (a block does not shrink it). There are no stuns: a hit never
+// stops what you are doing. A hard one knocks you back, and for t.push s you slide instead of
+// walking (until you are no faster than a walk), though you can still attack, block, dash or cast.
 function hurt(t, dmg, o) {
   dmg *= RULES.dmg;
   const by = o.by != null ? byId(o.by) : null;
@@ -1119,9 +1120,10 @@ function hurt(t, dmg, o) {
   if (o.by != null && o.by !== t.id) { t.lastBy = o.by; t.lastT = S.time; if (o.kind !== 'maho') charge(by, dmg * ULT.deal); }
   charge(t, dmg * ULT.take);
   if (blocked) { if (o.a != null) { t.vx += Math.cos(o.a) * 90; t.vy += Math.sin(o.a) * 90; } }
-  else if (!(t.act && ACTS[t.act].armor)) {
-    if (o.stun) { t.stun = Math.max(t.stun, o.stun); t.act = ''; }
-    if (o.kb && o.a != null) { const kb = o.kb * (CHARS[t.ch].kbm || 1) * KB; t.vx = Math.cos(o.a) * kb; t.vy = Math.sin(o.a) * kb; }
+  else if (!(t.act && ACTS[t.act].armor) && o.kb && o.a != null) {
+    const kb = o.kb * (CHARS[t.ch].kbm || 1) * KB;
+    t.vx = Math.cos(o.a) * kb; t.vy = Math.sin(o.a) * kb;
+    t.push = Math.max(t.push, Math.log(Math.max(1, kb / 250)) / KB);
   }
   fx(['h', r1(t.x), r1(t.y), dmg, KIND_CODE[o.kind] || 0, blocked ? 1 : 0, t.id]);
   if (t.hp <= 0) die(t);
@@ -1130,7 +1132,7 @@ function hurt(t, dmg, o) {
 // Points change hands here: a sorcerer who kills a curse gains CURSE_PTS; one who kills a sorcerer
 // takes everything the victim carried, plus 1. A sorcerer dies with nothing either way.
 function die(t) {
-  Object.assign(t, { alive: false, hp: 0, resp: RULES.resp, act: '', heal: 0, blk: false, stun: 0, vx: 0, vy: 0 });
+  Object.assign(t, { alive: false, hp: 0, resp: RULES.resp, act: '', heal: 0, blk: false, push: 0, vx: 0, vy: 0 });
   const by = t.lastBy != null && S.time - t.lastT < CREDIT_T ? byId(t.lastBy) : null;
   const k = by && by !== t && !cursed(by) ? by : null, vc = cursed(t), lost = vc ? 0 : t.pts;
   let gain = 0;
@@ -1168,7 +1170,7 @@ const MAHO = { hp: 3600, r: 34, spd: 255, dmg: 110 };
 function spawnMaho(x, y, aim, own) {
   const m = { isM: true, id: 1e6 + S.nid++, own, x, y, vx: 0, vy: 0,
     aim, hp: MAHO.hp, r: MAHO.r, spins: 0, adapt: [], mode: 'rise', mt: 0, cd: 0, lcd: 0, pc: 0,
-    tg: null, rt: 0, stun: 0, hitDone: false, px: 0, py: 0, rx: 0, ry: 0, ra: 0, flash: 0 };
+    tg: null, rt: 0, push: 0, hitDone: false, px: 0, py: 0, rx: 0, ry: 0, ra: 0, flash: 0 };
   collide(m, m.r);
   m.px = m.rx = m.x; m.py = m.ry = m.y;
   S.maho.push(m);
@@ -1190,7 +1192,7 @@ function hurtMaho(m, dmg, o) {
   if (o.by != null && o.by !== m.own) charge(byId(o.by), dmg * ULT.deal);
   fx(['h', r1(m.x), r1(m.y), dmg, KIND_CODE[k] || 0, adapted ? 2 : 0, m.id]);
   if (!adapted && k !== 'wall') { m.adapt.push(k); spinWheel(m); }
-  if ((k === 'bf' || k === 'ss') && o.a != null) { m.stun = 0.35; m.vx = Math.cos(o.a) * 400; m.vy = Math.sin(o.a) * 400; }
+  if ((k === 'bf' || k === 'ss') && o.a != null) { m.push = 0.35; m.vx = Math.cos(o.a) * 400; m.vy = Math.sin(o.a) * 400; }
   if (m.hp <= 0) { const by = byId(o.by); event(['N', (by ? by.name : 'Someone') + ' exorcised Mahoraga!']); }
   return true;
 }
@@ -1216,7 +1218,7 @@ function updMaho(dt) {
     if (m.cd > 0) m.cd -= dt;
     if (m.lcd > 0) m.lcd -= dt;
     if (m.hp <= 0) { m.dead = true; fx(['mgone', r1(m.x), r1(m.y)]); continue; }
-    if (m.stun > 0) { m.stun -= dt; const k = Math.exp(-KB * dt); m.vx *= k; m.vy *= k; mmove(m, dt); continue; }
+    if (m.push > 0) { m.push -= dt; const k = Math.exp(-KB * dt); m.vx *= k; m.vy *= k; mmove(m, dt); continue; }
     if (m.mode === 'rise') { m.vx = m.vy = 0; if (m.mt >= 0.7) { m.mode = 'kick'; m.mt = 0; } continue; }
     if (m.mode === 'kick') {
       const o = byId(m.own);
@@ -1224,7 +1226,7 @@ function updMaho(dt) {
       const a = ang(m, o);
       m.aim = a;
       if (dist(m, o) < m.r + FR + 14) {
-        if (hurt(o, 60, { by: m.own, a, kb: 350, stun: 0.6, ub: true, kind: 'maho' })) fx(['kick', r1(o.x), r1(o.y), r2(a)]);
+        if (hurt(o, 60, { by: m.own, a, kb: 350, ub: true, kind: 'maho' })) fx(['kick', r1(o.x), r1(o.y), r2(a)]);
         m.mode = 'hunt'; m.mt = 0; m.cd = 0.9; m.vx = m.vy = 0;
       } else { m.vx = Math.cos(a) * 560; m.vy = Math.sin(a) * 560; }
       mmove(m, dt); continue;
@@ -1237,7 +1239,7 @@ function updMaho(dt) {
         for (const t of targets(m.id)) {
           const d = dist(m, t) - t.r - m.r;
           if (d > 62 || (Math.abs(angD(m.aim, ang(m, t))) > 0.95 && d > 6)) continue;
-          if (hurt(t, MAHO.dmg * (1 + 0.2 * Math.min(5, m.spins)), { by: m.own, a: ang(m, t), kb: 170, stun: 0.45, kind: 'maho' })) any = true;
+          if (hurt(t, MAHO.dmg * (1 + 0.2 * Math.min(5, m.spins)), { by: m.own, a: ang(m, t), kb: 170, kind: 'maho' })) any = true;
         }
         fx(['snd', 'swing', r1(m.x), r1(m.y)]);
         if (any) { spinWheel(m); fx(['snd', 'kick', r1(m.x), r1(m.y)]); }
@@ -1275,12 +1277,12 @@ function updMaho(dt) {
 const SHOT = [{ spd: 1500, range: 760, w: 12 }, { spd: 640, range: 640, w: 10 }];
 function shotHit(b, t) {
   if (b.k === 1) {
-    if (!hurt(t, 55, { by: b.own, a: b.a, kb: 60, stun: 0.2, kind: 'cu' })) return false;
+    if (!hurt(t, 55, { by: b.own, a: b.a, kb: 60, kind: 'cu' })) return false;
     if (!t.isM) t.slow = Math.max(t.slow, 1.4);
     fx(['bile', r1(t.x), r1(t.y)]);
     return true;
   }
-  if (!hurt(t, 100, { by: b.own, a: b.a, kb: 90, stun: 0.25, fixed: true, kind: 'dis' })) return false;
+  if (!hurt(t, 100, { by: b.own, a: b.a, kb: 90, fixed: true, kind: 'dis' })) return false;
   fx(['dsh', r1(t.x), r1(t.y), r2(b.a)]);
   return true;
 }
@@ -1306,7 +1308,7 @@ function updEle(dt) {
     if (was < 0 && e.t >= 0) {
       for (const t of targets(e.own)) {
         const d = Math.hypot(t.x - e.x, t.y - e.y);
-        if (d < 120 + t.r) hurt(t, 170, { by: e.own, a: Math.atan2(t.y - e.y, t.x - e.x), kb: 260, stun: 0.55, kind: 'ele' });
+        if (d < 120 + t.r) hurt(t, 170, { by: e.own, a: Math.atan2(t.y - e.y, t.x - e.x), kb: 260, kind: 'ele' });
       }
       fx(['ele', e.x, e.y]);
     }
@@ -1324,7 +1326,7 @@ function updRabbits(dt) {
     if (!r.burst && r.t >= r.T) {
       r.burst = true;
       for (const t of targets(r.own)) {
-        if (Math.hypot(t.x - r.x, t.y - r.y) < RAB.r + t.r) hurt(t, RAB.dmg, { by: r.own, a: Math.atan2(t.y - r.y, t.x - r.x), kb: 120, stun: 0.35, kind: 'rab' });
+        if (Math.hypot(t.x - r.x, t.y - r.y) < RAB.r + t.r) hurt(t, RAB.dmg, { by: r.own, a: Math.atan2(t.y - r.y, t.x - r.x), kb: 120, kind: 'rab' });
       }
       fx(['rabb', r.x, r.y, r.a]);
     }
@@ -1345,7 +1347,7 @@ function updFighter(f, dt) {
   control(f, dt);
   if (!f.alive) { if (S.phase === 'play' && (f.resp -= dt) <= 0) respawn(f); return; }
   for (const k of KEYS) if (f.cd[k] > 0) f.cd[k] = Math.max(0, f.cd[k] - dt);
-  if (f.stun > 0) f.stun = Math.max(0, f.stun - dt);
+  if (f.push > 0) f.push = Math.max(0, f.push - dt);
   if (f.iframe > 0) f.iframe -= dt;
   if (f.prot > 0) f.prot -= dt;
   if (f.slow > 0) f.slow -= dt;
@@ -1358,7 +1360,7 @@ function updFighter(f, dt) {
   if (f.act) { f.actT += dt; ACTS[f.act].step(f, dt); }
   const A = f.act ? ACTS[f.act] : null;
   if (A && A.lock) { /* the action set the velocity */ }
-  else if (f.stun > 0) { const k = Math.exp(-KB * dt); f.vx *= k; f.vy *= k; }
+  else if (f.push > 0) { const k = Math.exp(-KB * dt); f.vx *= k; f.vy *= k; }
   else {
     let mx = f.inp.mx, my = f.inp.my;
     const l = Math.hypot(mx, my);
@@ -1373,7 +1375,7 @@ function updFighter(f, dt) {
     const into = -(f.vx * c.nx + f.vy * c.ny);
     if (into > 0) {
       // knocked into a wall hard: extra damage
-      if (f.stun > 0 && into > 650 && f.slamT <= 0 && S.time - f.lastT < 1) {
+      if (f.push > 0 && into > 650 && f.slamT <= 0 && S.time - f.lastT < 1) {
         f.slamT = 0.8;
         fx(['slam', r1(f.x - c.nx * f.r), r1(f.y - c.ny * f.r)]);
         hurt(f, 40, { by: f.lastBy, kind: 'wall' });
@@ -1451,7 +1453,7 @@ function curseThink(f, ai, t) {
   const lead = (s) => ({ x: t.x + t.vx * s * D.lead, y: t.y + t.vy * s * D.lead });
   const aimAt = (p) => Math.atan2(p.y - f.y, p.x - f.x) + rnd(-D.aimErr, D.aimErr);
   inp.aim = aimAt(lead(0.08)); inp.ad = d;
-  if (f.cd.q <= 0 && !f.act && f.stun <= 0 && d >= C.q[0] && d <= C.q[1] && Math.random() < D.use) {
+  if (f.cd.q <= 0 && !f.act && d >= C.q[0] && d <= C.q[1] && Math.random() < D.use) {
     inp.aim = aimAt(lead(f.ch === 'spitter' ? 0.3 + d / SHOT[1].spd : 0.25)); inp.q++;
   }
   inp.m1 = d < t.r + C.reach + 6 && Math.random() < D.m1;
@@ -1512,7 +1514,7 @@ function think(f, ai) {
   const aimAt = (p) => Math.atan2(p.y - f.y, p.x - f.x) + rnd(-D.aimErr, D.aimErr);
   inp.aim = aimAt(lead(0.08)); inp.ad = d;
   if (d < 130 && (t.act === 'swing' || (t.act === 'nue' && t.actT < 0.15)) && Math.abs(angD(t.aim, ang(t, f))) < 0.9 && Math.random() < D.block) ai.blkT = 0.5;
-  const ready = (k) => (k === 'u' ? f.ult >= 100 && RULES.ults : f.cd[k] <= 0) && !f.act && f.stun <= 0 && Math.random() < D.use;
+  const ready = (k) => (k === 'u' ? f.ult >= 100 && RULES.ults : f.cd[k] <= 0) && !f.act && Math.random() < D.use;
   const own = S.maho.find((m) => m.own === f.id);
   if (see) {
     if (f.ch === 'yuji') {
@@ -1938,8 +1940,7 @@ function arms(f, sleeve) {
   let L = [8, -14], R = [8, 14];
   const sway = f.alive ? Math.sin(f.walk) * 4 * Math.min(1, f.spd / 120) : 0;
   L[0] += sway; R[0] -= sway;
-  if (f.stun > 0 && !act) { const w = Math.sin(T * 30) * 4; L = [2 + w, -17]; R = [2 - w, 17]; }
-  else if (act === 'swing') {
+  if (act === 'swing') {
     const fin = f.combo === 3, dur = fin ? 0.42 : 0.3, p = clamp(t / dur, 0, 1);
     const ext = p < 0.32 ? p / 0.32 : 1 - (p - 0.32) / 0.68;
     const side = f.combo % 2 ? -1 : 1, fist = [8 + ext * (fin ? 26 : 20), side * (14 - ext * 10)];
@@ -2006,10 +2007,6 @@ function drawFighter(f) {
     g.strokeStyle = `rgba(143,182,255,${0.45 + 0.4 * f.guard / 100})`; g.lineWidth = 4;
     g.beginPath(); g.arc(x, y, 35, a - 1.15, a + 1.15); g.stroke();
   }
-  if (f.stun > 0.15 && !f.act) {
-    g.fillStyle = '#ffe14d';
-    for (let i = 0; i < 3; i++) { const t = T * 6 + i * TAU / 3; circ(x + Math.cos(t) * 15, y - 6 + Math.sin(t) * 7, 2.6); }
-  }
   if (f.act === 'ss' && f.actT < f.actD) {
     g.strokeStyle = `rgba(191,234,255,${0.4 + 0.4 * Math.sin(T * 40)})`; g.lineWidth = 3;
     g.beginPath(); g.arc(x, y, 26 + f.actT * 30, 0, TAU); g.stroke();
@@ -2029,10 +2026,6 @@ function drawCurse(f) {
   if (f.ch === 'fly') drawFly(f, f.actT); else if (f.ch === 'spitter') drawSpitter(f, f.actT); else drawBrute(f, f.actT);
   g.restore(); g.globalAlpha = 1;
   if (f.flash > 0) { g.globalAlpha = f.flash * 0.55; g.fillStyle = '#fff'; circ(x, y, r + 5); g.globalAlpha = 1; }
-  if (f.stun > 0.15 && !f.act) {
-    g.fillStyle = '#ffe14d';
-    for (let i = 0; i < 3; i++) { const q = T * 6 + i * TAU / 3; circ(x + Math.cos(q) * (r + 2), y - 6 + Math.sin(q) * 7, 2.4); }
-  }
 }
 function drawFly(f, t) {
   const flap = Math.sin(T * 80 + f.id * 3), bite = f.act === 'pounce' && t >= 0.22;
@@ -3216,8 +3209,8 @@ let peer = null, nextId = 1, snapT = 0, inT = 0, lastSent = '', helloT = 0;
 // dec(), so the two sides cannot drift. Types: 1 / 2 = rounded to 1 or 2 decimals, s = string,
 // b = boolean, B = bot or not, c = the cooldown table, none = a plain value.
 const SPEC = {
-  f: 'id name:s ch:s nch:s bot:B x:1 y:1 vx:1 vy:1 aim:2 hp:1 alive:b resp:2 prot:2 guard:1 gdT:2 blk:b stun:2 iframe:2 slow:2 heal:2 slamT:2 act:s actT:2 actA:2 actD:2 lk hitDone:b hitL combo comboT:2 swCd:2 cd:c ult:1 pts kills deaths lastBy lastT:2',
-  m: 'id own x:1 y:1 vx:1 vy:1 aim:2 hp:1 spins adapt mode:s mt:2 cd:2 lcd:2 tg rt:2 stun:2 hitDone:b pc',
+  f: 'id name:s ch:s nch:s bot:B x:1 y:1 vx:1 vy:1 aim:2 hp:1 alive:b resp:2 prot:2 guard:1 gdT:2 blk:b push:2 iframe:2 slow:2 heal:2 slamT:2 act:s actT:2 actA:2 actD:2 lk hitDone:b hitL combo comboT:2 swCd:2 cd:c ult:1 pts kills deaths lastBy lastT:2',
+  m: 'id own x:1 y:1 vx:1 vy:1 aim:2 hp:1 spins adapt mode:s mt:2 cd:2 lcd:2 tg rt:2 push:2 hitDone:b pc',
   e: 'id own x:1 y:1 t:2 a:2',
   r: 'id own x0:1 y0:1 x:1 y:1 a:2 t:2 T:2 burst:b nt:2',
   h: 'id own k x:1 y:1 a:2 d:1',
@@ -3796,7 +3789,7 @@ function applySnap(m) {
 // A joiner predicts its own walking and dashing with the host's numbers; everything else (hits,
 // knockback, the lunges of moves) comes from the host.
 const pred = { on: false, x: 0, y: 0, vx: 0, vy: 0, ox: 0, oy: 0, hist: [], dashT: 0, dashA: 0, dSeen: 0, acc: 0 };
-const predFree = (me) => me.alive && me.stun <= 0 && S.phase === 'play' && (!me.act || me.act === 'dash' || !ACTS[me.act].lock);
+const predFree = (me) => me.alive && me.push <= 0 && S.phase === 'play' && (!me.act || me.act === 'dash' || !ACTS[me.act].lock);
 function predStep(me, dt) {
   const inp = me.inp;
   if (pred.dashT > 0) {
@@ -3859,7 +3852,7 @@ function joinTick(dt) {
     f.ra = f.ra + angD(f.ra, f.aim) * k;
     if (f.act) f.actT += dt;
     for (const q of KEYS) if (f.cd[q] > 0) f.cd[q] = Math.max(0, f.cd[q] - dt);
-    for (const q of ['stun', 'prot', 'resp', 'heal', 'iframe', 'slow']) if (f[q] > 0) f[q] = Math.max(0, f[q] - dt);
+    for (const q of ['push', 'prot', 'resp', 'heal', 'iframe', 'slow']) if (f[q] > 0) f[q] = Math.max(0, f[q] - dt);
   }
   for (const m of S.maho) {
     m.x += m.vx * dt; m.y += m.vy * dt; m.mt += dt;

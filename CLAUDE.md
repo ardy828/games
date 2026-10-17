@@ -612,15 +612,17 @@ mouse, touch), screens, multiplayer, main loop.
   ids from 1e6, humans the host's or the server's.
 - **Input** is `f.inp`: move vector, `aim` (radians), `ad` (distance to the cursor, for moves that
   land where you point), `m1`/`blk` held, and a press *counter* per key, so a lost packet cannot eat a
-  press. `control()` turns counter changes into presses, buffered for 0.3 s while stunned or busy.
+  press. `control()` turns counter changes into presses, buffered for 0.3 s while busy.
 - **Actions**: `ACTS` is what a fighter is busy doing (`swing`, `dash`, `cast`, `bf`, `pb`, `ss`,
   `nue`, `summon`, and the curses' `pounce`, `slam`, `spit`), each a `step(f)` over `f.actT`. `lock` means the action drives the velocity,
   `slow` scales walking while it runs, `armor` means hits damage but do not interrupt. `MOVES[ch][k]`
   starts one and returns `false` to refuse (Mahoraga already out).
 - **`hurt(t, dmg, o)`** is the only way damage happens: `o.by` (attacker's fighter id; Mahoraga's hits
   use his owner's), `o.a` (direction, which decides blocking: front 150°), `kb` in units (velocity is
-  `kb * KB`, decaying at `KB`), `stun`, `kind` (for Mahoraga's adaptation), `gb` breaks a block, `ub`
-  ignores it, `fixed` is not reduced by it (Dismantle). A stun cancels the current action. Kill credit
+  `kb * KB`, decaying at `KB`), `kind` (for Mahoraga's adaptation), `gb` breaks a block, `ub` ignores
+  it, `fixed` is not reduced by it (Dismantle). **There are no stuns**: a hit never cancels an action
+  or stops input. A hard knockback sets `f.push` (until the slide is down to walking speed), during
+  which the fighter slides instead of walking but can still attack, block, dash and cast. Kill credit
   goes to `lastBy` within `CREDIT_T` s; your own Mahoraga never earns kills on you. A target's
   `CHARS[ch].kbm` scales knockback.
 - **Mahoraga** (`updMaho`, modes `rise kick hunt swing lunge`) kicks his summoner first, then hunts
