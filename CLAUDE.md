@@ -49,7 +49,7 @@ lying down.
 menus and HUD, Google Fonts, save in `localStorage` (`bonk-arena-save-v1`). Like Scrapline it injects
 PeerJS only when the player hosts or joins; see "Bonk Arena architecture" below.
 
-`jujutsu/index.html` (Jujutsu Arena, ~4000 lines) is a top-down brawler in modern syntax: canvas world,
+`jujutsu/index.html` (Jujutsu Arena, ~4250 lines) is a top-down brawler in modern syntax: canvas world,
 DOM menus and HUD, Google Fonts, save in `localStorage` (`jujutsu-arena-save-v1`). It injects PeerJS
 for private parties and opens a WebSocket to its own server for PLAY ONLINE; `jujutsu/server/` is that
 server, a Cloudflare Worker deployed from this repository (not served by Pages). See "Jujutsu Arena
@@ -564,7 +564,7 @@ One IIFE, sections in this order: save, skins, tuning, canvas, audio, drawing ba
 
 ## Jujutsu Arena architecture
 
-Free-for-all on a city map: Yuji or Megumi against each other and the cursed spirits, first to
+Free-for-all on a city map: Yuji, Megumi or Nobara against each other and the cursed spirits, first to
 `toWin` points, respawns after `RULES.resp` s. One IIFE, sections in this order: save, tuning, canvas,
 audio, city, the match (sim), bots and curses, effects, rendering, minimap, HUD, input (keyboard,
 mouse, touch), screens, multiplayer, main loop.
@@ -578,7 +578,10 @@ mouse, touch), screens, multiplayer, main loop.
   body radius, `sw` swing-time factor, `kbm` knockback taken, `q` range for their one move, `want`
   distance kept), `cursed(f)` tests a fighter. They are fighters in `S.f` with `ctl: 'bot'`, made by
   `addCurse()`, steered by `curseThink()` (sorcerers only; no block, dodge or heal), and come back as a
-  random `CURSE_MIX` kind. `hurt()` refuses a curse's hit on another curse or on Mahoraga. Their moves
+  random `CURSE_MIX` kind. Adding a sorcerer means a `CHARS` row, `SORCERERS`, `ACTS`/`MOVES`, a
+  `think()` branch, `AIM_LEN` (every move needs an entry or its touch button never fires), a `drawFighter()`
+  look, a `CUTS` panel, the death screen's swap button, and an allow flag in `RULES0`/`cleanRules()`
+  (both copies) and the admin page's `FIELDS`. `hurt()` refuses a curse's hit on another curse or on Mahoraga. Their moves
   are `ACTS.pounce`, `slam` (`SLAM`, telegraphed ring) and `spit` (bile is a shot with `k: 1` in
   `S.sh`; `SHOT` holds each shot kind's speed and range). `SORCERERS` lists the playable two; a
   joiner's character is validated against it. Sorcerer bots (`addBot()`) only play the menu's demo and
@@ -597,6 +600,8 @@ mouse, touch), screens, multiplayer, main loop.
   `drawCutin()` clears and hides it when none plays; `paintCutin()` draws the slanted neon bands, rain
   and speed lines, the title, and the figure (`cutYuji`, `cutMegumi`) in panel units. The figures use
   the game's own flat style (`hair()`, `limb()`, ellipses and circles, no outlines and no faces).
+  `CUTS` holds each kind's colours, titles and figure (`cutYuji`, `cutMegumi`, `cutNobara`); Nobara's
+  panel rains nails.
   Banners wait for a cut-in to finish (`cutLeft()`).
 - **Rules**: `RULES` (`RULES0` defaults, `cleanRules()` to validate) holds points to win, round time,
   rounds on/off (off = endless), break, respawn, cursed spirits per room and their skill, multipliers (`dmg`, `hp`,
@@ -608,13 +613,13 @@ mouse, touch), screens, multiplayer, main loop.
 - **`S` is the whole match** and is plain data: entities refer to each other by id, never by reference
   (`own`, `tg`, `lastBy`, `hitL`), so a snapshot can carry all of it and any joiner can take over as
   host. `S.f` fighters (curses included), `S.maho` Mahoraga, `S.ele` Max Elephants, `S.rab` Rabbit
-  Escape swarms, `S.sh` shots (Dismantle slashes and bile). Bots and curses have negative ids, Mahoraga
+  Escape swarms, `S.sh` shots (Dismantle slashes, bile and Nobara's nails), `S.rn` Raining Nails. Bots and curses have negative ids, Mahoraga
   ids from 1e6, humans the host's or the server's.
 - **Input** is `f.inp`: move vector, `aim` (radians), `ad` (distance to the cursor, for moves that
   land where you point), `m1`/`blk` held, and a press *counter* per key, so a lost packet cannot eat a
   press. `control()` turns counter changes into presses, buffered for 0.3 s while busy.
 - **Actions**: `ACTS` is what a fighter is busy doing (`swing`, `dash`, `cast`, `bf`, `pb`, `ss`,
-  `nue`, `summon`, and the curses' `pounce`, `slam`, `spit`), each a `step(f)` over `f.actT`. `lock` means the action drives the velocity,
+  `nue`, `summon`, `nail`, `res`, `pin`, `rain`, and the curses' `pounce`, `slam`, `spit`), each a `step(f)` over `f.actT`. `lock` means the action drives the velocity,
   `slow` scales walking while it runs, `armor` means hits damage but do not interrupt. `MOVES[ch][k]`
   starts one and returns `false` to refuse (Mahoraga already out).
 - **`hurt(t, dmg, o)`** is the only way damage happens: `o.by` (attacker's fighter id; Mahoraga's hits
@@ -630,6 +635,12 @@ mouse, touch), screens, multiplayer, main loop.
   until killed, and `newMatch()` clears `S.maho`. `hurtMaho()` adapts: the first hit of each
   `kind` spins the wheel and later ones take 60% less; each punch he lands spins it and adds 20%
   damage (up to five spins). He punches with alternate fists (`pc` counts punches for the drawing).
+- **Nobara**: her nails (`SHOT` kind 2, `NAIL`) and Raining Nails (`RAIN`, entities in `S.rn`, spawned by
+  `rainNail()` while `f.rain` runs and landed by `updRain()`) call `embed()`, which pushes her id onto
+  the target's `nl` (fighters and Mahoraga; `nailsIn()` draws them). Every hit she lands goes through
+  `mark()` in `hurt()`, keeping her `f.rm` (a flat list: target id, time the mark ends; `marked()`
+  reads it, `die()` strips the dead). `ACTS.res` (Resonance) hurts everyone `marked()`, `hairpin()`
+  bursts her nails (`PIN.base + PIN.per` per nail) and removes them. `nl`, `rm` and `rain` are synced.
 - **Rabbit Escape** is one entity per cast, not one per rabbit: the swarm runs from `x0,y0` to `x,y`
   over `T` s, bursts (`RAB.dmg` in `RAB.r`), then nibbles and slows for `RAB.linger` s. Each rabbit's
   path is worked out from the entity in `drawSwarm()`.

@@ -173,12 +173,13 @@
 const $ = (id) => document.getElementById(id);
 const KEY_STORE = 'jujutsu-arena-admin-key';
 const ROOMS = ['pub-1', 'pub-2', 'pub-3', 'pub-4'];
-const DEFAULTS = { rounds: true, points: 20, time: 0, brk: 7, resp: 4, curses: 6, skill: 1, dmg: 1, cd: 1, ur: 1, spd: 1, hp: 1, yuji: true, megumi: true, ults: true };
+const DEFAULTS = { rounds: true, points: 20, time: 0, brk: 7, resp: 4, curses: 6, skill: 1, dmg: 1, cd: 1, ur: 1, spd: 1, hp: 1, yuji: true, megumi: true, nobara: true, ults: true };
 const FIELDS = [
   { k: 'rounds', t: 'bool', n: 'Rounds', h: 'Off: one endless free-for-all with no winner' },
   { k: 'ults', t: 'bool', n: 'Ultimates allowed' },
   { k: 'yuji', t: 'bool', n: 'Yuji allowed' },
   { k: 'megumi', t: 'bool', n: 'Megumi allowed' },
+  { k: 'nobara', t: 'bool', n: 'Nobara allowed' },
   { k: 'points', t: 'num', n: 'Points to win', min: 0, max: 200, step: 1, h: '0 = no points limit. A curse is worth 1; a kill takes the victim\'s points + 1' },
   { k: 'time', t: 'num', n: 'Round time (minutes)', min: 0, max: 30, step: 0.5, h: '0 = no time limit; when time runs out, most points wins' },
   { k: 'brk', t: 'num', n: 'Break between rounds (s)', min: 3, max: 30, step: 1 },
@@ -201,8 +202,9 @@ const PRESETS = [
   ['Curse swarm', { curses: 10 }],
   ['No curses', { curses: 0 }],
   ['Endless', { rounds: false }],
-  ['Yuji only', { yuji: true, megumi: false }],
-  ['Megumi only', { yuji: false, megumi: true }],
+  ['Yuji only', { yuji: true, megumi: false, nobara: false }],
+  ['Megumi only', { yuji: false, megumi: true, nobara: false }],
+  ['Nobara only', { yuji: false, megumi: false, nobara: true }],
 ];
 const EVENTS = [
   ['heal', '反転', 'Heal everyone', 'Full health for every fighter'],
@@ -397,7 +399,7 @@ function putRules() {
 function fillRules(r) { rules = { ...DEFAULTS, ...(r || {}) }; putRules(); dirty = false; $('dirty').hidden = true; }
 function changed() { dirty = true; $('dirty').hidden = false; }
 $('saveRules').onclick = async () => {
-  if (!rules.yuji && !rules.megumi) { toast('At least one fighter has to be allowed.', true); return; }
+  if (!rules.yuji && !rules.megumi && !rules.nobara) { toast('At least one fighter has to be allowed.', true); return; }
   try {
     const j = await api('rules', { rules });
     fillRules(j.rules);
@@ -411,6 +413,7 @@ function describe(r) {
   if (!r.ults) out.push('no ultimates');
   if (!r.yuji) out.push('no Yuji');
   if (!r.megumi) out.push('no Megumi');
+  if (!r.nobara) out.push('no Nobara');
   out.push(r.curses + ' curses');
   return out.join(', ');
 }
