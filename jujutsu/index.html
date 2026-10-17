@@ -1004,12 +1004,12 @@ function newMatch() {
 // Mahoraga: rises from Megumi's shadow, kicks Megumi away, then hunts whoever is nearest and in
 // sight, Megumi included. Each move that hurts him for the first time spins the wheel and he
 // adapts to it (60% less from then on); every hit he lands spins it too, and each spin (up to five)
-// makes his sword hit 20% harder.
+// makes his punches hit 20% harder.
 const MAHO = { hp: 1200, r: 34, spd: 255, life: 16, dmg: 110 };
 function summonMaho(f) {
   const a = f.aim;
   const m = { isM: true, id: 1e6 + S.nid++, own: f.id, x: f.x + Math.cos(a) * 72, y: f.y + Math.sin(a) * 72, vx: 0, vy: 0,
-    aim: a + Math.PI, hp: MAHO.hp, r: MAHO.r, t: MAHO.life, spins: 0, adapt: [], mode: 'rise', mt: 0, cd: 0, lcd: 0,
+    aim: a + Math.PI, hp: MAHO.hp, r: MAHO.r, t: MAHO.life, spins: 0, adapt: [], mode: 'rise', mt: 0, cd: 0, lcd: 0, pc: 0,
     tg: null, rt: 0, stun: 0, hitDone: false, px: 0, py: 0, rx: 0, ry: 0, ra: 0, flash: 0 };
   collide(m, m.r);
   m.px = m.rx = m.x; m.py = m.ry = m.y;
@@ -1072,11 +1072,11 @@ function updMaho(dt) {
         let any = false;
         for (const t of targets(m.id)) {
           const d = dist(m, t) - t.r - m.r;
-          if (d > 64 || (Math.abs(angD(m.aim, ang(m, t))) > 1.2 && d > 6)) continue;
+          if (d > 62 || (Math.abs(angD(m.aim, ang(m, t))) > 0.95 && d > 6)) continue;
           if (hurt(t, MAHO.dmg * (1 + 0.2 * Math.min(5, m.spins)), { by: m.own, a: ang(m, t), kb: 170, stun: 0.45, kind: 'maho' })) any = true;
         }
         fx(['snd', 'swing', r1(m.x), r1(m.y)]);
-        if (any) spinWheel(m);
+        if (any) { spinWheel(m); fx(['snd', 'kick', r1(m.x), r1(m.y)]); }
       }
       if (m.mt >= 0.72) { m.mode = 'hunt'; m.mt = 0; m.cd = 0.5; }
       mmove(m, dt); continue;
@@ -1085,7 +1085,7 @@ function updMaho(dt) {
       m.vx = Math.cos(m.aim) * 1000; m.vy = Math.sin(m.aim) * 1000;
       let close = m.mt >= 0.28;
       for (const t of targets(m.id)) if (dist(m, t) < t.r + m.r + 34) close = true;
-      if (close) { m.mode = 'swing'; m.mt = 0; m.hitDone = false; m.vx *= 0.3; m.vy *= 0.3; }
+      if (close) { m.mode = 'swing'; m.mt = 0; m.hitDone = false; m.pc = (m.pc || 0) + 1; m.vx *= 0.3; m.vy *= 0.3; }
       mmove(m, dt); continue;
     }
     m.rt -= dt;
@@ -1095,7 +1095,7 @@ function updMaho(dt) {
     const d = dist(m, t), a = ang(m, t);
     if (d < 140 || (d < 820 && los(m, t))) {
       m.aim = a;
-      if (d < m.r + t.r + 52 && m.cd <= 0) { m.mode = 'swing'; m.mt = 0; m.hitDone = false; }
+      if (d < m.r + t.r + 52 && m.cd <= 0) { m.mode = 'swing'; m.mt = 0; m.hitDone = false; m.pc = (m.pc || 0) + 1; }
       else if (d > 170 && d < 340 && m.lcd <= 0) { m.mode = 'lunge'; m.mt = 0; m.lcd = 3; }
       else { m.vx = Math.cos(a) * MAHO.spd; m.vy = Math.sin(a) * MAHO.spd; }
     } else {
@@ -1766,8 +1766,9 @@ function drawFighter(f) {
   }
 }
 // The Ten Shadows shikigami, drawn from above after the anime: Nue, an orange owl-like bird with a white
-// skull mask and two sets of talons; the white rabbits of Rabbit Escape; Max Elephant, grey with yellow
-// markings on its forehead, head, back and knees; and Mahoraga, with the eight-handled wheel.
+// skull mask and two sets of talons; the white rabbits of Rabbit Escape; Max Elephant, pink with yellow
+// markings on its forehead, head, back and knees; and Mahoraga, who fights with his fists, has wings
+// where his eyes would be and the eight-handled wheel over his head.
 function feather(x, y, a, len, w, col) { g.fillStyle = col; g.beginPath(); g.ellipse(x + Math.cos(a) * len / 2, y + Math.sin(a) * len / 2, len / 2, w, a, 0, TAU); g.fill(); }
 function drawNue(f) {
   const x = f.rx, y = f.ry, a = f.actA, t = f.actT, dive = t < 0.1 ? 1 - t / 0.1 : 0, flap = Math.sin(T * 24);
@@ -1847,10 +1848,10 @@ function drawSwarm(r) {
 function drawElephant(x, y, a, s, alpha) {
   const Y = '#f0c33c';      // the markings: yellow in the anime, on its forehead, head, back and knees
   g.save(); g.translate(x, y); g.rotate(a); g.scale(s, s); g.globalAlpha = alpha;
-  for (const [lx, ly] of [[30, 42], [30, -42], [-34, 40], [-34, -40]]) { g.fillStyle = '#868c97'; ell(lx, ly, 14, 11); g.fillStyle = Y; ell(lx + 2, ly, 6, 5); }
-  g.fillStyle = '#7d838e'; g.beginPath(); g.moveTo(-60, 0); g.lineTo(-80, -5); g.lineTo(-80, 5); g.closePath(); g.fill();
-  g.fillStyle = '#979da8'; ell(0, 0, 64, 50);
-  g.fillStyle = '#aab0ba'; ell(-6, -6, 52, 34);
+  for (const [lx, ly] of [[30, 42], [30, -42], [-34, 40], [-34, -40]]) { g.fillStyle = '#c97890'; ell(lx, ly, 14, 11); g.fillStyle = Y; ell(lx + 2, ly, 6, 5); }
+  g.fillStyle = '#c27189'; g.beginPath(); g.moveTo(-60, 0); g.lineTo(-80, -5); g.lineTo(-80, 5); g.closePath(); g.fill();
+  g.fillStyle = '#de8ca4'; ell(0, 0, 64, 50);
+  g.fillStyle = '#eba2b7'; ell(-6, -6, 52, 34);
   // the markings along its back
   g.fillStyle = Y;
   g.beginPath(); g.moveTo(-46, 0); g.lineTo(-30, -9); g.lineTo(-14, 0); g.lineTo(-30, 9); g.closePath(); g.fill();
@@ -1858,16 +1859,16 @@ function drawElephant(x, y, a, s, alpha) {
   circ(-58, 0, 3);
   // ears
   for (const sd of [-1, 1]) {
-    g.fillStyle = '#8b919c'; g.beginPath(); g.ellipse(38, sd * 32, 20, 27, sd * 0.4, 0, TAU); g.fill();
-    g.fillStyle = '#9fa5b0'; g.beginPath(); g.ellipse(40, sd * 30, 12, 18, sd * 0.4, 0, TAU); g.fill();
+    g.fillStyle = '#d3829a'; g.beginPath(); g.ellipse(38, sd * 32, 20, 27, sd * 0.4, 0, TAU); g.fill();
+    g.fillStyle = '#e99db2'; g.beginPath(); g.ellipse(40, sd * 30, 12, 18, sd * 0.4, 0, TAU); g.fill();
   }
   // head, with the marks on its crown and forehead
-  g.fillStyle = '#a3a9b4'; ell(56, 0, 24, 22);
+  g.fillStyle = '#e898ae'; ell(56, 0, 24, 22);
   g.fillStyle = Y; ell(46, 0, 7, 10); g.beginPath(); g.moveTo(58, 0); g.lineTo(66, -6); g.lineTo(74, 0); g.lineTo(66, 6); g.closePath(); g.fill();
   g.fillStyle = '#1f1b16'; ell(62, -12, 3.2, 2, 0.4); ell(62, 12, 3.2, 2, -0.4);
   g.fillStyle = '#f7f2e3'; ell(78, -11, 11, 3.2, 0.35); ell(78, 11, 11, 3.2, -0.35);
   // the trunk, curling forward
-  g.strokeStyle = '#9ba1ac'; g.lineWidth = 12; g.lineCap = 'round';
+  g.strokeStyle = '#e293a9'; g.lineWidth = 12; g.lineCap = 'round';
   g.beginPath(); g.moveTo(74, 0); g.quadraticCurveTo(102, 0, 104, 18); g.stroke();
   g.strokeStyle = 'rgba(31,27,22,.3)'; g.lineWidth = 1.5; g.beginPath();
   for (const t of [0.25, 0.45, 0.65, 0.85]) { const px = lerp(74, 104, t), py = t * t * 18; g.moveTo(px - 4, py - 5); g.lineTo(px + 4, py + 5); }
@@ -1875,26 +1876,26 @@ function drawElephant(x, y, a, s, alpha) {
   g.restore(); g.globalAlpha = 1;
 }
 function drawMaho(m) {
-  const x = m.rx, y = m.ry, a = m.ra, rise = m.mode === 'rise' ? clamp(m.mt / 0.7, 0, 1) : 1;
+  const x = m.rx, y = m.ry, a = m.ra, rise = m.mode === 'rise' ? clamp(m.mt / 0.7, 0, 1) : 1, sc = 0.4 + 0.6 * rise;
   g.fillStyle = 'rgba(5,4,10,.55)'; ell(x, y + 6, 42 + (1 - rise) * 10, 32);
-  g.save(); g.translate(x, y); g.rotate(a); g.scale(0.4 + 0.6 * rise, 0.4 + 0.6 * rise); g.globalAlpha = 0.3 + 0.7 * rise;
-  // sword arm: swung across during an attack
-  let sw = 0.15;
-  if (m.mode === 'swing') { const p = clamp(m.mt / 0.34, 0, 1); sw = m.mt < 0.34 ? -1.1 * p : -1.1 + clamp((m.mt - 0.34) / 0.12, 0, 1) * 2.3; }
-  g.fillStyle = '#d9d2c3'; ell(0, -26, 11, 9); circ(12, -30, 9);
+  g.save(); g.translate(x, y); g.rotate(a); g.scale(sc, sc); g.globalAlpha = 0.3 + 0.7 * rise;
+  // fists: one punches with each attack, left and right in turn (-1 pulled back, 1 fully thrown)
+  const side = (m.pc || 0) % 2 ? 1 : -1;
+  let ext = 0;
+  if (m.mode === 'swing') ext = m.mt < 0.34 ? -m.mt / 0.34 : m.mt < 0.46 ? -1 + (m.mt - 0.34) / 0.12 * 2 : Math.max(0, 1 - (m.mt - 0.46) / 0.26);
+  g.lineCap = 'round';
+  for (const sd of [-1, 1]) {
+    const e = sd === side ? ext : 0, fx = 16 + (e > 0 ? e * 44 : e * 14), fy = sd * (30 - Math.max(0, e) * 20);
+    g.strokeStyle = '#d9d2c3'; g.lineWidth = 15; g.beginPath(); g.moveTo(2, sd * 22); g.lineTo(fx, fy); g.stroke();
+    g.fillStyle = '#ece6d8'; circ(fx, fy, 10.5);
+    g.strokeStyle = 'rgba(120,110,95,.55)'; g.lineWidth = 1.5;
+    g.beginPath(); for (const k of [-4, 0, 4]) { g.moveTo(fx + 6, fy + k); g.lineTo(fx + 9, fy + k); } g.stroke();
+  }
+  g.lineCap = 'butt';
   g.fillStyle = '#ece6d8'; ell(0, 0, 22, 33);
   g.fillStyle = '#2b2b34'; ell(-6, 0, 10, 26);
-  g.fillStyle = '#c9c1b0'; ell(6, -14, 9, 10); ell(6, 14, 9, 10);
-  g.save(); g.translate(0, 28); g.rotate(sw);
-  g.fillStyle = '#d9d2c3'; ell(8, 4, 13, 9);
-  g.fillStyle = '#eef3ff'; g.beginPath(); g.moveTo(14, 0); g.lineTo(92, -4); g.lineTo(100, 3); g.lineTo(92, 9); g.lineTo(14, 10); g.closePath(); g.fill();
-  g.strokeStyle = '#6f7a94'; g.lineWidth = 2; g.stroke();
-  g.fillStyle = '#9aa6c2'; g.fillRect(14, 2, 70, 3);
-  g.restore();
+  g.fillStyle = '#d9d2c3'; ell(6, -13, 9, 10); ell(6, 13, 9, 10);
   g.fillStyle = '#ece6d8'; circ(6, 0, 13);
-  g.fillStyle = '#f5f2ea';
-  for (const s of [-1, 1]) { ell(-2, s * 15, 9, 3.2, s * 0.5); ell(-6, s * 13, 8, 2.8, s * 0.9); }
-  g.fillStyle = '#2b2b34'; ell(14, 0, 3, 6);
   g.restore(); g.globalAlpha = 1;
   if (m.flash > 0) { g.globalAlpha = m.flash * 0.5; g.fillStyle = '#fff'; circ(x, y, 36); g.globalAlpha = 1; }
   // the wheel floats over his head and turns a notch with every adaptation
@@ -1906,6 +1907,15 @@ function drawMaho(m) {
   g.fillStyle = '#e8c35a';
   for (let i = 0; i < 8; i++) { const t = i * TAU / 8; circ(Math.cos(t) * 33, Math.sin(t) * 33, 4); }
   circ(0, 0, 6);
+  g.restore();
+  // where his eyes would be, two pairs of white wings (drawn over the wheel so they show)
+  g.save(); g.translate(x, y); g.rotate(a); g.scale(sc, sc); g.globalAlpha = rise;
+  for (const sd of [-1, 1]) {
+    feather(13, sd * 6, sd * 1.2, 24, 4.2, '#e4e0d6');
+    feather(14, sd * 5, sd * 0.78, 30, 4.8, '#f8f6f0');
+    feather(15, sd * 4, sd * 0.42, 20, 3.6, '#fdfcf8');
+    g.strokeStyle = 'rgba(150,140,125,.6)'; g.lineWidth = 1; g.beginPath(); g.moveTo(14, sd * 5); g.lineTo(14 + Math.cos(sd * 0.78) * 26, sd * 5 + Math.sin(sd * 0.78) * 26); g.stroke();
+  }
   g.restore(); g.globalAlpha = 1;
 }
 function drawTelegraphs() {
@@ -1929,7 +1939,7 @@ function drawTelegraphs() {
   }
   for (const m of S.maho) if (m.mode === 'swing' && m.mt < 0.34) {
     g.fillStyle = `rgba(240,194,79,${0.12 + 0.2 * m.mt / 0.34})`;
-    g.beginPath(); g.moveTo(m.rx, m.ry); g.arc(m.rx, m.ry, m.r + 64, m.ra - 1.2, m.ra + 1.2); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(m.rx, m.ry); g.arc(m.rx, m.ry, m.r + 62, m.ra - 0.95, m.ra + 0.95); g.closePath(); g.fill();
   }
 }
 function drawShots() {
@@ -2637,7 +2647,7 @@ let peer = null, nextId = 1, snapT = 0, inT = 0, lastSent = '', helloT = 0;
 // b = boolean, B = bot or not, c = the cooldown table, none = a plain value.
 const SPEC = {
   f: 'id name:s ch:s nch:s bot:B x:1 y:1 vx:1 vy:1 aim:2 hp:1 alive:b resp:2 prot:2 guard:1 gdT:2 blk:b stun:2 iframe:2 slow:2 heal:2 slamT:2 act:s actT:2 actA:2 actD:2 hitDone:b hitL combo comboT:2 swCd:2 cd:c kills deaths lastBy lastT:2',
-  m: 'id own x:1 y:1 vx:1 vy:1 aim:2 hp:1 t:2 spins adapt mode:s mt:2 cd:2 lcd:2 tg rt:2 stun:2 hitDone:b',
+  m: 'id own x:1 y:1 vx:1 vy:1 aim:2 hp:1 t:2 spins adapt mode:s mt:2 cd:2 lcd:2 tg rt:2 stun:2 hitDone:b pc',
   e: 'id own x:1 y:1 t:2 a:2',
   r: 'id own x0:1 y0:1 x:1 y:1 a:2 t:2 T:2 burst:b nt:2',
   h: 'id own x:1 y:1 a:2 d:1',
@@ -2995,7 +3005,11 @@ function wsConnect(i) {
     const from = e.data.slice(0, j);
     n.heard = performance.now();
     if (from === '!') onSys(m);
-    else if (n.host) { const h = humans.find((o) => o.id === +from); if (h && h.link) onHostData(h.link, m); }
+    else if (n.host) {
+      let h = humans.find((o) => o.id === +from);
+      if (!h && m.t === 'hello' && Number.isInteger(+from)) { h = { id: +from, name: 'Sorcerer', ch: 'yuji', local: false, link: wsLink(+from) }; h.link.h = h; humans.push(h); }
+      if (h && h.link) onHostData(h.link, m);
+    }
     else onJoinMsg(m);
   };
   ws.onclose = () => {
