@@ -2,7 +2,8 @@
 
 Browser games, each one a **single self-contained HTML file** — no build step, no dependencies,
 no bundler. Open the file in a browser and it runs. The exceptions are the online modes of
-Scrapline, Flatcraft and Bonk Arena, which pull PeerJS from a CDN when you host or join.
+Scrapline, Flatcraft, Bonk Arena and Jujutsu Arena, which pull PeerJS from a CDN when you host or join,
+and Jujutsu Arena's public server, a small Cloudflare Worker in [`jujutsu/server/`](jujutsu/server/).
 
 **▶ Play them: <https://ardy828.github.io/games/>**
 
@@ -14,6 +15,7 @@ Scrapline, Flatcraft and Bonk Arena, which pull PeerJS from a CDN when you host 
 | **Flatcraft** | 3D survival sandbox with biomes, mobs and crafting | [Play](https://ardy828.github.io/games/flatcraft/) | [`flatcraft/`](flatcraft/) |
 | **Obito's Multiverse** | Story-driven ninja action adventure | [Play](https://ardy828.github.io/games/obito/) | [`obito/`](obito/) |
 | **Bonk Arena** | Sumo party brawler, solo or online with up to 8 | [Play](https://ardy828.github.io/games/bonk/) | [`bonk/`](bonk/) |
+| **Jujutsu Arena** | Top-down sorcerer brawler on a city map, online up to 8 | [Play](https://ardy828.github.io/games/jujutsu/) | [`jujutsu/`](jujutsu/) |
 
 Each game's menu has a button back to the landing page.
 
@@ -196,3 +198,42 @@ The platform shrinks after ten seconds, so every round ends.
   helmet, ninja headband…). Bots wear shop skins too. Coins, skins, your name and stats are kept in `localStorage`.
 - All drawing is canvas, all audio is synthesised with the Web Audio API, and there are no image
   or sound files.
+
+## Jujutsu Arena
+
+A top-down brawler on a big city map: streets, rooftops, parks, a shrine and a scramble crossing in the
+middle. Pick Yuji or Megumi and exorcise everyone else; the first to the kill target wins and a new
+match starts. You respawn a few seconds after going down and can switch fighter while you wait. There
+is no cursed energy: every move has its own cooldown.
+
+- **Controls (keyboard and mouse)** — WASD to move, the mouse to aim (every attack goes where it
+  points), left click to punch (hold for a four-hit combo), right click to block, Shift (or Space) to
+  dash, `Q` `E` `C` for the three techniques, `R` for reverse cursed technique, `F` for the ultimate,
+  Tab for the scoreboard, Esc to pause, `M` to mute.
+- **Controls (touch)** — a floating stick on the left; on the right an attack button (hold it; drag it
+  to aim, or it aims at the nearest enemy), block, dash, heal, the three techniques and the ultimate.
+  Tap a technique to cast it at the nearest enemy, or drag it to aim and release. Landscape is best.
+- **Everyone** has a dash with a moment of invulnerability, a block that soaks 75% of a hit from the
+  front until its guard meter breaks, and RCT, which heals a third of your health on a long cooldown.
+- **Yuji** is fast and hits hard up close. *Black Flash* lunges into a punch that breaks guard and hits
+  very hard, *Piercing Blood* fires a line of blood after a short charge (watch for the red line),
+  *Dismantle* throws a slash that always does the same damage, and the ultimate, *Soul Strike*, dashes
+  forward into a huge blow.
+- **Megumi** fights through shikigami. *Nue* carries him forward and shocks anyone in the way, *Rabbit
+  Escape* sends a swarm of rabbits to where you aim, where it bursts and then nibbles and slows, *Max
+  Elephant* drops on the spot you aim at after a shadow warning, and the ultimate summons *Mahoraga*,
+  who kicks Megumi away and then attacks whoever he can see, Megumi included. Each new move that hurts
+  Mahoraga turns his wheel: he adapts to it and takes far less from it after that, and every punch he
+  lands makes the next one harder.
+- **Practice** — you against 1 to 7 bots (Easy, Normal or Hard), first to 5, 10 or 20 kills.
+- **Private party** — HOST PARTY gives a four-digit code; friends type it and press JOIN. Up to 8, with
+  bots if the host adds them. If a player's connection drops, a bot plays for them while their browser
+  reconnects. Runs over WebRTC (PeerJS, loaded only when you host or join) on the host's device.
+- **Play online** — joins a public room on the game's server, where anyone can drop in; bots keep the
+  room busy until people arrive. The match runs on one player's device, and if that player leaves the
+  room moves to someone else's without stopping. The server is a Cloudflare Worker in
+  [`jujutsu/server/`](jujutsu/server/); [its README](jujutsu/server/README.md) explains how to deploy it
+  from this repository and what the free plan covers. Until it is deployed and its address is set in
+  the game, PLAY ONLINE says so.
+- All drawing is canvas (the city is built from a fixed seed, so everyone gets the same map) and all
+  audio is synthesised. Your name, fighter, kills and wins are kept in `localStorage`.

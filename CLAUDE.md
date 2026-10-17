@@ -49,6 +49,12 @@ lying down.
 menus and HUD, Google Fonts, save in `localStorage` (`bonk-arena-save-v1`). Like Scrapline it injects
 PeerJS only when the player hosts or joins; see "Bonk Arena architecture" below.
 
+`jujutsu/index.html` (Jujutsu Arena, ~3300 lines) is a top-down brawler in modern syntax: canvas world,
+DOM menus and HUD, Google Fonts, save in `localStorage` (`jujutsu-arena-save-v1`). It injects PeerJS
+for private parties and opens a WebSocket to its own server for PLAY ONLINE; `jujutsu/server/` is that
+server, a Cloudflare Worker deployed from this repository (not served by Pages). See "Jujutsu Arena
+architecture" below.
+
 `flatcraft/index.html` is the other exception: it loads Three.js r128 (the last UMD build) from cdnjs at
 boot (and carries its texture art inline as one base64 PNG strip), since a voxel renderer without WebGL helpers is not worth hand-rolling. It also injects the same
 PeerJS build as Scrapline, only when the player hosts or joins a multiplayer room.
@@ -556,3 +562,78 @@ One IIFE, sections in this order: save, skins, tuning, canvas, audio, drawing ba
   `Peer` (BroadcastChannel between pages in one browser) injected into a throwaway copy of the
   file. The mock has no fast channel, so it covers the reliable-lane fallback only.
 
+## Jujutsu Arena architecture
+
+Free-for-all on a city map: Yuji or Megumi, first to `toWin` kills, respawns after `RESPAWN` s. One
+IIFE, sections in this order: save, tuning, canvas, audio, city, the match (sim), bots, effects,
+rendering, minimap, HUD, input (keyboard, mouse, touch), screens, multiplayer, main loop.
+
+- **No cursed energy.** Each move has a cooldown in `f.cd` keyed `q e c` (techniques), `u` (ultimate),
+  `r` (RCT) and `d` (dash); `CHARS` holds each fighter's stats and move names and `COMMON` the shared
+  two. `cdOf(ch, k)` reads them.
+- **`S` is the whole match** and is plain data: entities refer to each other by id, never by reference
+  (`own`, `tg`, `lastBy`, `hitL`), so a snapshot can carry all of it and any joiner can take over as
+  host. `S.f` fighters, `S.maho` Mahoraga, `S.ele` Max Elephants, `S.rab` Rabbit Escape swarms, `S.sh`
+  Dismantle slashes. Bots have negative ids, Mahoraga ids from 1e6, humans the host's or the server's.
+- **Input** is `f.inp`: move vector, `aim` (radians), `ad` (distance to the cursor, for moves that
+  land where you point), `m1`/`blk` held, and a press *counter* per key, so a lost packet cannot eat a
+  press. `control()` turns counter changes into presses, buffered for 0.3 s while stunned or busy.
+- **Actions**: `ACTS` is what a fighter is busy doing (`swing`, `dash`, `cast`, `bf`, `pb`, `ss`,
+  `nue`, `summon`), each a `step(f)` over `f.actT`. `lock` means the action drives the velocity,
+  `slow` scales walking while it runs, `armor` means hits damage but do not interrupt. `MOVES[ch][k]`
+  starts one and returns `false` to refuse (Mahoraga already out).
+- **`hurt(t, dmg, o)`** is the only way damage happens: `o.by` (attacker's fighter id; Mahoraga's hits
+  use his owner's), `o.a` (direction, which decides blocking: front 150°), `kb` in units (velocity is
+  `kb * KB`, decaying at `KB`), `stun`, `kind` (for Mahoraga's adaptation), `gb` breaks a block, `ub`
+  ignores it, `fixed` is not reduced by it (Dismantle). A stun cancels the current action. Kill credit
+  goes to `lastBy` within `CREDIT_T` s; your own Mahoraga never earns kills on you.
+- **Mahoraga** (`updMaho`, modes `rise kick hunt swing lunge`) kicks his summoner first, then hunts
+  the nearest fighter he can see, his summoner included. `hurtMaho()` adapts: the first hit of each
+  `kind` spins the wheel and later ones take 60% less; each punch he lands spins it and adds 20%
+  damage (up to five spins). He punches with alternate fists (`pc` counts punches for the drawing).
+- **Rabbit Escape** is one entity per cast, not one per rabbit: the swarm runs from `x0,y0` to `x,y`
+  over `T` s, bursts (`RAB.dmg` in `RAB.r`), then nibbles and slows for `RAB.linger` s. Each rabbit's
+  path is worked out from the entity in `drawSwarm()`.
+- **City** (`buildCity()`, seed fixed) is a 6×6 grid of blocks with 140-wide streets; block types are
+  `city`, `plaza` (the four round the scramble crossing), `park`, `shrine` and `lot`. Everything solid
+  goes through `addSolid()` into a spatial hash; `tall` solids (buildings, torii posts, the statue)
+  also stop projectiles, beams and line of sight (`tallAt`, `rayLen`, `los`). Cars, trees, planters
+  and the pond only block walking. **Anything random in `buildCity()` must use its seeded `R`**, or
+  devices disagree about the map.
+- **Navigation**: a 32-unit grid (`navFree`) and a BFS flow field per target (`flowTo`, cached and
+  shared), followed with `navDir()` by bots and Mahoraga when a building is in the way.
+- **Bots** (`think()` every `DIFF.react` s, `botThink()` steering every step): nearest enemy (hurt and
+  visible first), dodge telegraphs (elephant shadow, Piercing Blood line, Soul Strike crouch, a hunting
+  Mahoraga), block swings, use each move when it would land, heal under 40%.
+- **Effects**: `fx()` is cosmetic and rides in the next snapshot (may be lost); `event()` must land
+  (kill feed, banners, match results) and goes out reliably at once. Both run `doFx()`/`doEvent()`
+  locally first. Sounds are scaled by distance from the camera (`loud()`); the menu's demo match is
+  silent.
+- **Rendering**: world units through one transform (`cam.z` fits about `VIEW` units across the
+  geometric mean of the screen's sides). Order: ground, decals, street objects, building shadows,
+  telegraphs, bodies sorted by y, rooftops, trees, then things in the air (falling elephants, Nue),
+  slashes, particles, name tags. Fighters are drawn from above, rotated to their aim (+x forward), with
+  a ring under them (gold for you).
+- **Touch**: `TOUCH` / `body.tui`; a floating stick (`#stickZone`) and the `#pad` buttons laid out by
+  `layoutPad()` round the attack button, scaled to the screen. `AIM_LEN[ch][k]` sets each button's
+  aim line; `forceAim` carries a drag's aim into the input with the press.
+- **Multiplayer** is host-authoritative with two transports behind `broadcast()`, `stream()` and
+  `toHost()`: PeerJS for private parties (Bonk Arena's scheme: two lanes, `bye`, redial with
+  `back: {id, tok}`, a bot plays for a dropped player) and, for PLAY ONLINE, a WebSocket to the relay
+  in `jujutsu/server/` (`SERVER`; messages are `to|json` out and `from|json` in, `!` being the
+  server). Snapshot rows are arrays in the order of `SPEC`, written by `enc()` and read by `dec()`, so
+  sender and receiver cannot drift; add a synced field by adding it to `SPEC`. A joiner predicts only
+  its own walking and dashing (`pred`, reconciled against the input the host acknowledged in `ak`);
+  everything else is coasted and smoothed between snapshots in `joinTick()`.
+- **Host migration** (public rooms only): when the server names a new host (`{sys:'host'}`), that
+  client's `promote()` turns its mirrored `S` into the live match (shots in flight are dropped), and a
+  stalled old host `demote()`s itself. Bots keep a public room at `PUBLIC_FILL` fighters
+  (`syncBots()`). A hosting tab in the background keeps the sim running from the heartbeat timer.
+- **Server** (`jujutsu/server/worker.js`): one Durable Object per room `pub-1`…`pub-4`, WebSocket
+  Hibernation API, 8 players, only the host may send to `*` or to an id, a host silent for
+  `STALL_MS` is replaced. Its README has the deploy steps (Cloudflare Workers Builds from this repo,
+  root `jujutsu/server`). Test it with `npx wrangler dev` and a copy of the game with `SERVER` set to
+  `http://127.0.0.1:8787`.
+- Testing: the sandbox cannot reach cdnjs or the PeerJS cloud, so parties were tested with the
+  `peerjs` and `peer` npm packages (a local PeerServer and a copy of the game pointed at it), and the
+  public server with `wrangler dev`, three Chromium pages, and a page stalling its socket.
