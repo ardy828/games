@@ -2632,7 +2632,7 @@ function startSolo() {
 //    as "from|json", where '!' is the server itself. If the host leaves or stalls, the server names
 //    another host and that client promote()s its mirrored match into a live one.
 // Host -> joiner: hi, full, lob, go, s, ev, bye. Joiner -> host: hello, i, ch, bye. Both: hb.
-const SERVER = '';     // the Cloudflare Worker's address, e.g. 'https://jujutsu-arena.NAME.workers.dev'
+const SERVER = 'https://jujutsu-arena.ardychan828.workers.dev';     // the Cloudflare Worker (jujutsu/server/)
 const PUBLIC_ROOMS = ['pub-1', 'pub-2', 'pub-3', 'pub-4'];
 const PUBLIC_FILL = 4;     // bots keep a public room at this many fighters
 const PEER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js';

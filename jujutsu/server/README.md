@@ -37,9 +37,10 @@ If you would rather use a terminal: install Node, then in this folder run `npx w
 
 ## Allowed sites
 
-The server only accepts players from `https://ardy828.github.io` and from `localhost` (for testing).
-If you host the game somewhere else as well, add that address to `ALLOWED_ORIGINS` in `wrangler.toml`
-(comma-separated, e.g. `"https://ardy828.github.io,https://games.example.com"`).
+The server only accepts players from the sites in `ALLOWED_ORIGINS` in `wrangler.toml` (now
+`https://ardy828.github.io` and any `https://*.ardychan828.workers.dev` Worker) and from `localhost`
+for testing. If you host the game somewhere else as well, add that address to the comma-separated list,
+e.g. `"https://ardy828.github.io,https://games.example.com"`; a `*` stands for any subdomain.
 
 ## Free plan limits
 

@@ -17,11 +17,12 @@ const MAX_PLAYERS = 8;
 const MAX_MSG = 16384;      // bytes; a snapshot is a few kB
 const STALL_MS = 3000;      // a host silent this long hands the room on
 
+// ALLOWED_ORIGINS is a comma-separated list; a * stands for any subdomain, e.g. https://*.example.workers.dev
 function allowed(origin, env) {
   if (!origin) return true;    // not a browser
-  const list = String(env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
-  if (list.includes(origin)) return true;
-  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  return String(env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean).some((p) =>
+    new RegExp('^' + p.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[\\w-]+(\\.[\\w-]+)*') + '$').test(origin));
 }
 
 export default {
