@@ -202,9 +202,18 @@ The platform shrinks after ten seconds, so every round ends.
 ## Jujutsu Arena
 
 A top-down brawler on a big city map: streets, rooftops, parks, a shrine and a scramble crossing in the
-middle. Pick Yuji or Megumi and exorcise everyone else; the first to the kill target wins and a new
-match starts. You respawn a few seconds after going down and can switch fighter while you wait. There
-is no cursed energy: every move has its own cooldown.
+middle. Pick Yuji or Megumi and score points; the first to the points target wins and a new match
+starts. You respawn a few seconds after going down and can switch fighter while you wait. There is no
+cursed energy: every move has its own cooldown.
+
+- **Points** — exorcising a cursed spirit is worth 1 point. Killing another sorcerer takes every point
+  they carry, plus 1, and leaves them with none. Any other death (to a curse, a wall, your own
+  Mahoraga) loses all your points. The ★ by a sorcerer's name is how many they carry. Kills and
+  deaths (between sorcerers only) are still counted, just for show.
+- **Cursed spirits** fill the city instead of bots and hunt sorcerers only. A *Fly Head* is small and
+  fast and pounces, a *Spitter Curse* keeps its distance and spits bile that slows you, and a *Brute
+  Curse* is slow and tough and slams the ground around it after a wind-up (get out of the purple
+  ring). They come back a few seconds after they are exorcised.
 
 - **Controls (keyboard and mouse)** — WASD to move, the mouse to aim (every attack goes where it
   points), left click to punch (hold for a four-hit combo), right click to block, Shift (or Space) to
@@ -228,20 +237,20 @@ is no cursed energy: every move has its own cooldown.
   who kicks Megumi away and then attacks whoever he can see, Megumi included, until someone kills him
   or the match ends. Each new move that hurts Mahoraga turns his wheel: he adapts to it and takes far
   less from it after that, and every punch he lands makes the next one harder.
-- **Practice** — you against 1 to 7 bots (Easy, Normal or Hard), first to 5, 10 or 20 kills.
+- **Practice** — you against 1 to 10 cursed spirits (Easy, Normal or Hard), first to 10, 20 or 40 points.
 - **Private party** — HOST PARTY gives a four-digit code; friends type it and press JOIN. Up to 8, with
-  bots if the host adds them. If a player's connection drops, a bot plays for them while their browser
+  as many cursed spirits as the host picks. If a player's connection drops, a bot plays for them while their browser
   reconnects. Runs over WebRTC (PeerJS, loaded only when you host or join) on the host's device.
-- **Play online** — joins a public room on the game's server, where anyone can drop in; bots keep the
-  room busy until people arrive. The match runs on one player's device, and if that player leaves the
+- **Play online** — joins a public room on the game's server, where anyone can drop in; cursed spirits
+  roam every room. The match runs on one player's device, and if that player leaves the
   room moves to someone else's without stopping. The server is a Cloudflare Worker in
   [`jujutsu/server/`](jujutsu/server/); [its README](jujutsu/server/README.md) explains how to deploy it
   from this repository and what the free plan covers. Until it is deployed and its address is set in
   the game, PLAY ONLINE says so.
 - **Admin page** — the server also has a password-protected control panel at `/admin` for the public
-  rooms: who is on (with a kick button), the rules (round length or endless, kills to win, respawn time,
-  bots, damage / health / speed / cooldown / ultimate-charge multipliers, which fighters are allowed),
+  rooms: who is on (with a kick button), the rules (round length or endless, points to win, respawn
+  time, cursed spirits, damage / health / speed / cooldown / ultimate-charge multipliers, which fighters are allowed),
   broadcast messages and events (heal everyone, fill every ultimate, a wild Mahoraga, end or restart
   the round). [The server's README](jujutsu/server/README.md) explains how to set its password.
 - All drawing is canvas (the city is built from a fixed seed, so everyone gets the same map) and all
-  audio is synthesised. Your name, fighter, kills and wins are kept in `localStorage`.
+  audio is synthesised. Your name, fighter, lobby choices, kills and wins are kept in `localStorage`.

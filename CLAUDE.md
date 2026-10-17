@@ -49,7 +49,7 @@ lying down.
 menus and HUD, Google Fonts, save in `localStorage` (`bonk-arena-save-v1`). Like Scrapline it injects
 PeerJS only when the player hosts or joins; see "Bonk Arena architecture" below.
 
-`jujutsu/index.html` (Jujutsu Arena, ~3300 lines) is a top-down brawler in modern syntax: canvas world,
+`jujutsu/index.html` (Jujutsu Arena, ~3800 lines) is a top-down brawler in modern syntax: canvas world,
 DOM menus and HUD, Google Fonts, save in `localStorage` (`jujutsu-arena-save-v1`). It injects PeerJS
 for private parties and opens a WebSocket to its own server for PLAY ONLINE; `jujutsu/server/` is that
 server, a Cloudflare Worker deployed from this repository (not served by Pages). See "Jujutsu Arena
@@ -564,17 +564,33 @@ One IIFE, sections in this order: save, skins, tuning, canvas, audio, drawing ba
 
 ## Jujutsu Arena architecture
 
-Free-for-all on a city map: Yuji or Megumi, first to `toWin` kills, respawns after `RESPAWN` s. One
-IIFE, sections in this order: save, tuning, canvas, audio, city, the match (sim), bots, effects,
-rendering, minimap, HUD, input (keyboard, mouse, touch), screens, multiplayer, main loop.
+Free-for-all on a city map: Yuji or Megumi against each other and the cursed spirits, first to
+`toWin` points, respawns after `RULES.resp` s. One IIFE, sections in this order: save, tuning, canvas,
+audio, city, the match (sim), bots and curses, effects, rendering, minimap, HUD, input (keyboard,
+mouse, touch), screens, multiplayer, main loop.
+
+- **Points, not kills.** `die()` settles them: a sorcerer who kills a curse gains `CURSE_PTS`, one who
+  kills a sorcerer takes the victim's `pts` plus 1, and a sorcerer dies with 0 whoever killed them.
+  `kills`/`deaths` count sorcerer-on-sorcerer only and are just shown. `ranked()`/`standings()` (the
+  scoreboard, results, the admin page's stat) list sorcerers only, by points. The `'k'` event carries
+  the points moved so the feed, the `+N` float and the death screen (`deadLost`) can say so.
+- **Cursed spirits** replace bots: rows in `CHARS` flagged `curse` (`fly`, `spitter`, `brute`; `r`
+  body radius, `sw` swing-time factor, `kbm` knockback taken, `q` range for their one move, `want`
+  distance kept), `cursed(f)` tests a fighter. They are fighters in `S.f` with `ctl: 'bot'`, made by
+  `addCurse()`, steered by `curseThink()` (sorcerers only; no block, dodge or heal), and come back as a
+  random `CURSE_MIX` kind. `hurt()` refuses a curse's hit on another curse or on Mahoraga. Their moves
+  are `ACTS.pounce`, `slam` (`SLAM`, telegraphed ring) and `spit` (bile is a shot with `k: 1` in
+  `S.sh`; `SHOT` holds each shot kind's speed and range). `SORCERERS` lists the playable two; a
+  joiner's character is validated against it. Sorcerer bots (`addBot()`) only play the menu's demo and
+  stand in for dropped players.
 
 - **No cursed energy.** `q e c` (techniques), `r` (RCT) and `d` (dash) have cooldowns in `f.cd`, read
   through `cdOf(ch, k)` (which applies `RULES.cd`); `CHARS` holds each fighter's stats and move names and
   `COMMON` the shared two. The ultimate `u` has a meter instead, `f.ult` 0–100, filled by `charge()`:
   `ULT.deal` per point of damage dealt (not by your own Mahoraga), `ULT.take` per point taken and
   `ULT.idle` per second, times `RULES.ur`. It survives death and empties at a new match.
-- **Rules**: `RULES` (`RULES0` defaults, `cleanRules()` to validate) holds kills to win, round time,
-  rounds on/off (off = endless), break, respawn, bots and their skill, multipliers (`dmg`, `hp`,
+- **Rules**: `RULES` (`RULES0` defaults, `cleanRules()` to validate) holds points to win, round time,
+  rounds on/off (off = endless), break, respawn, cursed spirits per room and their skill, multipliers (`dmg`, `hp`,
   `spd`, `cd`, `ur`), allowed fighters and whether ultimates work. Practice and parties start from
   `RULES0` with the lobby's choices; public rooms get theirs from the server (`welcome`, `rules`).
   **`RULES0` and `cleanRules()` are duplicated in `server/worker.js`; change both together.** The sim
@@ -582,20 +598,22 @@ rendering, minimap, HUD, input (keyboard, mouse, touch), screens, multiplayer, m
   round clock `S.roundT` in `step`).
 - **`S` is the whole match** and is plain data: entities refer to each other by id, never by reference
   (`own`, `tg`, `lastBy`, `hitL`), so a snapshot can carry all of it and any joiner can take over as
-  host. `S.f` fighters, `S.maho` Mahoraga, `S.ele` Max Elephants, `S.rab` Rabbit Escape swarms, `S.sh`
-  Dismantle slashes. Bots have negative ids, Mahoraga ids from 1e6, humans the host's or the server's.
+  host. `S.f` fighters (curses included), `S.maho` Mahoraga, `S.ele` Max Elephants, `S.rab` Rabbit
+  Escape swarms, `S.sh` shots (Dismantle slashes and bile). Bots and curses have negative ids, Mahoraga
+  ids from 1e6, humans the host's or the server's.
 - **Input** is `f.inp`: move vector, `aim` (radians), `ad` (distance to the cursor, for moves that
   land where you point), `m1`/`blk` held, and a press *counter* per key, so a lost packet cannot eat a
   press. `control()` turns counter changes into presses, buffered for 0.3 s while stunned or busy.
 - **Actions**: `ACTS` is what a fighter is busy doing (`swing`, `dash`, `cast`, `bf`, `pb`, `ss`,
-  `nue`, `summon`), each a `step(f)` over `f.actT`. `lock` means the action drives the velocity,
+  `nue`, `summon`, and the curses' `pounce`, `slam`, `spit`), each a `step(f)` over `f.actT`. `lock` means the action drives the velocity,
   `slow` scales walking while it runs, `armor` means hits damage but do not interrupt. `MOVES[ch][k]`
   starts one and returns `false` to refuse (Mahoraga already out).
 - **`hurt(t, dmg, o)`** is the only way damage happens: `o.by` (attacker's fighter id; Mahoraga's hits
   use his owner's), `o.a` (direction, which decides blocking: front 150°), `kb` in units (velocity is
   `kb * KB`, decaying at `KB`), `stun`, `kind` (for Mahoraga's adaptation), `gb` breaks a block, `ub`
   ignores it, `fixed` is not reduced by it (Dismantle). A stun cancels the current action. Kill credit
-  goes to `lastBy` within `CREDIT_T` s; your own Mahoraga never earns kills on you.
+  goes to `lastBy` within `CREDIT_T` s; your own Mahoraga never earns kills on you. A target's
+  `CHARS[ch].kbm` scales knockback.
 - **Mahoraga** (`updMaho`, modes `rise kick hunt swing lunge`) kicks his summoner first, then hunts
   the nearest fighter he can see, his summoner included. He has `MAHO.hp` and no lifetime: he stays
   until killed, and `newMatch()` clears `S.maho`. `hurtMaho()` adapts: the first hit of each
@@ -612,12 +630,12 @@ rendering, minimap, HUD, input (keyboard, mouse, touch), screens, multiplayer, m
   devices disagree about the map.
 - **Navigation**: a 32-unit grid (`navFree`) and a BFS flow field per target (`flowTo`, cached and
   shared), followed with `navDir()` by bots and Mahoraga when a building is in the way.
-- **Bots** (`think()` every `DIFF.react` s, `botThink()` steering every step) only target someone they
-  can see: within `DIFF.sight` and with line of sight (nearest and most hurt first). A target that slips
+- **Bots and curses** (`think()` every `DIFF.react` s, `botThink()` steering every step) only target
+  someone they can see: within `DIFF.sight` and with line of sight (nearest and most hurt first). A target that slips
   out of view, or an unseen attacker, is remembered as a spot to check for `BOT_MEMORY` s; otherwise
   they roam between street corners (`ai.roam`). They dodge telegraphs (elephant shadow, Piercing Blood
-  line, Soul Strike crouch, a hunting Mahoraga), block swings, use each move when it would land, and
-  heal under 40%.
+  line, Soul Strike crouch, a Brute Curse's slam, a hunting Mahoraga), block swings, use each move when
+  it would land, and heal under 40%. `wander()` is the shared memory-then-roam fallback.
 - **Effects**: `fx()` is cosmetic and rides in the next snapshot (may be lost); `event()` must land
   (kill feed, banners, match results) and goes out reliably at once. Both run `doFx()`/`doEvent()`
   locally first. Sounds are scaled by distance from the camera (`loud()`); the menu's demo match is
@@ -626,7 +644,8 @@ rendering, minimap, HUD, input (keyboard, mouse, touch), screens, multiplayer, m
   geometric mean of the screen's sides). Order: ground, decals, street objects, building shadows,
   telegraphs, bodies sorted by y, rooftops, trees, then things in the air (falling elephants, Nue),
   slashes, particles, name tags. Fighters are drawn from above, rotated to their aim (+x forward), with
-  a ring under them (gold for you).
+  a ring under them (gold for you); `drawFighter()` hands curses to `drawCurse()` (`drawFly`,
+  `drawSpitter`, `drawBrute`). A sorcerer's name tag shows ★ and the points they carry.
 - **Touch**: `TOUCH` / `body.tui`; a floating stick (`#stickZone`) and the `#pad` buttons laid out by
   `layoutPad()` round the attack button, scaled to the screen. `AIM_LEN[ch][k]` sets each button's
   aim line; `forceAim` carries a drag's aim into the input with the press.
@@ -640,8 +659,8 @@ rendering, minimap, HUD, input (keyboard, mouse, touch), screens, multiplayer, m
   everything else is coasted and smoothed between snapshots in `joinTick()`.
 - **Host migration** (public rooms only): when the server names a new host (`{sys:'host'}`), that
   client's `promote()` turns its mirrored `S` into the live match (shots in flight are dropped), and a
-  stalled old host `demote()`s itself. Bots keep a public room at `PUBLIC_FILL` fighters
-  (`syncBots()`). A hosting tab in the background keeps the sim running from the heartbeat timer.
+  stalled old host `demote()`s itself. `syncCurses()` keeps `RULES.curses` cursed spirits in a public
+  room. A hosting tab in the background keeps the sim running from the heartbeat timer.
 - **Server** (`jujutsu/server/worker.js`): one Durable Object per room `pub-1`…`pub-4`, WebSocket
   Hibernation API, 8 players, only the host may send to `*`, to an id or to `!` (its scoreboard, every
   2 s, for the admin page), a host silent for `STALL_MS` is replaced. Each room stores the admin's

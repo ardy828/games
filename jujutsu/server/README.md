@@ -42,10 +42,10 @@ the public rooms:
 
 - **Who's on**: every room's players, who is hosting, the scoreboard and the round clock, updated every
   few seconds, with a button to kick someone.
-- **Rules** for every public room: rounds on or off (off is one endless free-for-all), kills to win,
-  round time limit, break between rounds, respawn time, how many fighters bots fill a room up to and
+- **Rules** for every public room: rounds on or off (off is one endless free-for-all), points to win,
+  round time limit, break between rounds, respawn time, how many cursed spirits roam each room and
   how good they are, damage, health, speed, cooldown and ultimate-charge multipliers, which fighters
-  can be picked, and whether ultimates work at all. A few presets (Chaos, Tanks, Ult spam…) fill them
+  can be picked, and whether ultimates work at all. A few presets (Chaos, Tanks, Curse swarm…) fill them
   in. Private parties and practice keep their usual rules.
 - **Broadcast**: a message shown as a banner in every room, or in one.
 - **Events**: heal everyone, fill every ultimate, reset every cooldown, drop a wild Mahoraga that

@@ -173,18 +173,18 @@
 const $ = (id) => document.getElementById(id);
 const KEY_STORE = 'jujutsu-arena-admin-key';
 const ROOMS = ['pub-1', 'pub-2', 'pub-3', 'pub-4'];
-const DEFAULTS = { rounds: true, kills: 10, time: 0, brk: 7, resp: 4, bots: 4, skill: 1, dmg: 1, cd: 1, ur: 1, spd: 1, hp: 1, yuji: true, megumi: true, ults: true };
+const DEFAULTS = { rounds: true, points: 20, time: 0, brk: 7, resp: 4, curses: 6, skill: 1, dmg: 1, cd: 1, ur: 1, spd: 1, hp: 1, yuji: true, megumi: true, ults: true };
 const FIELDS = [
   { k: 'rounds', t: 'bool', n: 'Rounds', h: 'Off: one endless free-for-all with no winner' },
   { k: 'ults', t: 'bool', n: 'Ultimates allowed' },
   { k: 'yuji', t: 'bool', n: 'Yuji allowed' },
   { k: 'megumi', t: 'bool', n: 'Megumi allowed' },
-  { k: 'kills', t: 'num', n: 'Kills to win', min: 0, max: 100, step: 1, h: '0 = no kill limit' },
-  { k: 'time', t: 'num', n: 'Round time (minutes)', min: 0, max: 30, step: 0.5, h: '0 = no time limit; when time runs out, most kills wins' },
+  { k: 'points', t: 'num', n: 'Points to win', min: 0, max: 200, step: 1, h: '0 = no points limit. A curse is worth 1; a kill takes the victim\'s points + 1' },
+  { k: 'time', t: 'num', n: 'Round time (minutes)', min: 0, max: 30, step: 0.5, h: '0 = no time limit; when time runs out, most points wins' },
   { k: 'brk', t: 'num', n: 'Break between rounds (s)', min: 3, max: 30, step: 1 },
   { k: 'resp', t: 'num', n: 'Respawn time (s)', min: 0.5, max: 15, step: 0.5 },
-  { k: 'bots', t: 'num', n: 'Bots fill rooms up to', min: 0, max: 7, step: 1, h: 'fighters in total; bots leave as people join' },
-  { k: 'skill', t: 'sel', n: 'Bot skill', opts: [[0, 'Easy'], [1, 'Normal'], [2, 'Hard']] },
+  { k: 'curses', t: 'num', n: 'Cursed spirits per room', min: 0, max: 10, step: 1, h: 'on the map whoever is in the room; they respawn' },
+  { k: 'skill', t: 'sel', n: 'Curse skill', opts: [[0, 'Easy'], [1, 'Normal'], [2, 'Hard']] },
   { k: 'dmg', t: 'mult', n: 'Damage', min: 0.25, max: 4 },
   { k: 'hp', t: 'mult', n: 'Health', min: 0.25, max: 4 },
   { k: 'spd', t: 'mult', n: 'Move speed', min: 0.5, max: 2 },
@@ -197,7 +197,9 @@ const PRESETS = [
   ['Tanks', { hp: 3, dmg: 0.75 }],
   ['Speed demons', { spd: 1.8, resp: 1.5 }],
   ['Ult spam', { ur: 4 }],
-  ['3-minute rounds', { rounds: true, time: 3, kills: 0 }],
+  ['3-minute rounds', { rounds: true, time: 3, points: 0 }],
+  ['Curse swarm', { curses: 10 }],
+  ['No curses', { curses: 0 }],
   ['Endless', { rounds: false }],
   ['Yuji only', { yuji: true, megumi: false }],
   ['Megumi only', { yuji: false, megumi: true }],
@@ -207,7 +209,7 @@ const EVENTS = [
   ['ults', '魂', 'Ultimates ready', 'Fill every ultimate meter'],
   ['cds', '疾', 'Reset cooldowns', 'Every move ready at once'],
   ['maho', '魔虚羅', 'Wild Mahoraga', 'Drops one with no master until someone kills it'],
-  ['end', '終', 'End round', 'Most kills wins right now'],
+  ['end', '終', 'End round', 'Most points wins right now'],
   ['restart', '始', 'Restart round', 'Scores back to zero'],
 ];
 
@@ -310,21 +312,21 @@ function render(s) {
     let info = 'Empty';
     if (r.players.length && !st) info = 'Waiting for the host… (' + (host ? host.name : 'none') + ')';
     else if (st) {
-      info = st.ph === 'over' ? 'Between rounds' : !rl.rounds ? 'Endless' : (st.tw > 0 ? 'First to ' + st.tw : 'Most kills') + (rl.time > 0 ? ' · ' + mmss(Math.max(0, st.rl)) + ' left' : '');
+      info = st.ph === 'over' ? 'Between rounds' : !rl.rounds ? 'Endless' : (st.tw > 0 ? 'First to ' + st.tw + ' points' : 'Most points') + (rl.time > 0 ? ' · ' + mmss(Math.max(0, st.rl)) + ' left' : '');
       if (host) info += ' · hosted by ' + host.name;
     }
     card.append(el('div', 'info', info));
     if (r.players.length) {
       const t = el('table'), hd = el('tr');
-      for (const [s2, c] of [['NAME', ''], ['FIGHTER', ''], ['K', 'n'], ['D', 'n'], ['', 'n']]) hd.append(el('th', c, s2));
+      for (const [s2, c] of [['NAME', ''], ['FIGHTER', ''], ['PTS', 'n'], ['K', 'n'], ['D', 'n'], ['', 'n']]) hd.append(el('th', c, s2));
       t.append(hd);
-      const rows = st ? st.f : r.players.map((p) => [p.id, p.name, '', '', '', 0, 1]);
-      for (const [id, name, ch, k, d, bot, alive] of rows) {
+      const rows = st ? st.f : r.players.map((p) => [p.id, p.name, '', '', '', '', 0, 1]);
+      for (const [id, name, ch, pts, k, d, bot, alive] of rows) {
         const tr = el('tr'), nm = el('td', '', name), human = r.players.find((p) => p.id === id);
         if (bot) nm.append(el('span', 'tag', 'BOT'));
         if (human && human.host) nm.append(el('span', 'tag host', 'HOST'));
         if (st && !alive) nm.append(el('span', 'tag dead', 'DOWN'));
-        tr.append(nm, el('td', '', ch ? ch.toUpperCase() : ''), el('td', 'n', String(k)), el('td', 'n', String(d)));
+        tr.append(nm, el('td', '', ch ? ch.toUpperCase() : ''), el('td', 'n', String(pts)), el('td', 'n', String(k)), el('td', 'n', String(d)));
         const kc = el('td', 'n');
         if (human) {
           const b = el('button', 'kick', 'KICK');
@@ -383,7 +385,7 @@ function showVal(f) {
   const out = document.querySelector('label[for="r-' + f.k + '"] output');
   if (!out) return;
   const v = rules[f.k];
-  out.textContent = f.t === 'mult' ? 'x' + v.toFixed(2) : f.k === 'kills' && !v ? 'no limit' : f.k === 'time' && !v ? 'no limit' : '';
+  out.textContent = f.t === 'mult' ? 'x' + v.toFixed(2) : f.k === 'points' && !v ? 'no limit' : f.k === 'time' && !v ? 'no limit' : '';
 }
 function putRules() {
   for (const f of FIELDS) {
@@ -404,12 +406,12 @@ $('saveRules').onclick = async () => {
 };
 $('resetRules').onclick = () => { rules = { ...DEFAULTS }; putRules(); changed(); };
 function describe(r) {
-  const out = [!r.rounds ? 'endless' : (r.kills ? 'first to ' + r.kills : 'most kills') + (r.time ? ' in ' + r.time + ' min' : '')];
+  const out = [!r.rounds ? 'endless' : (r.points ? 'first to ' + r.points + ' points' : 'most points') + (r.time ? ' in ' + r.time + ' min' : '')];
   for (const [k, n] of [['dmg', 'damage'], ['hp', 'health'], ['spd', 'speed'], ['cd', 'cooldowns'], ['ur', 'ult charge']]) if (r[k] !== 1) out.push(n + ' ×' + r[k]);
   if (!r.ults) out.push('no ultimates');
   if (!r.yuji) out.push('no Yuji');
   if (!r.megumi) out.push('no Megumi');
-  out.push(r.bots + ' bots');
+  out.push(r.curses + ' curses');
   return out.join(', ');
 }
 
