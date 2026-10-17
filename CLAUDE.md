@@ -602,9 +602,12 @@ rendering, minimap, HUD, input (keyboard, mouse, touch), screens, multiplayer, m
   devices disagree about the map.
 - **Navigation**: a 32-unit grid (`navFree`) and a BFS flow field per target (`flowTo`, cached and
   shared), followed with `navDir()` by bots and Mahoraga when a building is in the way.
-- **Bots** (`think()` every `DIFF.react` s, `botThink()` steering every step): nearest enemy (hurt and
-  visible first), dodge telegraphs (elephant shadow, Piercing Blood line, Soul Strike crouch, a hunting
-  Mahoraga), block swings, use each move when it would land, heal under 40%.
+- **Bots** (`think()` every `DIFF.react` s, `botThink()` steering every step) only target someone they
+  can see: within `DIFF.sight` and with line of sight (nearest and most hurt first). A target that slips
+  out of view, or an unseen attacker, is remembered as a spot to check for `BOT_MEMORY` s; otherwise
+  they roam between street corners (`ai.roam`). They dodge telegraphs (elephant shadow, Piercing Blood
+  line, Soul Strike crouch, a hunting Mahoraga), block swings, use each move when it would land, and
+  heal under 40%.
 - **Effects**: `fx()` is cosmetic and rides in the next snapshot (may be lost); `event()` must land
   (kill feed, banners, match results) and goes out reliably at once. Both run `doFx()`/`doEvent()`
   locally first. Sounds are scaled by distance from the camera (`loud()`); the menu's demo match is

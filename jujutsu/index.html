@@ -21,7 +21,7 @@
   html,body{height:100%;background:var(--bg);overflow:hidden}
   body{color:var(--ink);font-family:var(--body);font-weight:600}
   canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
-  body.playing:not(.tui) canvas#c{cursor:none}
+  body.playing:not(.tui):not(.dead) canvas#c{cursor:none}
   button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   button:disabled{cursor:default;opacity:.4}
   input{font:inherit}
@@ -330,11 +330,12 @@ const CHARS = {
 const COMMON = { r: { n: 'RCT', k: '反転', cd: 50 }, d: { n: 'Dash', k: '疾', cd: 2.5 } };
 const KEYS = ['q', 'e', 'c', 'r', 'u', 'd'];
 const cdOf = (ch, k) => (CHARS[ch].moves[k] || COMMON[k]).cd;
-const DIFF = [   // how quickly bots rethink, how well they aim, how often they block, dodge and use moves
-  { react: 0.42, aimErr: 0.24, block: 0.12, dodge: 0.15, use: 0.4, m1: 0.55, lead: 0.3 },
-  { react: 0.24, aimErr: 0.1, block: 0.4, dodge: 0.45, use: 0.75, m1: 0.85, lead: 0.75 },
-  { react: 0.12, aimErr: 0.04, block: 0.65, dodge: 0.75, use: 1, m1: 1, lead: 1 },
+const DIFF = [   // how far bots see, how quickly they rethink, how well they aim, how often they block, dodge and use moves
+  { sight: 520, react: 0.42, aimErr: 0.24, block: 0.12, dodge: 0.15, use: 0.4, m1: 0.55, lead: 0.3 },
+  { sight: 650, react: 0.24, aimErr: 0.1, block: 0.4, dodge: 0.45, use: 0.75, m1: 0.85, lead: 0.75 },
+  { sight: 780, react: 0.12, aimErr: 0.04, block: 0.65, dodge: 0.75, use: 1, m1: 1, lead: 1 },
 ];
+const BOT_MEMORY = 2.5;   // seconds a bot keeps heading for where it last saw its target
 const BOT_NAMES = ['Panda', 'Toge', 'Maki', 'Nobara', 'Todo', 'Mai', 'Momo', 'Kamo', 'Miwa', 'Nanami',
   'Ino', 'Choso', 'Yuta', 'Hakari', 'Kirara', 'Mechamaru', 'Utahime', 'Yaga', 'Takaba', 'Higuruma'];
 const TIPS = [
@@ -1233,13 +1234,16 @@ function step(dt) {
 }
 
 // ───────────────────────── Bots ─────────────────────────
-// A bot rethinks every few tenths of a second (faster on Hard): it picks the nearest enemy (the
-// hurt and the visible first), dodges telegraphs (the elephant's shadow, a Piercing Blood line, a
+// A bot rethinks every few tenths of a second (faster on Hard). It only goes after someone it can
+// see: within its sight range (DIFF.sight) with no building in the way, the nearest and most hurt
+// first. When they slip out of view it heads for where it last saw them for BOT_MEMORY seconds, then
+// gives up; a hit from someone out of sight turns it on them the same way. With no one in view it
+// roams from street to street. It dodges telegraphs (the elephant's shadow, a Piercing Blood line, a
 // Soul Strike crouch, a Mahoraga hunting it), blocks swings, and uses each move when it would land.
 // Between thoughts it steers: straight at a target it can see, down the flow field around buildings
-// when it cannot.
+// otherwise.
 let botN = 0;
-function mkAI(diff) { return { d: DIFF[diff] || DIFF[1], th: 0, goal: null, want: 0, see: false, st: 1, blkT: 0, flee: 0, fleeA: 0, swap: 0, sx: 0, sy: 0, sT: 0 }; }
+function mkAI(diff) { return { d: DIFF[diff] || DIFF[1], th: 0, goal: null, want: 0, see: false, st: 1, blkT: 0, flee: 0, fleeA: 0, swap: 0, sx: 0, sy: 0, sT: 0, mem: null, roam: null, roamT: 0 }; }
 function addBot() {
   const used = new Set(S.f.map((f) => f.name));
   const name = BOT_NAMES.find((n) => !used.has(n)) || 'Sorcerer ' + (S.f.length + 1);
@@ -1254,8 +1258,14 @@ function think(f, ai) {
   for (const o of S.f) {
     if (o === f || !o.alive || o.prot > 0) continue;
     const d = dist(f, o);
-    const s = d * (0.6 + 0.4 * o.hp / maxHp(o)) + (d < 900 && los(f, o) ? 0 : 450);
+    if (d > D.sight || !los(f, o)) continue;
+    const s = d * (0.6 + 0.4 * o.hp / maxHp(o));
     if (s < ts) { ts = s; t = o; }
+  }
+  if (t) ai.mem = { x: t.x, y: t.y, t: S.time + BOT_MEMORY };
+  else if (f.lastBy != null && S.time - f.lastT < 0.5) {     // hit from out of sight: go and look
+    const o = byId(f.lastBy);
+    if (o && o.alive) ai.mem = { x: o.x, y: o.y, t: S.time + BOT_MEMORY };
   }
   // dodge whatever is about to hit
   let threat = null;
@@ -1275,8 +1285,21 @@ function think(f, ai) {
   }
   if (f.hp < maxHp(f) * 0.4 && f.cd.r <= 0 && Math.random() < 0.5) inp.r++;
   inp.blk = false;
-  if (!t) { inp.m1 = false; ai.goal = { x: MID + Math.cos(f.id) * 400, y: MID + Math.sin(f.id) * 400 }; ai.want = 0; ai.see = false; return; }
-  const d = dist(f, t), see = d < 1000 && los(f, t);
+  if (!t) {
+    inp.m1 = false; ai.want = 0; ai.see = false;
+    if (ai.mem && S.time < ai.mem.t && Math.hypot(ai.mem.x - f.x, ai.mem.y - f.y) > 40) { ai.goal = { x: ai.mem.x, y: ai.mem.y }; return; }
+    ai.mem = null;
+    // roam: the next street corner, out of three picked at random the one nearest the middle
+    if (!ai.roam || Math.hypot(ai.roam.x - f.x, ai.roam.y - f.y) < 60 || S.time > ai.roamT) {
+      const near = city.spawns.filter((p) => { const d = Math.hypot(p.x - f.x, p.y - f.y); return d > 300 && d < 1100; });
+      const pool = near.length ? near : city.spawns;
+      ai.roam = [pick(pool), pick(pool), pick(pool)].reduce((a, b) => (Math.hypot(a.x - MID, a.y - MID) < Math.hypot(b.x - MID, b.y - MID) ? a : b));
+      ai.roamT = S.time + rnd(6, 10);
+    }
+    ai.goal = ai.roam;
+    return;
+  }
+  const d = dist(f, t), see = true;
   const lead = (s) => ({ x: t.x + t.vx * s * D.lead, y: t.y + t.vy * s * D.lead });
   const aimAt = (p) => Math.atan2(p.y - f.y, p.x - f.x) + rnd(-D.aimErr, D.aimErr);
   inp.aim = aimAt(lead(0.08)); inp.ad = d;
@@ -1304,7 +1327,7 @@ function think(f, ai) {
 function botThink(f, dt) {
   const ai = f.ai || (f.ai = mkAI(S.diff)), inp = f.inp;
   if (!f.alive) {
-    inp.mx = inp.my = 0; inp.m1 = inp.blk = false;
+    inp.mx = inp.my = 0; inp.m1 = inp.blk = false; ai.mem = ai.roam = ai.goal = null;
     if (!ai.swap) { ai.swap = 1; if (Math.random() < 0.3) f.nch = f.nch === 'yuji' ? 'megumi' : 'yuji'; }
     return;
   }
@@ -2224,6 +2247,7 @@ function hud() {
   slots.blk.el.classList.toggle('held', !!me.blk);
   const dead = !me.alive && S.phase === 'play';
   $('deadBox').classList.toggle('on', dead);
+  document.body.classList.toggle('dead', !me.alive);
   if (dead) {
     $('killer').textContent = deadBy || 'THE CITY';
     const rs = 'Back in ' + Math.max(0, me.resp).toFixed(1) + 's';
@@ -2469,6 +2493,7 @@ function show(name) {
   document.body.classList.toggle('playing', name === null);
   if (name === null && document.activeElement && document.activeElement.blur) document.activeElement.blur();
   if (name !== null) releaseInput();
+  if (name !== null) document.body.classList.remove('dead');
   if (name === null && TOUCH) layoutPad();
 }
 const canPause = () => S && S.mode === 'solo';
