@@ -645,14 +645,21 @@ mouse, touch), screens, multiplayer, main loop.
 - **Gojo**: Blue (`BLUE`, `S.bl`, `updBlue()`) pulls by setting velocity and `push` on everyone in range
   each step and ticks damage; Red is `SHOT` kind 3 and bursts through `redBlast()`; Hollow Purple
   (`PURPLE`, `S.pu`, `updPurple()`) ignores walls and keeps a host-only `hit` list. Infinite Void
-  (`DOM`, `S.dm`) counts `d.t` down from `DOM.form + DOM.dur`: for `DOM.form` s it is a burst in the
-  world (`drawBurst()`), then `updDomain()` closes it on everyone inside, recording them in `vic` and
-  setting their `frz`: a frozen fighter neither moves nor acts (`control()`, `updFighter()`), a frozen
+  (`DOM`, `S.dm`) counts `d.t` down from `DOM.form + DOM.dur`: for `DOM.form` s white light swells out
+  of Gojo in the world (`drawBurst()`), then `updDomain()` closes it on everyone inside, recording them in `vic` and
+  setting their `frz` (the 5 s start here); for the first `DOM.rush` s of them `drawRush()` bursts
+  black ink with star streaks out of him, just for show, and `domGrow()` follows the ink, so the void
+  and the sphere only show after it (the camera pulls back for the people inside). A frozen fighter neither moves nor acts (`control()`, `updFighter()`), a frozen
   Mahoraga stands still; it ends, and `frz` clears, after `DOM.dur` or when Gojo dies. `inDomain(d)`
   says whether this device sees it from inside (`drawDomains()` blacks out everything, splatters the
   void, hangs its black hole above them, and redraws the people in it; `outside()` drops orbs, shots, particles, tags and minimap dots
   beyond its edge) or outside (a black sphere `DOM.lift` up; `hidden()` keeps what is under it out of
-  sight). `CHARS.gojo.ur` slows his ultimate meter. His banner is a band like the others (`CUTS.dom`,
+  sight). `CHARS.gojo.ur` slows his ultimate meter. His block is Infinity (`CHARS.gojo.moves.blk`,
+  `infinity()`): held, `hurt()` refuses every hit without `o.mel` (strikes, Black Flash, Soul Strike,
+  Mahoraga's fists, a curse's pounce and slam), `shotHit()` stops shots on him and Blue does not pull
+  him; a melee hit breaks it (`guardBreak()`) and lands in full, and `tryMove()` refuses his attacks
+  while it is up. For a living Gojo, `drawMini()` draws Hollow Purple's reach and path and rings
+  anyone in it. His banner is a band like the others (`CUTS.dom`,
   `cutGojo()`: the sign, a fist with two fingers up).
 - **Rabbit Escape** is one entity per cast, not one per rabbit: the swarm runs from `x0,y0` to `x,y`
   over `T` s, bursts (`RAB.dmg` in `RAB.r`), then nibbles and slows for `RAB.linger` s. Each rabbit's

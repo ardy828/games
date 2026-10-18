@@ -247,9 +247,13 @@ cursed energy: every move has its own cooldown.
 - **Gojo** has the Limitless. *Blue* sits where you aim for a moment and drags everyone near it into its
   middle, hurting them all the while (dash to break free). *Red* bursts on whatever it hits, hurling
   everyone near it away. *Hollow Purple* winds up (a purple line shows its path), then a huge orb goes
-  through everyone and every wall in its way, hitting each once, hard, with no knockback. His
-  ultimate, *Infinite Void*, takes about three times as long to charge. It bursts out of him in black
-  and violet for a moment (run!), then closes on everyone still inside: they are frozen for 5 seconds
+  through everyone and every wall in its way, hitting each once, hard, with no knockback; while he is
+  up, the minimap shows its reach and path and rings anyone in it, for sniping. His block is
+  *Infinity*: held, nothing reaches him from any side (shots stop, Blue cannot pull him), but he cannot
+  attack, and any melee hit breaks it and lands in full. His
+  ultimate, *Infinite Void*, takes about three times as long to charge. Blinding white light swells
+  out of him for a moment (run!), then black ink bursts out of him with stars rushing past and it
+  closes on everyone still inside: they are frozen for 5 seconds
   and see nothing but the void, splashed with white, and the people in it. From outside it is a black
   sphere hanging over the street, which you can walk under without being caught.
 - **Practice** — you against 1 to 10 cursed spirits (Easy, Normal or Hard), first to 10, 20 or 40 points.
