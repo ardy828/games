@@ -718,8 +718,9 @@ mouse, touch), screens, multiplayer, main loop.
   (`clashWhite()`, drawn in `render()` for anyone near) applies the result: `closeDomain()` closes the
   void mid-rush with `d.ext` extra seconds, or `d.fail` (synced) shrinks the rush away in
   `CLASH.fail` s and the shrine runs for `s.dur`. While clashing, `updDomain()` lets the rush play to
-  `CLASH.age` s and holds it there, and `drawRush()` draws it round the shrine (`d.sx/sy`, synced) out to
-  `MS.r`, a full disc of starry space with the ink's spikes at its rim, its streaks moving on `T`. Nothing shows
+  `CLASH.age` s and holds it there, and `drawRush()` draws it round the shrine (`d.sx/sy`, synced) as
+  starry space, its streaks moving on `T`: over the whole view for the two of them and anyone within
+  `MS.r + 300` (`wide`), else a disc out to `MS.r` with the ink's spikes at its rim. Nothing shows
   the count; `drawClash()`'s meeting point drifts at random. Shrines are drawn after `drawDomains()`
   while any domain clashes (`drawShrines(true)`), and `drawClash()` redraws Gojo, so both sit over his
   ink; `updCam()` frames a participant's camera on the clash.

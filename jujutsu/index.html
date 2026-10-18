@@ -3424,13 +3424,15 @@ function inkPath(d, L, cx = d.x, cy = d.y) {
   }
   return P;
 }
-function drawRush(d) {      // in a domain clash (d.cl) it fills the shrine's whole reach instead, round the shrine (d.sx, d.sy)
+function drawRush(d) {      // in a domain clash (d.cl) it is centred on the shrine (d.sx, d.sy) and swallows everything: the whole view for the two of them and anyone near (wide), its reach for those further off
   const cl = d.cl && d.sx != null, cx = cl ? d.sx : d.x, cy = cl ? d.sy : d.y, R0 = cl ? MS.r : DOM.r;
+  const mine = cl && meId != null && S.cl.some((c) => c.gd === d.id && (c.go === meId || c.su === meId)), my = cl && meId != null ? byId(meId) : null;
+  const wide = cl && (mine || (my && my.alive && Math.hypot(my.x - cx, my.y - cy) < MS.r + 300));
   const gone = d.fail > 0 ? clamp(d.fail / CLASH.fail, 0, 1) : 1, age = domAge(d), run = d.cl ? age + T % 600 : age, p = age / DOM.rush, k = inkR(d) * gone, me = inDomain(d);
   const fade = 1 - clamp((p - 0.82) / 0.18, 0, 1), dark = clamp((p - 0.62) / 0.33, 0, 1);
   let reach = R0 * 1.12;
-  if (me) for (const [x, y] of [[view.L, view.T], [view.R, view.T], [view.L, view.B], [view.R, view.B]]) reach = Math.max(reach, Math.hypot(x - cx, y - cy) * 1.05);
-  const L = reach * k;
+  if (me || wide) for (const [x, y] of [[view.L, view.T], [view.R, view.T], [view.L, view.B], [view.R, view.B]]) reach = Math.max(reach, Math.hypot(x - cx, y - cy) * 1.05);
+  const L = wide ? reach * gone * clamp(inkR(d) / 0.9, 0, 1) : reach * k;
   g.save(); g.globalAlpha = Math.min(1, gone * 2);
   if (me) { g.fillStyle = '#fbf8f3'; g.fillRect(view.L - 50, view.T - 50, view.R - view.L + 100, view.B - view.T + 100); }
   else if (!cl) whiteDisc(d, DOM.r * gone, 1 - clamp((p - 0.45) / 0.4, 0, 1));
@@ -3444,7 +3446,7 @@ function drawRush(d) {      // in a domain clash (d.cl) it fills the shrine's wh
   g.fillStyle = gr; g.fill(P);
   if (cl) { circ(cx, cy, L); g.beginPath(); g.arc(cx, cy, L * 1.12, 0, TAU); g.clip(); } else g.clip(P);      // a clash's rush swallows all of it
   if (cl) {      // and its sky is full of stars
-    for (let i = 0; i < 140; i++) {
+    for (let i = 0, n = wide ? 360 : 140; i < n; i++) {
       const a = hash1(i * 3.3 + 7) * TAU, r = Math.sqrt(hash1(i * 1.9 + 2)) * L, tw = 0.45 + 0.55 * Math.sin(T * (2 + 3 * hash1(i + 5)) + i), sz = 1 + 2.6 * hash1(i * 4.4) ** 2;
       g.fillStyle = `rgba(${i % 4 ? '235,240,255' : '200,180,255'},${clamp(tw, 0, 1) * Math.min(1, gone * 2)})`; circ(cx + Math.cos(a) * r, cy + Math.sin(a) * r, sz);
     }

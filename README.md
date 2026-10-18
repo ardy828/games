@@ -279,8 +279,8 @@ cursed energy: every move has its own cooldown.
   steps inside cannot leave until it ends.
 - **Domain clash.** If Gojo and Sukuna expand their domains within a second of each other, with Gojo
   inside the shrine's reach, the domains clash. Both banners cut in from opposite sides of the screen
-  while Gojo walks up to the foot of the rising shrine and his star rush swallows the shrine's whole
-  reach in starry space, and
+  while Gojo walks up to the foot of the rising shrine and his star rush swallows everything in starry
+  space (the whole screen for the two of them and anyone near; from further off, the shrine's reach), and
   their powers grind against each other at the shrine's mouth. For 10 seconds both of them mash their
   ultimate (F, or tap its button): there is no counter, and nobody can touch either of them. The screen
   goes white, and whoever pressed more wins. If Gojo wins, the shrine crumbles and the rush runs on
