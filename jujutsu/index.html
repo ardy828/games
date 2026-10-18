@@ -1336,6 +1336,7 @@ function hurt(t, dmg, o) {
   if (S.dm.length && o.by != null && o.kind !== 'wall' && spaceOf(o.src != null ? o.src : o.by) !== spaceOf(t.id)) return false;      // nothing crosses a domain's edge
   if (t.isM) { const ok = hurtMaho(t, dmg, o); if (ok && by && by.ch === 'nobara') mark(by, t); return ok; }
   if (!t.alive || t.prot > 0 || t.iframe > 0 || S.phase !== 'play') return false;
+  if (S.ms.length && S.ms.some((m) => m.own === t.id)) return false;      // nothing touches Sukuna up on his shrine
   if (infinity(t)) { fx(['inf', r1(t.x), r1(t.y)]); return false; }
   let blocked = false;
   if (t.blk && o.a != null && Math.abs(angD(t.aim, o.a + Math.PI)) < 1.31) {
@@ -1780,8 +1781,8 @@ function updDomain(dt) {
 // bursts into a ring of fire FUGA.r wide (he picks the spot anywhere on the map: openFugaMap()) that burns and slows everyone in it for FUGA.dur s. Malevolent
 // Shrine (S.ms) has no barrier: once it has risen (MS.rise s, lifting him onto its roof, where he stays
 // until it sinks) it cuts everyone within MS.r every MS.tick s, and whoever has been inside (s.in, host
-// only) cannot leave until it ends, MS.dur s later or when he dies.
-const CLEAVE = { range: 270, wind: 0.22, share: 0.4 };
+// only) cannot leave until it ends, MS.dur s later or when he dies. While it stands nothing can hurt him.
+const CLEAVE = { range: 650, wind: 0.22, share: 0.4 };
 const FUGA = { charge: 1.15, flight: 0.45, range: MAP * 1.5, bot: 900, r: 380, dur: 6, hit: 200, tick: 0.4, burn: 30, ring: 78, ringDmg: 10 };
 const MS = { r: 620, rise: 1, dur: 10, tick: 0.1, dmg: 9, lift: 18 };
 function cleaveTarget(f) {
@@ -2602,10 +2603,9 @@ function drawFighter(f) {
     g.fillStyle = '#4a2a22'; circ(-0.5, 0, 9.6);
     spiky(0.5, 0, 6.5, 11.5, 11, f.id * 0.7, '#f39ab5', 0.12, 0.72);
     g.fillStyle = '#ffc6d6'; circ(1.5, -2.5, 2.6);
-  } else if (suk) {      // black spiky hair, and the marks on his face
+  } else if (suk) {      // black spiky hair
     spiky(-1, 0, 8, 13.5, 12, f.id * 0.6, '#14121a', 0.2, 0.66);
     spiky(-1, 0, 5, 9, 9, f.id * 0.6 + 0.3, '#2a2636', 0.15, 0.7);
-    g.fillStyle = '#14121a'; ell(10.6, 0, 0.9, 1.6); ell(10.2, -4.4, 0.7, 1.4); ell(10.2, 4.4, 0.7, 1.4);
   } else if (gojo) {     // white hair, sticking up every way
     spiky(-0.5, 0, 8.5, 14, 13, f.id * 0.4, '#e9eef6', 0.18, 0.75);
     spiky(-0.5, 0, 5.5, 10, 10, f.id * 0.4 + 0.3, '#ffffff', 0.12, 0.8);
@@ -2733,12 +2733,58 @@ function drawBrute(f, t) {
 }
 // ── Sukuna ──
 // a flickering tongue of flame standing at (x, y), s tall
-function flame(x, y, s, seed) {
-  const fl = 0.75 + 0.25 * Math.sin(T * 18 + seed * 7), h = s * fl, w = s * 0.42;
-  g.fillStyle = 'rgba(255,90,20,.75)';
-  g.beginPath(); g.moveTo(x - w, y); g.quadraticCurveTo(x - w, y - h * 0.55, x + Math.sin(T * 9 + seed) * w * 0.4, y - h); g.quadraticCurveTo(x + w, y - h * 0.55, x + w, y); g.closePath(); g.fill();
-  g.fillStyle = 'rgba(255,214,110,.9)';
-  g.beginPath(); g.moveTo(x - w * 0.5, y); g.quadraticCurveTo(x - w * 0.45, y - h * 0.4, x, y - h * 0.6); g.quadraticCurveTo(x + w * 0.45, y - h * 0.4, x + w * 0.5, y); g.closePath(); g.fill();
+function flame(x, y, s, seed) {      // layered: deep red outside, orange, yellow, a white-hot core, swaying and flickering
+  const t = T * 7 + seed * 3.1, h = s * (0.82 + 0.18 * Math.sin(t * 1.9)), w = s * 0.34, sway = Math.sin(t) * w * 0.4;
+  g.fillStyle = 'rgba(255,80,20,.16)'; ell(x, y - h * 0.32, w * 1.6, h * 0.5);      // its glow
+  const L = [['#c41f12', 1, 1], ['#ff6a18', 0.74, 0.8], ['#ffb93a', 0.5, 0.58], ['#fff2c2', 0.24, 0.32]];
+  for (let i = 0; i < L.length; i++) {
+    const [c, wk, hk] = L[i], ww = w * wk, hh = h * hk, sw = sway * (0.4 + hk * 0.6);
+    g.fillStyle = c; g.beginPath(); g.moveTo(x - ww, y);
+    g.quadraticCurveTo(x - ww * 1.15, y - hh * 0.42, x - ww * 0.35 + sw * 0.5, y - hh * 0.68);
+    g.quadraticCurveTo(x - ww * 0.15 + sw * 0.7, y - hh * 0.8, x + sw, y - hh);
+    if (!i) { g.quadraticCurveTo(x + ww * 0.25 + sw * 0.4, y - hh * 0.72, x + ww * 0.55, y - hh * 0.74); g.quadraticCurveTo(x + ww * 0.62, y - hh * 0.6, x + ww * 0.7, y - hh * 0.5); }      // a side tongue
+    else g.quadraticCurveTo(x + ww * 0.6 + sw * 0.4, y - hh * 0.6, x + ww * 0.7, y - hh * 0.5);
+    g.quadraticCurveTo(x + ww * 1.15, y - hh * 0.3, x + ww, y);
+    g.quadraticCurveTo(x, y + ww * 0.4, x - ww, y); g.closePath(); g.fill();
+  }
+}
+// A cylinder of fire rising from a circle of radius r at (x, y), H tall: its walls stream upward in
+// bright bands, its top is a ragged crown of tongues, embers fly off it. al fades it.
+function fireColumn(x, y, r, H, al, seed) {
+  if (H < 2 || al <= 0) return;
+  g.save(); g.globalAlpha = al;
+  const ry = r * 0.55, top = y - H, n = 18;
+  const body = () => {
+    g.beginPath(); g.moveTo(x - r, y);
+    g.lineTo(x - r * 0.96, top + 20);
+    for (let i = 0; i <= n; i++) {      // the ragged top
+      const u = i / n, px = x - r + u * 2 * r, spike = (i % 2 ? 0.35 : 1) * (40 + 50 * Math.abs(Math.sin(T * 6 + i * 1.9 + seed)));
+      g.lineTo(px, top - spike * (0.5 + 0.5 * Math.sin(u * Math.PI)));
+    }
+    g.lineTo(x + r * 0.96, top + 20); g.lineTo(x + r, y);
+    g.ellipse(x, y, r, ry, 0, 0, Math.PI); g.closePath();
+  };
+  g.fillStyle = 'rgba(255,90,20,.25)'; ell(x, y, r * 1.25, ry * 1.4);      // the glow on the ground
+  const gr = g.createLinearGradient(0, y + ry, 0, top - 60);
+  gr.addColorStop(0, '#fff3c4'); gr.addColorStop(0.18, '#ffc24a'); gr.addColorStop(0.5, '#ff6a18'); gr.addColorStop(0.85, '#c41f12'); gr.addColorStop(1, 'rgba(120,10,10,.6)');
+  body(); g.fillStyle = gr; g.fill();
+  g.save(); body(); g.clip();      // bright bands streaming up inside it
+  for (let i = 0; i < 26; i++) {
+    const px = x - r + hash1(seed * 3 + i) * 2 * r, len = 80 + 140 * hash1(i * 7 + seed), sp = 500 + 400 * hash1(i + seed), py = y + ry - ((T * sp + hash1(i * 5) * 2000) % (H + ry + len));
+    g.strokeStyle = i % 3 ? 'rgba(255,240,190,.55)' : 'rgba(255,140,40,.6)'; g.lineWidth = 4 + 8 * hash1(i * 11 + seed);
+    g.beginPath(); g.moveTo(px, py); g.quadraticCurveTo(px + Math.sin(T * 5 + i) * 14, py - len / 2, px, py - len); g.stroke();
+  }
+  // darker edges, so it reads as round
+  const eg = g.createLinearGradient(x - r, 0, x + r, 0);
+  eg.addColorStop(0, 'rgba(150,20,10,.45)'); eg.addColorStop(0.25, 'rgba(0,0,0,0)'); eg.addColorStop(0.75, 'rgba(0,0,0,0)'); eg.addColorStop(1, 'rgba(150,20,10,.45)');
+  g.fillStyle = eg; g.fillRect(x - r, top - 120, 2 * r, H + ry + 140);
+  g.restore();
+  for (let i = 0; i < 14; i++) flame(x - r + (i + 0.5) / 14 * 2 * r, top + 30 + 20 * Math.sin(i * 2.1), 90 + 50 * hash1(i + seed), i + seed);      // the crown
+  for (let i = 0; i < 24; i++) {      // embers
+    const e = (T * 0.8 + hash1(i * 3 + seed)) % 1, px = x + (hash1(i * 9 + seed) - 0.5) * r * 2.4 + Math.sin(T * 3 + i) * 20, py = y - e * (H + 200);
+    g.fillStyle = `rgba(255,${180 + 60 * hash1(i)},90,${1 - e})`; circ(px, py, 2.5 + 3 * hash1(i * 13));
+  }
+  g.restore();
 }
 // Divine Flame's bow, after the anime: a great crescent of fire like a pair of swept-back wings, held
 // out in his left hand, flames licking off its front edge, bright veins through it, the burning arrow
@@ -2802,21 +2848,27 @@ function drawFugaGround() {
 }
 // in the air: the ring of fire round him while he draws, and the flaming arrow in flight
 function drawFugaAir() {
-  for (const f of S.f) {
-    if (!f.alive || f.act !== 'fuga' || f.actT >= FUGA.charge + 0.2 || !vis(f.rx, f.ry, 120)) continue;
-    const k = clamp(f.actT / 0.3, 0, 1), n = 18;
-    for (let i = 0; i < n; i++) { const a = i / n * TAU + T * 1.5; flame(f.rx + Math.cos(a) * FUGA.ring, f.ry + Math.sin(a) * FUGA.ring * 0.9, 22 * k + 6, i); }
-  }
-  for (const e of S.fl) {      // as it lands the fire blasts up, over the rooftops: tall tongues all over it and a column in the middle
-    if (e.t < 0 || e.t >= 1.1 || !vis(e.x, e.y, FUGA.r + 320) || outside(e.x, e.y)) continue;
-    const p = e.t / 1.1, up = p < 0.15 ? p / 0.15 : 1 - (p - 0.15) / 0.85;
-    g.save(); g.globalAlpha = clamp(up * 1.4, 0, 1);
-    for (let i = 0; i < 30; i++) {
-      const a = hash1(e.id * 11 + i * 3) * TAU, d = Math.sqrt(hash1(e.id + i * 7)) * FUGA.r;
-      flame(e.x + Math.cos(a) * d, e.y + Math.sin(a) * d, (120 + 160 * hash1(i * 5 + e.id)) * up, i + 80);
+  for (const f of S.f) {      // the ring of fire round him while he draws: a glowing band with flames rising off it, embers drifting up
+    if (!f.alive || f.act !== 'fuga' || f.actT >= FUGA.charge + 0.2 || !vis(f.rx, f.ry, 160)) continue;
+    const k = clamp(f.actT / 0.3, 0, 1), R = FUGA.ring, x = f.rx, y = f.ry + 6;
+    g.save();
+    g.lineWidth = 22 * k; g.strokeStyle = 'rgba(255,80,20,.25)'; g.beginPath(); g.ellipse(x, y, R, R * 0.8, 0, 0, TAU); g.stroke();
+    g.lineWidth = 9 * k; g.strokeStyle = '#ff7a1e'; g.stroke();
+    g.lineWidth = 3 * k; g.strokeStyle = '#fff0b8'; g.stroke();
+    const n = 22, items = [];
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + T * 0.9; items.push([Math.sin(a), Math.cos(a) * R, Math.sin(a) * R * 0.8, i]); }
+    items.sort((p, q) => p[0] - q[0]);      // the far side first
+    for (const [, dx, dy, i] of items) flame(x + dx, y + dy, (30 + 16 * Math.abs(Math.sin(T * 5 + i))) * k, i + f.id);
+    for (let i = 0; i < 14; i++) {
+      const e = (T * 0.9 + hash1(i * 3 + f.id)) % 1, a = hash1(i * 7) * TAU;
+      g.fillStyle = `rgba(255,${190 + 50 * hash1(i)},100,${(1 - e) * k})`; circ(x + Math.cos(a) * R * (0.6 + 0.5 * e), y + Math.sin(a) * R * 0.8 - e * 90, 2 + 2 * hash1(i * 5));
     }
-    flame(e.x - 40, e.y + 30, 420 * up, 3); flame(e.x + 40, e.y + 30, 380 * up, 5); flame(e.x, e.y + 40, 520 * up, 7);
     g.restore();
+  }
+  for (const e of S.fl) {      // as it lands, a cylinder of fire rises the width of the blast, over the rooftops, then burns out
+    if (e.t < 0 || e.t >= 1.8 || !vis(e.x, e.y, FUGA.r + 700) || outside(e.x, e.y)) continue;
+    const H = 760 * (1 - (1 - Math.min(1, e.t / 0.3)) ** 3) * (e.t < 1.2 ? 1 : 1 - (e.t - 1.2) / 0.6 * 0.5);
+    fireColumn(e.x, e.y, FUGA.r, H, clamp((1.8 - e.t) / 0.6, 0, 1), e.id);
   }
   for (const e of S.fl) {
     if (e.t < -FUGA.flight || e.t >= 0) continue;
@@ -2828,53 +2880,97 @@ function drawFugaAir() {
     g.restore();
   }
 }
-// Malevolent Shrine from above: it rises out of the ground under him (bigger, its shadow longer), roofs
-// in two tiers with gold ridges, curved horns at the corners and flames on them; he stands on top.
-// Inside its reach slashes flicker everywhere, but there is no wall to see.
+// Malevolent Shrine, seen from the front like the buildings' fronts (in the banner's style): a stone base
+// with steps, a fanged maw glowing red between lacquered pillars, two tiers of upswept roofs trimmed in
+// gold, great horns with fire on their tips. It rises out of the ground under him (clipped at the
+// ground line, dust and cracks at its foot) and he stands on its ridge. While it is up the whole domain
+// is tinted red and slashes flicker everywhere in it, but there is no wall to see.
+const SHRINE_BASE = 170, SHRINE_H = 232;      // its foot below him, and from foot to ridge, in world units
 function drawShrines() {
   for (const s of S.ms) {
-    if (!vis(s.x, s.y, MS.r + 60) || outside(s.x, s.y)) continue;
+    if (!vis(s.x, s.y, MS.r + 260) || outside(s.x, s.y)) continue;
     const up = s.t < MS.rise ? 1 - (1 - s.t / MS.rise) ** 3 : 1, down = clamp((MS.rise + MS.dur - s.t) / 0.6, 0, 1), k = up * down;
-    if (s.t >= MS.rise) {      // the cuts
+    if (s.t >= MS.rise) {      // the red over everything in reach, deepest at its rim, and the cuts
+      const al = down;
+      const gr = g.createRadialGradient(s.x, s.y, MS.r * 0.2, s.x, s.y, MS.r);
+      gr.addColorStop(0, `rgba(170,0,20,${0.16 * al})`); gr.addColorStop(0.85, `rgba(190,0,25,${0.26 * al})`); gr.addColorStop(1, `rgba(120,0,15,${0.34 * al})`);
+      g.fillStyle = gr; circ(s.x, s.y, MS.r);
       const n = 34, seed = Math.floor(T * 24);
       for (let i = 0; i < n; i++) {
         const a = hash1(seed * 13 + i) * TAU, d = Math.sqrt(hash1(seed * 7 + i * 3)) * MS.r, x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d, b = hash1(i + seed) * Math.PI, L = 18 + 26 * hash1(seed + i * 5);
-        g.strokeStyle = i % 3 ? 'rgba(255,255,255,.7)' : 'rgba(255,60,90,.75)'; g.lineWidth = 2.5;
+        g.strokeStyle = i % 3 ? `rgba(255,255,255,${0.7 * al})` : `rgba(255,60,90,${0.75 * al})`; g.lineWidth = 2.5;
         g.beginPath(); g.moveTo(x - Math.cos(b) * L, y - Math.sin(b) * L); g.lineTo(x + Math.cos(b) * L, y + Math.sin(b) * L); g.stroke();
       }
     }
     if (k <= 0) continue;
-    const sc = 0.35 + 0.65 * k, lift = MS.lift * k;
-    g.save(); g.translate(s.x, s.y);
-    g.fillStyle = `rgba(0,0,0,${0.35 * k})`; ell(lift * 1.4, lift * 1.8, 96 * sc, 84 * sc);      // its shadow, longer the higher it is
-    g.translate(0, -lift); g.scale(sc, sc);
-    g.fillStyle = '#2a1424'; g.fillRect(-74, -74, 148, 148);      // the stone base
-    g.strokeStyle = '#120810'; g.lineWidth = 4; g.strokeRect(-74, -74, 148, 148);
-    const roof = (R, c1, c2) => {      // a pagoda roof from above: a square whose eaves sweep out at the corners
-      g.fillStyle = c1; g.beginPath();
-      for (let i = 0; i < 4; i++) {
-        const a = i * Math.PI / 2 + Math.PI / 4, b = a + Math.PI / 2;
-        const cx = Math.cos(a) * R * 1.32, cy = Math.sin(a) * R * 1.32, nx = Math.cos(b) * R * 1.32, ny = Math.sin(b) * R * 1.32;
-        if (!i) g.moveTo(cx, cy);
-        g.quadraticCurveTo((cx + nx) * 0.36, (cy + ny) * 0.36, nx, ny);
-      }
-      g.closePath(); g.fill(); g.strokeStyle = '#120810'; g.lineWidth = 3; g.stroke();
-      g.strokeStyle = c2; g.lineWidth = 2; g.beginPath(); g.moveTo(-R * 0.93, -R * 0.93); g.lineTo(R * 0.93, R * 0.93); g.moveTo(R * 0.93, -R * 0.93); g.lineTo(-R * 0.93, R * 0.93); g.stroke();
-    };
-    roof(76, '#4a1a3a', '#e8b04a');
-    for (let i = 0; i < 4; i++) {      // the horns, curving out from the corners, flames at their tips
-      const a = i * Math.PI / 2 + Math.PI / 4, c = Math.cos(a), sn = Math.sin(a), tx = c * 150 - sn * 30, ty = sn * 150 + c * 30;
-      g.strokeStyle = '#120810'; g.lineWidth = 14; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(c * 90, sn * 90); g.quadraticCurveTo(c * 140, sn * 140, tx, ty); g.stroke();
-      g.strokeStyle = '#e9dcc8'; g.lineWidth = 9; g.stroke();
-      flame(tx, ty, 22 * k + 4, i);
-    }
-    roof(44, '#5a2048', '#e8b04a');
-    g.fillStyle = '#e8b04a'; circ(0, 0, 7);
+    const bx = s.x, by = s.y + SHRINE_BASE, rise = (1 - k) * (SHRINE_H + 60);
+    g.fillStyle = `rgba(0,0,0,${0.4 * k})`; ell(bx + 30, by + 8, 230, 60);      // its shadow on the street
+    g.save();
+    g.beginPath(); g.rect(bx - 420, by - SHRINE_H - 400, 840, SHRINE_H + 400); g.clip();      // nothing below the ground line
+    g.translate(bx, by + rise);
+    shrineFront(k);
     g.restore();
-    const o = byId(s.own);      // he stands on the roof
-    if (o && o.alive) { const ox = o.rx, oy = o.ry; o.rx = s.x; o.ry = s.y - lift - 6 * k; drawFighter(o); o.rx = ox; o.ry = oy; }
+    if (s.t < MS.rise) {      // the street breaking open at its foot
+      g.strokeStyle = 'rgba(20,10,10,.7)'; g.lineWidth = 3;
+      for (let i = 0; i < 9; i++) { const a = Math.PI + i / 8 * Math.PI, L = 120 + 80 * hash1(i + s.id); g.beginPath(); g.moveTo(bx + Math.cos(a) * 200, by + 6); g.lineTo(bx + Math.cos(a) * (200 + L), by + 6 - Math.sin(a) * L * 0.25); g.stroke(); }
+      g.fillStyle = 'rgba(90,70,60,.5)'; for (let i = 0; i < 10; i++) circ(bx - 230 + i * 51, by + 4 - 20 * Math.abs(Math.sin(T * 9 + i)), 18 + 10 * hash1(i));
+    }
+    const o = byId(s.own);      // he stands on its ridge
+    if (o && o.alive) { const ox = o.rx, oy = o.ry; o.rx = s.x; o.ry = by + rise - SHRINE_H - 10; drawFighter(o); o.rx = ox; o.ry = oy; }
   }
+}
+// the shrine's front, its foot at (0, 0), up being -y
+function shrineFront(k) {
+  const ink = '#120810', gold = '#e8b04a', lac = '#7a1a2a', wood = '#2a1424';
+  g.save(); g.lineJoin = 'round'; g.lineCap = 'round';
+  // stone base and its steps
+  g.fillStyle = '#4a4048'; g.strokeStyle = ink; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(-200, 0); g.lineTo(200, 0); g.lineTo(184, -30); g.lineTo(-184, -30); g.closePath(); g.fill(); g.stroke();
+  g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 2;
+  for (const y of [-10, -20]) { g.beginPath(); g.moveTo(-190 + (y === -20 ? 8 : 0), y); g.lineTo(190 - (y === -20 ? 8 : 0), y); g.stroke(); }
+  // the hall: dark wood, the maw between the pillars
+  g.fillStyle = wood; g.strokeStyle = ink; g.lineWidth = 4; g.fillRect(-160, -122, 320, 92); g.strokeRect(-160, -122, 320, 92);
+  const glow = 0.75 + 0.25 * Math.sin(T * 6);
+  const mg = g.createRadialGradient(0, -74, 6, 0, -74, 130);
+  mg.addColorStop(0, `rgba(255,${200 * glow | 0},${140 * glow | 0},1)`); mg.addColorStop(0.35, '#e0204a'); mg.addColorStop(1, '#3a0614');
+  g.fillStyle = mg; g.beginPath(); g.ellipse(0, -76, 118, 40, 0, 0, TAU); g.fill(); g.stroke();
+  g.fillStyle = '#f1e6d6'; g.strokeStyle = ink; g.lineWidth = 2;
+  for (let i = 0; i < 9; i++) {      // fangs above and below
+    const x = -96 + i * 24, big = i === 1 || i === 7, h = big ? 30 : 18;
+    g.beginPath(); g.moveTo(x - 9, -110); g.lineTo(x + 9, -110); g.lineTo(x, -110 + h); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(x - 9, -42); g.lineTo(x + 9, -42); g.lineTo(x, -42 - h * 0.8); g.closePath(); g.fill(); g.stroke();
+  }
+  for (const x of [-160, -112, 112, 160]) {      // lacquered pillars with gold bands
+    g.fillStyle = lac; g.fillRect(x - 9, -126, 18, 98); g.strokeStyle = ink; g.lineWidth = 3; g.strokeRect(x - 9, -126, 18, 98);
+    g.fillStyle = gold; g.fillRect(x - 10, -116, 20, 5); g.fillRect(x - 10, -44, 20, 5);
+  }
+  // a roof: wide eaves sweeping up at the ends, tiled, with a gold rim
+  const roof = (w, y0, h, lift) => {
+    g.fillStyle = '#3a1630'; g.strokeStyle = ink; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(-w, y0 - lift); g.quadraticCurveTo(-w * 0.7, y0 + 6, -w * 0.45, y0); g.lineTo(w * 0.45, y0); g.quadraticCurveTo(w * 0.7, y0 + 6, w, y0 - lift);
+    g.lineTo(w * 0.55, y0 - h); g.lineTo(-w * 0.55, y0 - h); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(160,80,140,.35)'; g.lineWidth = 2;
+    for (let x = -w * 0.5; x <= w * 0.5; x += 16) { g.beginPath(); g.moveTo(x, y0 - 2); g.lineTo(x * 1.08, y0 - h + 2); g.stroke(); }
+    g.strokeStyle = gold; g.lineWidth = 3.5;
+    g.beginPath(); g.moveTo(-w, y0 - lift); g.quadraticCurveTo(-w * 0.7, y0 + 6, -w * 0.45, y0); g.lineTo(w * 0.45, y0); g.quadraticCurveTo(w * 0.7, y0 + 6, w, y0 - lift); g.stroke();
+    g.fillStyle = gold; circ(-w, y0 - lift, 5); circ(w, y0 - lift, 5);
+  };
+  roof(232, -120, 46, 34);
+  g.fillStyle = wood; g.fillRect(-104, -192, 208, 30); g.strokeStyle = ink; g.lineWidth = 3; g.strokeRect(-104, -192, 208, 30);      // the upper storey
+  for (let x = -90; x <= 90; x += 30) { g.fillStyle = '#e0204a'; g.globalAlpha = 0.5 + 0.3 * Math.sin(T * 5 + x); g.fillRect(x - 6, -186, 12, 18); g.globalAlpha = 1; }
+  // the horns, curving out and up from the upper storey, fire on their tips
+  for (const sx of [-1, 1]) {
+    g.strokeStyle = ink; g.lineWidth = 22;
+    g.beginPath(); g.moveTo(sx * 96, -176); g.bezierCurveTo(sx * 190, -190, sx * 230, -250, sx * 196, -320); g.stroke();
+    g.strokeStyle = '#e9dcc8'; g.lineWidth = 15; g.stroke();
+    g.strokeStyle = 'rgba(160,140,120,.6)'; g.lineWidth = 2;
+    for (let i = 1; i < 5; i++) { const u = i / 5, x = sx * (96 + u * 120), y = -176 - u * 110; g.beginPath(); g.moveTo(x - 6, y - 4); g.lineTo(x + 6, y + 4); g.stroke(); }
+    flame(sx * 196, -316, 34 + 24 * k, sx + 3);
+  }
+  roof(150, -188, 40, 26);
+  g.strokeStyle = gold; g.lineWidth = 5; g.beginPath(); g.moveTo(-70, -228); g.lineTo(70, -228); g.stroke();      // the ridge he stands on
+  g.fillStyle = gold; circ(-74, -228, 6); circ(74, -228, 6);
+  g.restore();
 }
 // The Ten Shadows shikigami, drawn from above after the anime: Nue, an orange owl-like bird with a white
 // skull mask and two sets of talons; the white rabbits of Rabbit Escape; Max Elephant, pink with yellow

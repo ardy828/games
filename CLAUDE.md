@@ -700,7 +700,9 @@ mouse, touch), screens, multiplayer, main loop.
   drawing. Malevolent Shrine (`S.ms`, `MS`, `updShrine()`): no barrier; after `MS.rise` s it pins him
   on its roof (position reset every step, and the joiner's `predStep()` holds him there), cuts everyone
   within `MS.r` every `MS.tick` s, and keeps whoever has been inside (`s.in`, host only) from leaving
-  until it ends. `drawShrines()` draws it rising and redraws him on top; `cutSukuna()` is his banner
+  until it ends; while it stands `hurt()` refuses every hit on him. `drawShrines()` tints the domain red,
+  draws the shrine from the front (`shrineFront()`, rising out of the ground) and redraws him on its ridge;
+  `fireColumn()` is Divine Flame's rising cylinder and `flame()` the layered flame everything uses; `cutSukuna()` is his banner
   (the Malevolent Shrine sign, his face marks).
 - **Nue** is a ride, not an action: `f.nue` (synced) counts down from `NUE.dur`, `nueSp()` scales walking
   (the joiner's `predStep()` too) from `NUE.sp0` to `NUE.sp1`, `rideNue()` shocks anyone touched (once per
