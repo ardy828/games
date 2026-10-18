@@ -1501,7 +1501,7 @@ function updRabbits(dt) {
       for (const f of S.f) {
         if (!f.alive || f.id === r.own || Math.hypot(f.x - r.x, f.y - r.y) > RAB.r - 12 + f.r) continue;
         f.slow = Math.max(f.slow, 0.35);
-        hurt(f, 6, { by: r.own, kind: 'rab' });
+        hurt(f, 7.2, { by: r.own, kind: 'rab' });
       }
     }
     if (r.t > r.T + RAB.linger) { r.dead = true; fx(['rgone', r.x, r.y]); }
