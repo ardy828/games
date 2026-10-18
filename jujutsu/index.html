@@ -1228,13 +1228,15 @@ const KIND_CODE = { m1: 0, bf: 1, pb: 2, dis: 3, ss: 4, nue: 5, rab: 6, ele: 7, 
 // cannot attack while it is up. It does not stop Infinite Void.
 const infinity = (t) => !t.isM && t.blk && !!CHARS[t.ch].moves.blk;
 // o: by (attacker's fighter id), a (direction of the hit), kb (push in units), kind, gb (breaks a
-// block), ub (ignores a block), fixed (a block does not shrink it). There are no stuns: a hit never
+// block), ub (ignores a block), fixed (a block does not shrink it), src (the id of whatever struck, when
+// it is not the attacker himself: Mahoraga). There are no stuns: a hit never
 // stops what you are doing. A hard one knocks you back, and for t.push s you slide instead of
 // walking (until you are no faster than a walk), though you can still attack, block, dash or cast.
 function hurt(t, dmg, o) {
   dmg *= RULES.dmg;
   const by = o.by != null ? byId(o.by) : null;
   if (by && cursed(by) && (t.isM || cursed(t))) return false;      // curses only hurt sorcerers
+  if (S.dm.length && o.by != null && o.kind !== 'wall' && spaceOf(o.src != null ? o.src : o.by) !== spaceOf(t.id)) return false;      // nothing crosses a domain's edge
   if (t.isM) { const ok = hurtMaho(t, dmg, o); if (ok && by && by.ch === 'nobara') mark(by, t); return ok; }
   if (!t.alive || t.prot > 0 || t.iframe > 0 || S.phase !== 'play') return false;
   if (infinity(t)) { fx(['inf', r1(t.x), r1(t.y)]); return false; }
@@ -1361,7 +1363,7 @@ function updMaho(dt) {
       const a = ang(m, o);
       m.aim = a;
       if (dist(m, o) < m.r + FR + 14) {
-        if (hurt(o, 60, { by: m.own, a, kb: 350, ub: true, kind: 'maho' })) fx(['kick', r1(o.x), r1(o.y), r2(a)]);
+        if (hurt(o, 60, { by: m.own, src: m.id, a, kb: 350, ub: true, kind: 'maho' })) fx(['kick', r1(o.x), r1(o.y), r2(a)]);
         m.mode = 'hunt'; m.mt = 0; m.cd = 0.9; m.vx = m.vy = 0;
       } else { m.vx = Math.cos(a) * 560; m.vy = Math.sin(a) * 560; }
       mmove(m, dt); continue;
@@ -1374,7 +1376,7 @@ function updMaho(dt) {
         for (const t of targets(m.id)) {
           const d = dist(m, t) - t.r - m.r;
           if (d > 62 || (Math.abs(angD(m.aim, ang(m, t))) > 0.95 && d > 6)) continue;
-          if (hurt(t, MAHO.dmg * (1 + 0.2 * Math.min(5, m.spins)), { by: m.own, a: ang(m, t), kb: 170, kind: 'maho' })) any = true;
+          if (hurt(t, MAHO.dmg * (1 + 0.2 * Math.min(5, m.spins)), { by: m.own, src: m.id, a: ang(m, t), kb: 170, kind: 'maho' })) any = true;
         }
         fx(['snd', 'swing', r1(m.x), r1(m.y)]);
         if (any) { spinWheel(m); fx(['snd', 'kick', r1(m.x), r1(m.y)]); }
@@ -1433,7 +1435,7 @@ function shotHit(b, t) {
 function updShots(dt) {
   for (const b of S.sh) {
     const K = SHOT[b.k || 0], step = K.spd * dt, c = Math.cos(b.a), s = Math.sin(b.a);
-    const vd = S.dm.length ? voidOf(b.own) : null, free = vd ? voidLen(vd, b.x, b.y, b.a, step) : rayLen(b.x, b.y, b.a, step);
+    const vd = S.dm.length ? voidOf(b.own) : null, free = vd ? voidLen(vd, b.x, b.y, b.a, step) : S.dm.length ? barrier(b.x, b.y, b.a, rayLen(b.x, b.y, b.a, step)) : rayLen(b.x, b.y, b.a, step);
     for (const t of targets(b.own)) {
       const dx = t.x - b.x, dy = t.y - b.y, al = dx * c + dy * s, pp = Math.abs(-dx * s + dy * c);
       if (al > -t.r && al < free + t.r && pp < t.r + K.w && shotHit(b, t)) { b.dead = true; break; }
@@ -1564,7 +1566,7 @@ function updBlue(dt) {
     for (const t of targets(b.own)) {
       const dx = b.x - t.x, dy = b.y - t.y, d = Math.hypot(dx, dy);
       if (d > BLUE.r + t.r) continue;
-      if (!(t.frz > 0) && d > 1 && !infinity(t)) {
+      if (!(t.frz > 0) && d > 1 && !infinity(t) && spaceOf(t.id) === spaceOf(b.own)) {
         const sp = BLUE.pull * clamp(d / 70, 0.25, 1), k = Math.min(1, dt * 10);
         t.vx += (dx / d * sp - t.vx) * k; t.vy += (dy / d * sp - t.vy) * k;
         t.push = Math.max(t.push || 0, 0.12);
@@ -1607,6 +1609,17 @@ function updPurple(dt) {
 // to shove them. Its edge is the one wall, and there is no way out through it.
 const voidOf = (id) => S.dm.find((d) => d.t <= DOM.shut && (d.own === id || d.vic.includes(id)));
 const NO_HIT = { hit: false };
+const spaceOf = (id) => { const d = S.dm.length ? voidOf(id) : null; return d ? d.id + 1 : 0; };      // inside a domain (its id + 1) or not (0)
+// how far a shot from outside gets before it meets a closed domain's edge
+function barrier(x, y, a, max) {
+  for (const d of S.dm) {
+    if (d.t > DOM.shut) continue;
+    const px = x - d.x, py = y - d.y, pu = px * Math.cos(a) + py * Math.sin(a), c = px * px + py * py - DOM.r * DOM.r, q = pu * pu - c;
+    if (c <= 0 || q < 0 || pu >= 0) continue;
+    max = Math.min(max, Math.max(0, -pu - Math.sqrt(q)));
+  }
+  return max;
+}
 // how far something travelling from (x, y) along a gets inside domain d before its edge
 function voidLen(d, x, y, a, max) {
   const px = x - d.x, py = y - d.y, pu = px * Math.cos(a) + py * Math.sin(a);
@@ -1697,7 +1710,7 @@ function separate() {
   const B = [];
   for (const f of S.f) if (f.alive && !LOCKED(f)) B.push(f);
   for (const m of S.maho) if (m.mode !== 'lunge') B.push(m);
-  const sp = B.map((e) => { const d = S.dm.length ? voidOf(e.id) : null; return d ? d.id + 1 : 0; });      // inside a domain or not
+  const sp = B.map((e) => spaceOf(e.id));
   for (let i = 0; i < B.length; i++) for (let j = i + 1; j < B.length; j++) {
     const a = B[i], b = B[j], dx = b.x - a.x, dy = b.y - a.y, m = a.r + b.r, d2 = dx * dx + dy * dy;
     if (d2 >= m * m || d2 < 1e-6 || sp[i] !== sp[j]) continue;
