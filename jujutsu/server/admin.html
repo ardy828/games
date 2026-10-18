@@ -58,20 +58,25 @@
   .chip{background:var(--panel2);border:1px solid var(--line);padding:6px 12px;font-size:14px}
   .chip b{font-family:var(--disp);font-weight:400;font-size:20px;letter-spacing:.04em;margin-right:6px;color:var(--gold)}
   .rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
-  .room{background:var(--panel2);border:1px solid var(--line);padding:10px 12px}
+  .room{min-width:0;background:var(--panel2);border:1px solid var(--line);padding:10px 12px}
   .room.empty{opacity:.6}
   .chatlog{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;max-height:220px;overflow-y:auto;font-size:13px;display:grid;gap:3px}
   .chatlog h4{font-family:var(--disp);font-weight:400;letter-spacing:.06em;color:var(--muted);font-size:13px}
   .chatlog div{overflow-wrap:anywhere}
   .chatlog time{color:var(--muted);font-size:11px;margin-right:6px}
-  .chatlog b{margin-right:5px}
+  .chatlog b{margin-right:5px;display:inline-block;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
   .room h3{font-family:var(--disp);font-weight:400;font-size:18px;letter-spacing:.06em;display:flex;justify-content:space-between}
   .room h3 span{color:var(--muted)}
-  .room .info{font-size:12.5px;color:var(--muted);margin:2px 0 8px}
-  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  .room .info{font-size:12.5px;color:var(--muted);margin:2px 0 8px;overflow-wrap:anywhere}
+  table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13.5px}
   th{font-size:10.5px;letter-spacing:.12em;color:var(--muted);text-align:left;padding:2px 4px}
   td{padding:4px;border-top:1px solid var(--line)}
-  td.n,th.n{text-align:right;width:28px}
+  td.n,th.n{text-align:right;width:26px}
+  th.ch{width:58px}
+  th.kc{width:46px}
+  .who{display:flex;flex-wrap:wrap;align-items:center;gap:2px 0}
+  .who>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-right:auto}
+  .who .tag{margin:0 5px 0 0}
   .tag{font-size:10px;letter-spacing:.08em;padding:1px 5px;margin-left:5px;border:1px solid var(--line);color:var(--muted);vertical-align:1px}
   .tag.host{color:var(--gold);border-color:#6b5a26}
   .tag.dead{color:var(--red);border-color:#5c2430}
@@ -327,15 +332,19 @@ function render(s) {
     card.append(el('div', 'info', info));
     if (r.players.length) {
       const t = el('table'), hd = el('tr');
-      for (const [s2, c] of [['NAME', ''], ['FIGHTER', ''], ['PTS', 'n'], ['K', 'n'], ['D', 'n'], ['', 'n']]) hd.append(el('th', c, s2));
+      for (const [s2, c] of [['NAME', ''], ['FIGHTER', 'ch'], ['PTS', 'n'], ['K', 'n'], ['D', 'n'], ['', 'n kc']]) hd.append(el('th', c, s2));
       t.append(hd);
       const rows = st ? st.f : r.players.map((p) => [p.id, p.name, '', '', '', '', 0, 1]);
       for (const [id, name, ch, pts, k, d, bot, alive] of rows) {
-        const tr = el('tr'), nm = el('td', '', name), human = r.players.find((p) => p.id === id);
+        const tr = el('tr'), nm = el('div', 'who'), human = r.players.find((p) => p.id === id);
         if (bot) nm.append(el('span', 'tag', 'BOT'));
         if (human && human.host) nm.append(el('span', 'tag host', 'HOST'));
         if (st && !alive) nm.append(el('span', 'tag dead', 'DOWN'));
-        tr.append(nm, el('td', '', ch ? ch.toUpperCase() : ''), el('td', 'n', String(pts)), el('td', 'n', String(k)), el('td', 'n', String(d)));
+        nm.prepend(el('span', '', name));
+        nm.title = name;
+        const nc = el('td');
+        nc.append(nm);
+        tr.append(nc, el('td', '', ch ? ch.toUpperCase() : ''), el('td', 'n', String(pts)), el('td', 'n', String(k)), el('td', 'n', String(d)));
         const kc = el('td', 'n');
         if (human) {
           const b = el('button', 'kick', 'KICK');
