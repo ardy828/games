@@ -360,9 +360,9 @@ const CHARS = {
     n: 'Megumi Fushiguro', s: 'MEGUMI', hp: 1000, spd: 285, m1: [55, 55, 60, 100], reach: 50, col: '#8fb4ff',
     blurb: 'Ten Shadows: fights through shikigami.',
     moves: {
-      q: { n: 'Nue', k: '鵺', cd: 8 },
-      e: { n: 'Rabbit Escape', k: '脱兎', cd: 11 },
-      c: { n: 'Max Elephant', k: '満象', cd: 13 },
+      q: { n: 'Nue', k: '鵺', cd: 7 },
+      e: { n: 'Rabbit Escape', k: '脱兎', cd: 10 },
+      c: { n: 'Max Elephant', k: '満象', cd: 11 },
       u: { n: 'Mahoraga', k: '魔虚羅' },
     },
   },
@@ -998,7 +998,7 @@ const ACTS = {
       for (const t of targets(f.id)) {
         if (f.hitL.includes(t.id) || dist(t, f) > t.r + FR + 22) continue;
         f.hitL.push(t.id);
-        if (hurt(t, 125, { by: f.id, a, kb: 160, kind: 'nue' })) fx(['zap', r1(t.x), r1(t.y)]);
+        if (hurt(t, 150, { by: f.id, a, kb: 160, kind: 'nue' })) fx(['zap', r1(t.x), r1(t.y)]);
       }
       return;
     }
@@ -1317,7 +1317,7 @@ function newMatch() {
 // adapts to it (60% less from then on); every hit he lands spins it too, and each spin (up to five)
 // makes his punches hit 20% harder. He has no time limit: he stays until he is killed or a new
 // match clears the board.
-const MAHO = { hp: 3600, r: 34, spd: 255, dmg: 125 };
+const MAHO = { hp: 3600, r: 34, spd: 255, dmg: 150 };
 function spawnMaho(x, y, aim, own) {
   const m = { isM: true, id: 1e6 + S.nid++, own, x, y, vx: 0, vy: 0,
     aim, hp: MAHO.hp, r: MAHO.r, spins: 0, adapt: [], mode: 'rise', mt: 0, cd: 0, lcd: 0, pc: 0,
@@ -1472,7 +1472,7 @@ function updEle(dt) {
     if (was < 0 && e.t >= 0) {
       for (const t of targets(e.own)) {
         const d = Math.hypot(t.x - e.x, t.y - e.y);
-        if (d < 120 + t.r) hurt(t, 195, { by: e.own, a: Math.atan2(t.y - e.y, t.x - e.x), kb: 260, kind: 'ele' });
+        if (d < 120 + t.r) hurt(t, 235, { by: e.own, a: Math.atan2(t.y - e.y, t.x - e.x), kb: 260, kind: 'ele' });
       }
       fx(['ele', e.x, e.y]);
     }
@@ -1483,7 +1483,7 @@ function updEle(dt) {
 // Rabbit Escape: the swarm pours out of Megumi's shadow, rushes to where he aimed (up to RAB.max
 // away) and bursts there, then mills about for a moment, nibbling and slowing whoever is caught in it.
 // One entity stands for the whole swarm; each rabbit's path is worked out from it when drawing.
-const RAB = { n: 16, min: 120, max: 430, spd: 820, r: 105, dmg: 150, linger: 1.3 };
+const RAB = { n: 16, min: 120, max: 430, spd: 820, r: 105, dmg: 180, linger: 1.3 };
 function updRabbits(dt) {
   for (const r of S.rab) {
     r.t += dt;
