@@ -140,6 +140,12 @@
   #banner.on{animation:ban var(--d,1.6s) ease forwards}
   #banT{display:block;font-family:var(--disp);font-weight:400;font-size:clamp(40px,9vw,88px);line-height:1;letter-spacing:.04em;color:#fff;text-shadow:0 0 18px var(--bc,#8b5cff),0 4px 0 #000}
   #banS{display:block;margin-top:8px;font-weight:700;color:#fff;font-size:clamp(13px,3.2vw,18px);text-shadow:0 2px 6px #000}
+  #ann{position:absolute;left:0;right:0;top:11%;text-align:center;opacity:0;padding:0 16px;pointer-events:none}
+  #ann.on{animation:banIn .45s ease forwards,banOut .7s ease calc(var(--d,5s) - .7s) forwards}
+  #annS{display:block;font-weight:800;letter-spacing:.3em;font-size:clamp(11px,2.6vw,15px);color:#f0c24f;text-shadow:0 2px 6px #000;margin-bottom:6px}
+  #annT{display:block;font-family:var(--disp);font-weight:400;font-size:clamp(28px,6vw,64px);line-height:1.08;letter-spacing:.03em;color:#fff;overflow-wrap:anywhere;text-shadow:0 0 18px #f0c24f,0 4px 0 #000}
+  @keyframes banIn{0%{opacity:0;transform:scale(1.4)}100%{opacity:1;transform:scale(1)}}
+  @keyframes banOut{0%{opacity:1}100%{opacity:0;transform:scale(.97)}}
   @keyframes ban{0%{opacity:0;transform:scale(1.5)}9%{opacity:1;transform:scale(1)}82%{opacity:1}100%{opacity:0;transform:scale(.97)}}
 
   #me{position:absolute;left:50%;bottom:86px;translate:-50% 0;width:min(360px,70vw);display:grid;gap:4px}
@@ -235,6 +241,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
   <div id="feed"></div>
   <div id="chat"><div id="chatLog"></div><input id="chatIn" maxlength="100" autocomplete="off" spellcheck="false" placeholder="Say something… (Enter to send, Esc to close)"></div>
   <div id="banner"><b id="banT"></b><span id="banS"></span></div>
+  <div id="ann"><span id="annS">ANNOUNCEMENT</span><b id="annT"></b></div>
   <div id="me">
     <div id="meName"><span id="meN"></span><span id="meK"></span></div>
     <div class="bar" id="hpBar"><i id="hpFill"></i><span id="hpTxt"></span></div>
@@ -3675,6 +3682,12 @@ function banner(t, s, col, d) {
   b.style.setProperty('--bc', col || '#8b5cff'); b.style.setProperty('--d', (d || 1.6) + 's');
   b.classList.remove('on'); void b.offsetWidth; b.classList.add('on');
 }
+// an admin's broadcast: the message itself big, over the banners, for sec seconds
+function announce(text, sec) {
+  const b = $('ann');
+  $('annT').textContent = text; b.style.setProperty('--d', sec + 's');
+  b.classList.remove('on'); void b.offsetWidth; b.classList.add('on');
+}
 let deadBy = '', deadLost = '';
 const ptsTxt = (n) => n + (n === 1 ? ' point' : ' points');
 function doEvent(a) {
@@ -4580,7 +4593,7 @@ function onSys(m) {
   }
   if (m.sys === 'msg') {
     const text = clean(m.text, 140);
-    if (text && S && S.mode !== 'demo') { banner('ANNOUNCEMENT', text, '#f0c24f', 5); feed([['📢 ' + text]]); SFX.win(); }
+    if (text && S && S.mode !== 'demo') { announce(text, clamp(num(m.sec, 5), 2, 60)); feed([['📢 ' + text]]); SFX.win(); }
     return;
   }
   if (m.sys === 'admin') { if (n.host) adminEvent(m.ev); return; }

@@ -723,7 +723,7 @@ mouse, touch), screens, multiplayer, main loop.
   Hibernation API, 20 players (`MAX_PLAYERS`), only the host may send to `*`, to an id or to `!` (its scoreboard, every
   2 s, for the admin page), a host silent for `STALL_MS` is replaced. Each room stores the admin's
   rules and sends them in `welcome` and as `{sys:'rules'}`; admin events go to the host as
-  `{sys:'admin', ev}` (`adminEvent()` runs them), broadcasts to everyone as `{sys:'msg'}`, and a kick
+  `{sys:'admin', ev}` (`adminEvent()` runs them), broadcasts to everyone as `{sys:'msg', text, sec}` (`announce()` shows the text big for `sec` s, 2–60), and a kick
   is `{sys:'kick'}` then a close.
 - **Admin page** (`jujutsu/server/admin.html`, served by the Worker at `/admin`, imported as a text
   module): talks to `/admin/api/{status,rules,event,msg,kick}` with `Authorization: Bearer

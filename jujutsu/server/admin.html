@@ -157,6 +157,7 @@
         <textarea id="msg" maxlength="140" placeholder="Double kill Fridays start now!"></textarea>
         <div class="row" style="margin-top:8px">
           <select id="msgRoom"></select>
+          <select id="msgSec" title="How long it stays on screen"><option value="3">3 s</option><option value="5" selected>5 s</option><option value="10">10 s</option><option value="15">15 s</option><option value="30">30 s</option><option value="60">60 s</option></select>
           <button class="big gold" id="sendMsg">SEND</button>
           <span class="note" id="msgLeft">140 left</span>
         </div>
@@ -455,7 +456,7 @@ $('msg').oninput = () => { $('msgLeft').textContent = (140 - $('msg').value.leng
 $('sendMsg').onclick = async () => {
   const text = $('msg').value.trim(), room = $('msgRoom').value;
   if (!text) { toast('Type a message first.', true); return; }
-  if (await act('Broadcast to ' + (room === 'all' ? 'all rooms' : room) + ': "' + text + '"', 'msg', { room, text })) { $('msg').value = ''; $('msg').oninput(); }
+  if (await act('Broadcast to ' + (room === 'all' ? 'all rooms' : room) + ': "' + text + '"', 'msg', { room, text, sec: +$('msgSec').value })) { $('msg').value = ''; $('msg').oninput(); }
 };
 for (const [ev, kj, n, h] of EVENTS) {
   const b = el('button', 'ev'), top = el('b');

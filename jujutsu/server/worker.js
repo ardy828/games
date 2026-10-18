@@ -16,7 +16,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import ADMIN_HTML from './admin.html';
 
-const VERSION = 8;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
+const VERSION = 9;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
 const ROOMS = ['pub-1', 'pub-2', 'pub-3', 'pub-4'];
 const MAX_PLAYERS = 20;
 const MAX_MSG = 32768;      // bytes; a full room's snapshot is about 8 kB
@@ -83,7 +83,8 @@ async function adminApi(req, env, what) {
   if (what === 'msg') {
     const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 140);
     if (!text) return json({ error: 'Type a message first.' }, 400);
-    await Promise.all(where.map((name) => ask(env, name, 'msg', { text })));
+    const sec = Math.min(60, Math.max(2, Math.round(Number(body.sec)) || 5));
+    await Promise.all(where.map((name) => ask(env, name, 'msg', { text, sec })));
     return json({ ok: true });
   }
   if (what === 'kick') {
@@ -205,7 +206,7 @@ export class Room extends DurableObject {
       return { ok: !!h };
     }
     if (what === 'msg') {
-      for (const p of players) send(p.ws, sys({ sys: 'msg', text: String(body.text || '').slice(0, 140) }));
+      for (const p of players) send(p.ws, sys({ sys: 'msg', text: String(body.text || '').slice(0, 140), sec: body.sec }));
       return { ok: true };
     }
     if (what === 'kick') {
