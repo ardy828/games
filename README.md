@@ -258,7 +258,7 @@ cursed energy: every move has its own cooldown.
   white splatters spreading out as far as they can see. Nobody inside can leave it
   until it ends, Gojo included, and nothing of the city is in there with them: no buildings or cars
   to bump into or to stop his Blue and Red, and nobody outside to shove them. From outside it is a black
-  sphere hanging over the street, which you can walk under without being caught.
+  sphere hanging over the street, and nobody, cursed spirits included, can get in until it ends.
 - **Practice** — you against 1 to 10 cursed spirits (Easy, Normal or Hard), first to 10, 20 or 40 points.
 - **Private party** — HOST PARTY gives a four-digit code; friends type it and press JOIN. Up to 20, with
   as many cursed spirits as the host picks. If a player's connection drops, a bot plays for them while their browser

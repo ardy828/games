@@ -1333,6 +1333,7 @@ function mmove(m, dt) {
   m.x += m.vx * dt; m.y += m.vy * dt;
   const c = collide(m, m.r);
   if (c.hit) { const into = -(m.vx * c.nx + m.vy * c.ny); if (into > 0) { m.vx += c.nx * into; m.vy += c.ny * into; } }
+  if (S.dm.length) domWall(m, m.id, m.r);
 }
 function mahoTarget(m) {
   let best = null, bs = 1e9;
@@ -1548,7 +1549,8 @@ function updRain(dt) {
 // once with no knockback. Infinite Void (S.dm, its d.t counting down from DOM.form + DOM.shut) first
 // swells out of him as white light for DOM.form s; then black ink bursts out of him and it closes on
 // everyone inside it, freezing them (f.frz) through the star rush (DOM.rush s, when Gojo cannot move
-// either) and DOM.dur s of void, or until he dies. It hangs DOM.lift above the street, and anyone outside can walk under it.
+// either) and DOM.dur s of void, or until he dies. Outside it is a black sphere hanging DOM.lift above the
+// street, and nobody can get in through its edge until it ends.
 const BLUE = { r: 230, T: 1.6, dt: 0.1, dmg: 9, pull: 330, pop: 70, popDmg: 60, range: 420 };
 const RED = { r: 125, dmg: 240, kb: 380, wind: 0.35 };
 const PURPLE = { wind: 0.75, spd: 950, r: 58, range: 1400, dmg: 420 };
@@ -1610,15 +1612,16 @@ function voidLen(d, x, y, a, max) {
   const px = x - d.x, py = y - d.y, pu = px * Math.cos(a) + py * Math.sin(a);
   return clamp(-pu + Math.sqrt(Math.max(0, pu * pu - (px * px + py * py - DOM.r * DOM.r))), 0, max);
 }
-// e is a fighter or the joiner's prediction, id whose it is
+// The edge is a wall both ways: nobody inside gets out and nobody outside (people, curses, a Mahoraga
+// it did not catch) gets in. e is a fighter, a Mahoraga or the joiner's prediction, id whose it is.
 function domWall(e, id, r) {
   for (const d of S.dm) {
-    if (d.t > DOM.shut || (d.own !== id && !d.vic.includes(id))) continue;
-    const dx = e.x - d.x, dy = e.y - d.y, l = Math.hypot(dx, dy), R = DOM.r - r;
-    if (l <= R || l === 0) continue;
-    const nx = dx / l, ny = dy / l, out = e.vx * nx + e.vy * ny;
+    if (d.t > DOM.shut) continue;
+    const ins = d.own === id || d.vic.includes(id), dx = e.x - d.x, dy = e.y - d.y, l = Math.hypot(dx, dy);
+    if (ins ? l <= DOM.r - r : l >= DOM.r + r) continue;
+    const nx = l ? dx / l : 1, ny = l ? dy / l : 0, R = ins ? DOM.r - r : DOM.r + r, sg = ins ? 1 : -1, through = (e.vx * nx + e.vy * ny) * sg;
     e.x = d.x + nx * R; e.y = d.y + ny * R;
-    if (out > 0) { e.vx -= nx * out; e.vy -= ny * out; }
+    if (through > 0) { e.vx -= nx * through * sg; e.vy -= ny * through * sg; }
   }
 }
 function updDomain(dt) {
@@ -3512,7 +3515,7 @@ function buildAbil(ch) {
   slotCh = ch;
   const box = $('abil'), C = CHARS[ch];
   box.textContent = '';
-  const defs = [['m1', 'LMB', '拳', 'Melee'], ['blk', 'RMB', '守', 'Block'], ['q', 'Q'], ['e', 'E'], ['c', 'C'], ['r', 'R', COMMON.r.k, 'RCT'], ['u', 'F'], ['d', 'SHIFT', COMMON.d.k, 'Dash']];
+  const defs = [['m1', 'LMB', '拳', 'Melee'], ['blk', 'RMB', '守', 'Block'], ['q', 'Q'], ['e', 'E'], ['c', 'C'], ['r', 'R', COMMON.r.k, 'RCT'], ['d', 'SHIFT', COMMON.d.k, 'Dash']];      // the ultimate has its bar instead
   for (const [k, key, kj0, nm0] of defs) {
     const mv = C.moves[k], kj = mv ? mv.k : kj0, nm = mv ? mv.n : nm0;
     const el = document.createElement('div');
