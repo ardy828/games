@@ -61,6 +61,12 @@ PeerJS build as Scrapline, only when the player hosts or joins a multiplayer roo
 
 Nothing is compiled or transpiled. Editing a file *is* deploying it.
 
+Every game has a full screen button: Scrapline's menu and pause screen, Block Blast's header, Bonk
+Arena's HUD, Flatcraft's pause card (all through the same `fsToggle()`/`fsIsOn()`/`fsTip()` snippet),
+Obito's corner and Jujutsu Arena's HUD. An iPhone has no Fullscreen API for pages, so the button shows a tip
+to Add to Home Screen instead, and every page carries `apple-mobile-web-app-capable` so that copy opens
+without the browser bar.
+
 Every page (the landing page and each game) ends with the same **lockdown** block: CSS that turns off
 selection, long-press callouts, image dragging and overscroll, and a script that cancels the right-click
 menu, copy/cut, selectstart, dragstart, pinch and Ctrl zoom and Ctrl+S/U/P/A/C/X, and cancels a

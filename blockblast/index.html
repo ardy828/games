@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Block Blast</title>
 <meta name="description" content="An 8x8 block-dropping puzzle. Drag pieces onto the grid, fill rows and columns to blast them away.">
@@ -90,6 +92,9 @@ img,svg,canvas,a{-webkit-user-drag:none}
   </button>
   <button id="bSound" class="btn" title="Sound (M)" aria-label="Toggle sound">
     <svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z"/><g class="on"><path d="M15.6 9.2a4 4 0 0 1 0 5.6"/><path d="M18.2 6.6a7.6 7.6 0 0 1 0 10.8"/></g><g class="mute"><path d="M16 9.6l5 4.8M21 9.6l-5 4.8"/></g></svg>
+  </button>
+  <button id="bFull" class="btn" title="Full screen" aria-label="Full screen">
+    <svg viewBox="0 0 24 24"><path class="fsp" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
   </button>
   <button id="bNew" class="btn" title="New game (R)" aria-label="New game">
     <svg viewBox="0 0 24 24"><path d="M20 5.5v5h-5"/><path d="M19.6 10.4A8 8 0 1 0 20 14.6"/></svg>
@@ -201,6 +206,7 @@ var elOTitle = document.getElementById("oTitle");
 var bSound = document.getElementById("bSound");
 var bNew = document.getElementById("bNew");
 var bHome = document.getElementById("bHome");
+var bFull = document.getElementById("bFull");
 var bAgain = document.getElementById("bAgain");
 
 var grid = new Int8Array(GRID*GRID);   /* -1 empty, else colour index */
@@ -539,12 +545,13 @@ function layout(){
   trayH  = u*2.75;
 
   var bs = Math.max(34, Math.min(u*0.72, 50));
-  bHome.style.width = bSound.style.width = bNew.style.width = bs + "px";
-  bHome.style.height = bSound.style.height = bNew.style.height = bs + "px";
+  bHome.style.width = bSound.style.width = bNew.style.width = bFull.style.width = bs + "px";
+  bHome.style.height = bSound.style.height = bNew.style.height = bFull.style.height = bs + "px";
   bHome.style.left = boardX + "px";
   bSound.style.left = (boardX + bs*1.25) + "px";
   bNew.style.left = (boardX + boardW - bs) + "px";
-  bHome.style.top = bSound.style.top = bNew.style.top = (headY + u*0.1) + "px";
+  bFull.style.left = (boardX + boardW - bs*2.25) + "px";
+  bHome.style.top = bSound.style.top = bNew.style.top = bFull.style.top = (headY + u*0.1) + "px";
 }
 
 /* ---------------------------------------------------------------- drawing */
@@ -981,6 +988,27 @@ window.addEventListener("keydown", function(e){
 bSound.addEventListener("click", function(){ audioInit(); setMuted(!muted); });
 bNew.addEventListener("click", function(){ audioInit(); reset(); });
 bHome.addEventListener("click", function(){ location.href = "../"; });
+/* full screen: the Fullscreen API where there is one (desktop, Android, iPad); an iPhone has none for
+   a page, so there the button says how to get it from the home screen instead */
+function fsIsOn(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function fsToggle(){
+  var d = document.documentElement, req = d.requestFullscreen || d.webkitRequestFullscreen;
+  if (fsIsOn()){ (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+  if (!req){ fsTip(); return; }
+  try { var p = req.call(d); if (p && p.catch) p.catch(function(){}); } catch (e){ /* refused */ }
+}
+function fsTip(){
+  var t = document.createElement("div");
+  t.textContent = "For full screen on iPhone: Share, then Add to Home Screen, and open it from there";
+  t.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:999;background:rgba(0,0,0,.88);color:#fff;" +
+    "padding:10px 14px;border-radius:8px;font:600 14px system-ui,sans-serif;text-align:center;max-width:90vw;pointer-events:none";
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 4500);
+}
+bFull.addEventListener("click", function(){ audioInit(); fsToggle(); });
+function fsIcon(){ bFull.querySelector(".fsp").setAttribute("d", fsIsOn() ? "M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5" : "M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"); }
+document.addEventListener("fullscreenchange", fsIcon);
+document.addEventListener("webkitfullscreenchange", fsIcon);
 bAgain.addEventListener("click", function(){ audioInit(); reset(); });
 
 window.addEventListener("resize", layout);

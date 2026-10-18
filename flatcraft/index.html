@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Flatcraft</title>
 <meta name="description" content="A Minecraft-style survival sandbox in the browser: biomes, caves, day and night, mobs, crafting, furnaces and tools, alone or with friends.">
@@ -565,6 +567,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     <p class="sub" id="pauseWorldName"></p>
     <button class="btn" type="button" id="resumeBtn">RESUME</button>
     <button class="btn" type="button" id="pauseOptionsBtn">OPTIONS</button>
+    <button class="btn" type="button" id="fsBtn">FULL SCREEN</button>
     <button class="btn" type="button" id="hostBtn">OPEN TO FRIENDS</button>
     <p class="note" id="roomNote"></p>
     <button class="btn quiet" type="button" id="quitBtn">SAVE &amp; QUIT TO MENU</button>
@@ -2133,6 +2136,23 @@ img,svg,canvas,a{-webkit-user-drag:none}
   // pitched a little differently so nothing repeats exactly.
   let AC = null, master = null;
   const $ = (id) => document.getElementById(id);
+  /* full screen: the Fullscreen API where there is one (desktop, Android, iPad); an iPhone has none for
+     a page, so there the button says how to get it from the home screen instead */
+  function fsIsOn(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  function fsToggle(){
+    var d = document.documentElement, req = d.requestFullscreen || d.webkitRequestFullscreen;
+    if (fsIsOn()){ (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+    if (!req){ fsTip(); return; }
+    try { var p = req.call(d); if (p && p.catch) p.catch(function(){}); } catch (e){ /* refused */ }
+  }
+  function fsTip(){
+    var t = document.createElement("div");
+    t.textContent = "For full screen on iPhone: Share, then Add to Home Screen, and open it from there";
+    t.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:999;background:rgba(0,0,0,.88);color:#fff;" +
+      "padding:10px 14px;border-radius:8px;font:600 14px system-ui,sans-serif;text-align:center;max-width:90vw;pointer-events:none";
+    document.body.appendChild(t);
+    setTimeout(function(){ t.remove(); }, 4500);
+  }
   function audioInit() {
     if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -3667,6 +3687,10 @@ img,svg,canvas,a{-webkit-user-drag:none}
   });
   $('optBack').addEventListener('click', showPause);
   $('quitBtn').addEventListener('click', () => { leaveWorld(); showMenu(); });
+  $('fsBtn').addEventListener('click', fsToggle);
+  const fsLabel = () => { $('fsBtn').textContent = fsIsOn() ? 'EXIT FULL SCREEN' : 'FULL SCREEN'; };
+  document.addEventListener('fullscreenchange', fsLabel);
+  document.addEventListener('webkitfullscreenchange', fsLabel);
 
   function clearWorldState() {
     for (const k of Array.from(chunks.keys())) unloadChunk(k);

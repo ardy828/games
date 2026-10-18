@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="description" content="An endless top-down arena shooter. Hold the line against malfunctioning salvage drones converging from every angle.">
 <meta name="color-scheme" content="dark">
@@ -318,7 +320,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
       <h1 class="title">SCRAPLINE</h1>
       <p class="lede">The yard&rsquo;s drones went bad three shifts ago. They come in from every bearing, they do not stop, and there is no extraction. Hold the line as long as you can.</p>
       <div class="row"><button id="b-play">PLAY</button><button class="ghost" id="b-coop">CO-OP</button><button class="ghost" id="b-mute">SOUND: ON</button></div>
-      <div class="row"><button class="ghost" id="b-home">&larr; ARDY GAMES</button></div>
+      <div class="row"><button class="ghost" id="b-home">&larr; ARDY GAMES</button><button class="ghost fs-b" id="b-fs">FULL SCREEN</button></div>
       <div class="keys" id="keys-kb">
         <div><b>WASD</b>move</div>
         <div><b>MOUSE</b>aim</div>
@@ -376,7 +378,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
           <div class="stats2" id="p-stats"></div>
         </div>
       </div>
-      <div class="row"><button id="b-resume">RESUME</button><button class="ghost" id="b-mute2">SOUND: ON</button><button class="ghost" id="b-quit">ABANDON RUN</button></div>
+      <div class="row"><button id="b-resume">RESUME</button><button class="ghost" id="b-mute2">SOUND: ON</button><button class="ghost fs-b" id="b-fs2">FULL SCREEN</button><button class="ghost" id="b-quit">ABANDON RUN</button></div>
       <button id="b-dbg" tabindex="-1" aria-label="Admin"></button>
     </div>
 
@@ -2651,6 +2653,28 @@ document.getElementById("b-again").addEventListener("click", function(){
   if (net) netSend({ t:"go", seed:runSeed });
 });
 document.getElementById("b-mute").addEventListener("click", function(){ audioInit(); setMuted(!muted); SFX.click(); });
+/* full screen: the Fullscreen API where there is one (desktop, Android, iPad); an iPhone has none for
+   a page, so there the button says how to get it from the home screen instead */
+function fsIsOn(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function fsToggle(){
+  var d = document.documentElement, req = d.requestFullscreen || d.webkitRequestFullscreen;
+  if (fsIsOn()){ (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+  if (!req){ fsTip(); return; }
+  try { var p = req.call(d); if (p && p.catch) p.catch(function(){}); } catch (e){ /* refused */ }
+}
+function fsTip(){
+  var t = document.createElement("div");
+  t.textContent = "For full screen on iPhone: Share, then Add to Home Screen, and open it from there";
+  t.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:999;background:rgba(0,0,0,.88);color:#fff;" +
+    "padding:10px 14px;border-radius:8px;font:600 14px system-ui,sans-serif;text-align:center;max-width:90vw;pointer-events:none";
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 4500);
+}
+function fsLabel(){ var t = fsIsOn() ? "EXIT FULL SCREEN" : "FULL SCREEN", b = document.querySelectorAll(".fs-b"); for (var i = 0; i < b.length; i++) b[i].textContent = t; }
+document.getElementById("b-fs").addEventListener("click", function(){ audioInit(); SFX.click(); fsToggle(); });
+document.getElementById("b-fs2").addEventListener("click", function(){ audioInit(); SFX.click(); fsToggle(); });
+document.addEventListener("fullscreenchange", fsLabel);
+document.addEventListener("webkitfullscreenchange", fsLabel);
 document.getElementById("b-home").addEventListener("click", function(){ location.href = "../"; });
 document.getElementById("b-mute2").addEventListener("click", function(){ audioInit(); setMuted(!muted); SFX.click(); });
 window.addEventListener("pointerdown", function(){ audioInit(); }, true);

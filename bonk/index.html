@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Bonk Arena</title>
 <meta name="description" content="Knock everyone off the platform. Solo against bots, Bonk Rush, two players on one keyboard, or online rooms for up to 8.">
@@ -170,6 +172,8 @@
     font-family:var(--disp);font-size:16px;pointer-events:auto;display:grid;place-items:center;box-shadow:0 3px 0 var(--ink)}
   #pauseBtn{left:8px}
   #muteBtn{right:8px}
+  #fsBtn{right:56px}
+  #fsBtn svg{width:20px;height:20px;fill:none;stroke:var(--ink);stroke-width:2.6;stroke-linecap:round}
   #netwarn{position:absolute;left:50%;top:50%;translate:-50% -50%;background:var(--red);color:#fff;border:3px solid var(--ink);border-radius:14px;
     padding:8px 14px;font-family:var(--disp);font-size:18px;letter-spacing:.05em;display:none}
   #netwarn.on{display:block}
@@ -210,6 +214,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
   <div id="spec"></div>
   <button id="pauseBtn" class="ico" aria-label="Pause">II</button>
   <button id="muteBtn" class="ico" aria-label="Mute">♪</button>
+  <button id="fsBtn" class="ico" aria-label="Full screen"><svg viewBox="0 0 24 24"><path class="fsp" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
   <div id="netwarn"></div>
   <div id="pad">
     <div id="stickZone"><div id="stickBase"><i id="stickKnob"></i></div><span id="stickHint">DRAG TO ROLL</span></div>
@@ -1759,6 +1764,27 @@ $('bResume').onclick = () => { SFX.click(); togglePause(); };
 $('bQuit').onclick = () => { SFX.click(); closeNet(); toMenu(); };
 $('pauseBtn').onclick = () => { if (screen === null) togglePause(); };
 $('muteBtn').onclick = () => { audioInit(); setMute(!save.mute); };
+/* full screen: the Fullscreen API where there is one (desktop, Android, iPad); an iPhone has none for
+   a page, so there the button says how to get it from the home screen instead */
+function fsIsOn(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function fsToggle(){
+  var d = document.documentElement, req = d.requestFullscreen || d.webkitRequestFullscreen;
+  if (fsIsOn()){ (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+  if (!req){ fsTip(); return; }
+  try { var p = req.call(d); if (p && p.catch) p.catch(function(){}); } catch (e){ /* refused */ }
+}
+function fsTip(){
+  var t = document.createElement("div");
+  t.textContent = "For full screen on iPhone: Share, then Add to Home Screen, and open it from there";
+  t.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:999;background:rgba(0,0,0,.88);color:#fff;" +
+    "padding:10px 14px;border-radius:8px;font:600 14px system-ui,sans-serif;text-align:center;max-width:90vw;pointer-events:none";
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 4500);
+}
+$('fsBtn').onclick = () => { audioInit(); fsToggle(); };
+const fsIcon = () => $('fsBtn').querySelector('.fsp').setAttribute('d', fsIsOn() ? 'M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5' : 'M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5');
+document.addEventListener('fullscreenchange', fsIcon);
+document.addEventListener('webkitfullscreenchange', fsIcon);
 $('bSolo').onclick = () => { SFX.click(); openLobby('solo'); };
 $('bLocal').onclick = () => { SFX.click(); openLobby('local'); };
 $('bRush').onclick = () => { SFX.click(); startRush(); };
