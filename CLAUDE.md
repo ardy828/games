@@ -702,8 +702,9 @@ mouse, touch), screens, multiplayer, main loop.
   slashes, particles, name tags. Fighters are drawn from above, rotated to their aim (+x forward), with
   a ring under them (gold for you); `drawFighter()` hands curses to `drawCurse()` (`drawFly`,
   `drawSpitter`, `drawBrute`). A sorcerer's name tag shows ★ and the points they carry.
-- **Touch**: `TOUCH` / `body.tui`; a floating stick (`#stickZone`) and the `#pad` buttons laid out by
-  `layoutPad()` round the attack button, scaled to the screen. `AIM_LEN[ch][k]` sets each button's
+- **Touch**: `TOUCH` / `body.tui`; a floating stick (`#stickZone`, resting visible at `stickHome()`) and the
+  `#pad` buttons laid out by `layoutPad()` round the attack button, scaled to the screen. They read touch
+  events by `identifier` (`touchOf()`), not pointer events, which iOS cancels when a second finger lands. `AIM_LEN[ch][k]` sets each button's
   aim line; `forceAim` carries a drag's aim into the input with the press.
 - **Multiplayer** is host-authoritative with two transports behind `broadcast()`, `stream()` and
   `toHost()`: PeerJS for private parties (Bonk Arena's scheme: two lanes, `bye`, redial with

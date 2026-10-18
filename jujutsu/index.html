@@ -210,17 +210,17 @@
   body.tui #mini{width:96px;height:96px}
   body.tui #feed{top:114px}
   body.tui #deadBox{top:auto;bottom:40%}
-  #stickZone{position:absolute;left:0;top:60px;bottom:0;width:45%;pointer-events:auto;touch-action:none}
-  .stk{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);display:none}
+  #stickZone{position:absolute;left:0;top:100px;bottom:0;width:45%;pointer-events:auto;touch-action:none}
+  .stk{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);opacity:.55;pointer-events:none}
   .stk i{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,255,255,.3)}
-  .stk.on{display:block}
+  .stk.on{opacity:1}
   .pb{position:absolute;width:var(--s,58px);height:var(--s,58px);border-radius:50%;pointer-events:auto;touch-action:none;
     background:rgba(19,19,29,.72);border:2px solid rgba(255,255,255,.22);display:grid;place-items:center;overflow:hidden;
     font-family:var(--jp);font-size:18px;color:var(--c,#fff)}
   .pb::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(4,4,10,.78) calc(var(--p,0) * 360deg),transparent 0)}
   .pb .t{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--disp);font-size:17px;color:#fff;z-index:1}
-  .pb .ic{width:50%;height:50%;margin-top:-10%}
-  .pb small{position:absolute;bottom:5px;left:0;right:0;text-align:center;font-family:var(--body);font-size:9px;font-weight:800;color:var(--muted)}
+  .pb .ic{width:52%;height:52%;margin-top:-16%}
+  .pb small{position:absolute;bottom:13%;left:0;right:0;text-align:center;font-family:var(--body);font-size:calc(var(--s,58px) * .145);font-weight:800;letter-spacing:-.01em;white-space:nowrap;color:#c9c7d8}
   .pb.down{background:rgba(139,92,255,.45);border-color:#fff}
 
 /* Locked down: no selecting, copying, long-press menus or image dragging (text fields excepted),
@@ -4004,7 +4004,7 @@ function localInput(me) {
   if (keys.has('KeyA') || keys.has('ArrowLeft')) v.mx -= 1;
   if (keys.has('KeyD') || keys.has('ArrowRight')) v.mx += 1;
   if (TOUCH) {
-    if (stick.id >= 0) { const s = stickVec(); v.mx = s[0]; v.my = s[1]; }
+    if (stick.id !== -1) { const s = stickVec(); v.mx = s[0]; v.my = s[1]; }
     v.m1 = touchHeld.m1; v.blk = touchHeld.blk;
     if (forceAim && T < forceAim.until) { v.aim = forceAim.a; v.ad = forceAim.ad; }
     else if (v.m1 || v.blk) { const t = nearestFoe(me, 320); if (t) { v.aim = Math.atan2(t.ry - me.ry, t.rx - me.rx); v.ad = Math.hypot(t.ry - me.ry, t.rx - me.rx); } }
@@ -4021,7 +4021,10 @@ function localInput(me) {
 
 // Touch: a floating stick on the left; on the right an attack button (hold; drag it to aim, or it
 // aims at the nearest enemy), block (hold), dash, RCT, and the techniques and ultimate, which cast
-// at the nearest enemy on a tap or where you drag them, on release.
+// at the nearest enemy on a tap or where you drag them, on release. These read touch events, not
+// pointer events: iOS cancels a finger's pointer events once a second finger lands (it takes the pair
+// for a pinch), which stopped you moving and attacking at once. Each control follows one touch's
+// identifier; touch events keep going to the element the touch began on, so no capture is needed.
 let TOUCH = matchMedia('(hover: none) and (pointer: coarse)').matches;
 function setTouch(on) { TOUCH = on; document.body.classList.toggle('tui', on); sizeMini(); }
 const STICK_R = 60;
@@ -4036,8 +4039,13 @@ function stickVec() {
   if (l > 1) { dx /= l; dy /= l; }
   return [dx, dy];
 }
+function stickHome() {
+  const z = clamp(Math.min(W, H) / 480, 0.72, 1.05), st = $('stk').style;
+  st.left = Math.round(96 * z) + 'px'; st.top = Math.round(H - 104 * z) + 'px';
+  $('stkKnob').style.transform = '';
+}
 function releaseTouch() {
-  stick.id = -1; $('stk').classList.remove('on');
+  stick.id = -1; $('stk').classList.remove('on'); stickHome();
   touchHeld.m1 = touchHeld.blk = false; aimPreview = null;
   for (const k in pads) { pads[k].el.classList.remove('down'); pads[k].pid = -1; }
 }
@@ -4045,24 +4053,29 @@ addEventListener('touchstart', () => { if (!TOUCH) setTouch(true); }, { passive:
 addEventListener('pointermove', (e) => { if (TOUCH && e.pointerType === 'mouse' && matchMedia('(hover: hover)').matches) { setTouch(false); releaseTouch(); } });
 addEventListener('pointerdown', () => audioInit(), true);
 const zone = $('stickZone');
-zone.addEventListener('pointerdown', (e) => {
-  if (stick.id >= 0) return;
-  stick.id = e.pointerId; stick.bx = stick.x = e.clientX; stick.by = stick.y = e.clientY;
-  try { zone.setPointerCapture(e.pointerId); } catch (err) { /* released */ }
-  const s = $('stk'); s.style.left = stick.bx + 'px'; s.style.top = stick.by + 'px'; s.classList.add('on');
+const touchOf = (e, id) => { for (const t of e.changedTouches) if (t.identifier === id) return t; return null; };
+const NP = { passive: false };
+zone.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (stick.id !== -1) return;
+  const t = e.changedTouches[0];
+  stick.id = t.identifier; stick.bx = stick.x = t.clientX; stick.by = stick.y = t.clientY;
+  const st = $('stk').style; st.left = stick.bx + 'px'; st.top = stick.by + 'px'; $('stk').classList.add('on');
   $('stkKnob').style.transform = '';
-});
-zone.addEventListener('pointermove', (e) => {
-  if (e.pointerId !== stick.id) return;
-  stick.x = e.clientX; stick.y = e.clientY;
+}, NP);
+zone.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const t = touchOf(e, stick.id);
+  if (!t) return;
+  stick.x = t.clientX; stick.y = t.clientY;
   const dx = stick.x - stick.bx, dy = stick.y - stick.by, l = Math.hypot(dx, dy), m = Math.min(l, STICK_R);
   $('stkKnob').style.transform = l ? `translate(${dx / l * m}px,${dy / l * m}px)` : '';
-});
-const stickUp = (e) => { if (e.pointerId === stick.id) { stick.id = -1; $('stk').classList.remove('on'); } };
-zone.addEventListener('pointerup', stickUp);
-zone.addEventListener('pointercancel', stickUp);
+}, NP);
+const stickUp = (e) => { if (touchOf(e, stick.id)) { stick.id = -1; $('stk').classList.remove('on'); stickHome(); } };
+zone.addEventListener('touchend', stickUp);
+zone.addEventListener('touchcancel', stickUp);
 // button layout: an arc of buttons around the big attack button in the bottom-right corner
-const PAD_LAYOUT = { m1: [0, 0, 86], blk: [0, 122, 58], q: [30, 122, 58], e: [60, 122, 58], c: [90, 122, 58], d: [8, 196, 56], r: [40, 196, 56], u: [72, 196, 60] };
+const PAD_LAYOUT = { m1: [0, 0, 98], blk: [0, 138, 66], q: [30, 138, 66], e: [60, 138, 66], c: [90, 138, 66], d: [4, 222, 60], r: [36, 222, 60], u: [70, 222, 70] };
 // per fighter: [length of the aim line, ring at its end, length set by how far you drag]
 const AIM_LEN = {
   yuji: { q: [190, 0], e: [900, 0], c: [700, 0], u: [450, 0] },
@@ -4085,31 +4098,35 @@ function buildPad(ch) {
     el.append(sm, t);
     box.append(el);
     const o = pads[k] = { el, t, p: -1, s: '', pid: -1, sx: 0, sy: 0, aimA: null, len: 0 };
-    el.addEventListener('pointerdown', (e) => {
+    el.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      if (o.pid >= 0) return;
-      o.pid = e.pointerId; o.sx = e.clientX; o.sy = e.clientY; o.aimA = null; o.len = 0;
-      try { el.setPointerCapture(e.pointerId); } catch (err) { /* released */ }
+      audioInit();
+      if (o.pid !== -1) return;
+      const p = e.changedTouches[0];
+      o.pid = p.identifier; o.sx = p.clientX; o.sy = p.clientY; o.aimA = null; o.len = 0;
       el.classList.add('down');
       if (k === 'm1') touchHeld.m1 = true;
       else if (k === 'blk') touchHeld.blk = true;
       else if (k === 'd' || k === 'r') press[k]++;
-    });
-    el.addEventListener('pointermove', (e) => {
-      if (e.pointerId !== o.pid) return;
-      const dx = e.clientX - o.sx, dy = e.clientY - o.sy, l = Math.hypot(dx, dy);
+    }, NP);
+    el.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const p = touchOf(e, o.pid);
+      if (!p) return;
+      const dx = p.clientX - o.sx, dy = p.clientY - o.sy, l = Math.hypot(dx, dy);
       if (l > 16) { o.aimA = Math.atan2(dy, dx); o.len = l; }
       else if (o.aimA != null && l < 10 && k !== 'm1') o.aimA = 'x';      // dragged back to the middle: cancel
       if (k === 'm1' && typeof o.aimA === 'number') forceAim = { a: o.aimA, ad: 300, until: T + 0.2 };
       const al = AIM_LEN[ch][k];
       if (al) aimPreview = typeof o.aimA === 'number' ? { a: o.aimA, len: dragLen(al, o.len), ring: al[1] } : null;
-    });
+    }, NP);
     const up = (e) => {
-      if (e.pointerId !== o.pid) return;
+      if (!touchOf(e, o.pid)) return;
+      e.preventDefault();
       o.pid = -1; el.classList.remove('down');
       if (k === 'm1') touchHeld.m1 = false;
       else if (k === 'blk') touchHeld.blk = false;
-      else if (AIM_LEN[ch][k] && e.type === 'pointerup' && o.aimA !== 'x') {
+      else if (AIM_LEN[ch][k] && e.type === 'touchend' && o.aimA !== 'x') {
         const me = S && byId(meId);
         if (typeof o.aimA === 'number') forceAim = { a: o.aimA, ad: dragLen(AIM_LEN[ch][k], o.len), until: T + 0.25 };
         else if (me) { const t = nearestFoe(me, 700); if (t) forceAim = { a: Math.atan2(t.ry - me.ry, t.rx - me.rx), ad: Math.hypot(t.ry - me.ry, t.rx - me.rx), until: T + 0.25 }; }
@@ -4117,19 +4134,20 @@ function buildPad(ch) {
       }
       if (AIM_LEN[ch][k]) aimPreview = null;
     };
-    el.addEventListener('pointerup', up);
-    el.addEventListener('pointercancel', up);
+    el.addEventListener('touchend', up, NP);
+    el.addEventListener('touchcancel', up);
   }
   layoutPad();
 }
 function layoutPad() {
-  const z = clamp(Math.min(W, H) / 480, 0.72, 1.05), cx = W - 70 * z, cy = H - 72 * z;
+  const z = clamp(Math.min(W, H) / 480, 0.72, 1.05), cx = W - 72 * z, cy = H - 74 * z;
   for (const k in pads) {
     const [deg, R0, s0] = PAD_LAYOUT[k], a = deg * Math.PI / 180, R = R0 * z, s = Math.round(s0 * z);
     const x = cx - Math.cos(a) * R, y = cy - Math.sin(a) * R;
     const st = pads[k].el.style;
     st.setProperty('--s', s + 'px'); st.left = (x - s / 2) + 'px'; st.top = (y - s / 2) + 'px';
   }
+  if (stick.id === -1) stickHome();
 }
 
 // ───────────────────────── Screens ─────────────────────────
