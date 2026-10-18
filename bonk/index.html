@@ -1466,7 +1466,7 @@ function localInput(slot) {
   let x = 0, y = 0;
   const maps = two ? [slot ? P2_MOVE : P1_MOVE] : [P1_MOVE, P2_MOVE];
   for (const m of maps) for (const k in m) if (keys.has(k)) { x += m[k][0]; y += m[k][1]; }
-  if (!slot && stick.id >= 0) { const v = stickVec(); x += v[0]; y += v[1]; }
+  if (!slot && stick.id !== -1) { const v = stickVec(); x += v[0]; y += v[1]; }
   return { x: clamp(x, -1, 1), y: clamp(y, -1, 1), d: dashN[slot] };
 }
 function emote(slot, k) {
@@ -1523,24 +1523,39 @@ function stickVec() {
 addEventListener('touchstart', () => { TOUCH = true; }, { passive: true, capture: true });
 addEventListener('pointerdown', () => audioInit(), true);
 const zone = $('stickZone'), dashBtn = $('dashBtn');
-zone.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  if (screen !== null || stick.id >= 0) return;
-  TOUCH = true;
-  stick.id = e.pointerId; stick.bx = stick.x = e.clientX; stick.by = stick.y = e.clientY;
+// the stick reads touch events (iOS Safari cancels pointer events when it decides a drag is a scroll,
+// and preventing touchstart/touchmove is what stops that); a mouse or pen uses pointer events
+function stickStart(id, x, y) {
+  if (screen !== null || stick.id !== -1) return;
+  stick.id = id; stick.bx = stick.x = x; stick.by = stick.y = y;
   zone.classList.add('used');
-  try { zone.setPointerCapture(e.pointerId); } catch (err) { /* already released */ }
-});
-zone.addEventListener('pointermove', (e) => {
-  if (e.pointerId !== stick.id) return;
-  stick.x = e.clientX; stick.y = e.clientY;
+}
+function stickMove(id, x, y) {
+  if (id !== stick.id) return;
+  stick.x = x; stick.y = y;
   const dx = stick.x - stick.bx, dy = stick.y - stick.by, l = Math.hypot(dx, dy);
   if (l > STICK_R * 1.6) { stick.bx = stick.x - dx / l * STICK_R * 1.6; stick.by = stick.y - dy / l * STICK_R * 1.6; }   // the base follows a long drag
+}
+const stickEnd = (id) => { if (id === stick.id) stick.id = -1; };
+zone.addEventListener('touchstart', (e) => {
+  e.preventDefault(); TOUCH = true; audioInit();
+  const t = e.changedTouches[0]; stickStart('t' + t.identifier, t.clientX, t.clientY);
+}, { passive: false });
+zone.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  for (const t of e.changedTouches) stickMove('t' + t.identifier, t.clientX, t.clientY);
+}, { passive: false });
+for (const ev of ['touchend', 'touchcancel']) zone.addEventListener(ev, (e) => { for (const t of e.changedTouches) stickEnd('t' + t.identifier); });
+zone.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch') return;
+  e.preventDefault(); stickStart(e.pointerId, e.clientX, e.clientY);
+  try { zone.setPointerCapture(e.pointerId); } catch (err) { /* already released */ }
 });
-const stickUp = (e) => { if (e.pointerId === stick.id) stick.id = -1; };
-for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) zone.addEventListener(ev, stickUp);
+zone.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') stickMove(e.pointerId, e.clientX, e.clientY); });
+for (const ev of ['pointerup', 'pointercancel']) zone.addEventListener(ev, (e) => { if (e.pointerType !== 'touch') stickEnd(e.pointerId); });
 function touchDash() { if (screen !== null) return; dashN[0]++; dashPress = 0.15; }
-dashBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); TOUCH = true; touchDash(); });
+dashBtn.addEventListener('touchstart', (e) => { e.preventDefault(); TOUCH = true; audioInit(); touchDash(); }, { passive: false });
+dashBtn.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch') { e.preventDefault(); touchDash(); } });
 cv.addEventListener('pointerdown', (e) => {
   if (e.pointerType !== 'touch' || screen !== null) return;
   TOUCH = true;
@@ -1551,7 +1566,7 @@ function syncPad() {
   const on = TOUCH && screen === null && !!S && S.mode !== 'demo';
   $('pad').classList.toggle('on', on);
   if (!on) return;
-  const r = zone.getBoundingClientRect(), held = stick.id >= 0, base = $('stickBase');
+  const r = zone.getBoundingClientRect(), held = stick.id !== -1, base = $('stickBase');
   base.style.left = (held ? stick.bx - r.left : Math.min(116, r.width / 2)) + 'px';
   base.style.top = (held ? stick.by - r.top : r.height - 116) + 'px';
   const v = held ? stickVec() : [0, 0];
