@@ -3432,13 +3432,22 @@ function cutNobara(t) {
 // Gojo making the domain sign, three-quarters on, in his black T-shirt with his arms bare: his hand up
 // beside his face, a fist with two fingers raised
 function cutGojo(t) {
-  g.fillStyle = 'rgba(0,0,0,.35)'; ell(0, 42, 38, 38);
-  g.fillStyle = '#111218'; ell(0, 40, 36, 36);
-  g.fillStyle = 'rgba(255,255,255,.06)'; ell(-12, 25, 12, 9); ell(12, 25, 12, 9);
-  g.fillStyle = '#111218'; ell(-27, 20, 10, 9); ell(27, 20, 10, 9);
-  limb([-29, 26, -33, 60], 11, SKIN);
-  limb([30, 26, 37, 6, 29, -6], 10.5, SKIN);
-  g.fillStyle = SKIN; g.fillRect(-5, -4, 10, 10);
+  g.save(); g.translate(0, -4); g.scale(0.86, 0.86);
+  const torso = (dx, dy) => {      // a slim build, a little wider at the shoulders than the waist
+    g.beginPath(); g.moveTo(-6 + dx, 4 + dy); g.lineTo(-20 + dx, 9 + dy);
+    g.quadraticCurveTo(-26 + dx, 11 + dy, -26 + dx, 20 + dy); g.lineTo(-22 + dx, 40 + dy);
+    g.lineTo(-19 + dx, 90 + dy); g.lineTo(19 + dx, 90 + dy); g.lineTo(22 + dx, 40 + dy);
+    g.lineTo(26 + dx, 20 + dy); g.quadraticCurveTo(26 + dx, 11 + dy, 20 + dx, 9 + dy); g.lineTo(6 + dx, 4 + dy);
+    g.closePath(); g.fill();
+  };
+  g.fillStyle = 'rgba(0,0,0,.35)'; torso(2, 3);
+  limb([-25, 20, -28, 42, -27, 62], 8.5, SKIN);      // bare arms
+  g.fillStyle = '#111218'; torso(0, 0);
+  g.strokeStyle = 'rgba(255,255,255,.08)'; g.lineWidth = 1.5;      // the chest under the tee
+  g.beginPath(); g.moveTo(-17, 24); g.quadraticCurveTo(-9, 30, -1.5, 27); g.moveTo(17, 24); g.quadraticCurveTo(9, 30, 1.5, 27); g.stroke();
+  g.fillStyle = '#111218'; ell(-23, 17, 6, 7); ell(23, 17, 6, 7);      // short sleeves
+  limb([24, 20, 31, 6, 28, -6], 8.5, SKIN);
+  g.fillStyle = SKIN; g.fillRect(-6, -4, 12, 10);
   g.fillStyle = SKIN; circ(0, -16, 15);
   hair(0, -22, 12, 30, Math.PI * 0.95, Math.PI * 2.05, 13, 0, '#e9eef6');
   hair(0, -22, 8, 21, Math.PI * 1.05, Math.PI * 1.95, 9, 0.1, '#ffffff');
@@ -3448,6 +3457,7 @@ function cutGojo(t) {
   limb([26, -12, 25.6, -25], 4.8, SKIN);
   g.fillStyle = SKIN; ell(28.5, -7, 7, 6.5);
   g.fillStyle = '#e9bf98'; ell(24, -4, 3.5, 2.5);
+  g.restore();
 }
 const CUTS = {
   ss: { pal: ['#ff5cb4', '#d4157e', '#5e17c4'], acc: ['#2fb4ff', '#38e07a'], big: '魂', title: 'SOUL STRIKE', sub: '魂を捉える一撃', subCol: '#ffd1ea', fig: (t) => cutYuji(t) },
