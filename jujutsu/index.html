@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@500;600;700;800&family=Yuji+Syuku&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:ital,wght@0,500;0,600;0,700;0,800;1,800&family=Yuji+Syuku&display=swap">
 <style>
   :root{
     --bg:#0b0b12; --panel:#13131d; --panel2:#1c1c2a; --line:#2d2d42; --ink:#f3efe6; --muted:#9a96ad;
@@ -3406,13 +3406,14 @@ function paintCutin(p) {
   // the big kanji behind, then the figure on the right
   g.font = `${h * 0.95}px "Yuji Syuku", serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillStyle = 'rgba(10,0,20,.2)'; g.fillText(C.big, dx + W * 0.4, cy + h * 0.04);
+  const fx = dx + W * (W < 600 ? 0.6 : 0.7) + tt * 14 * (yuji ? 1 : 0.4), fk = Math.min(k, W / 300);
   g.save();
-  g.translate(dx + W * (W < 600 ? 0.6 : 0.7) + tt * 14 * (yuji ? 1 : 0.4), cy);
-  const fk = Math.min(k, W / 300);
+  g.translate(fx, cy);
   g.scale(fk, fk);
   C.fig(tt);
   g.restore();
   g.restore();
+  if (C.say) sayBubble(C.say, fx, cy, fk, p);
   // the move's name on the left, and who it is about
   const tx = dx + Math.max(18, W * 0.05), fs = Math.round(clamp(Math.min(h * 0.3, W * 0.075), 24, 64));
   g.textAlign = 'left'; g.textBaseline = 'alphabetic';
@@ -3501,6 +3502,35 @@ function cutNobara(t) {
 // what each ultimate's panel shows
 // Gojo making the domain sign, three-quarters on, in his black T-shirt with his arms bare: his hand up
 // beside his face, a fist with two fingers raised
+// A manga speech bubble by the figure's head (CUTS[k].say), drawn over the band so it can stand out
+// of it: a lopsided white octagon with a thick black rim, a soft glow and a tail toward his face. It
+// pops in once the band has slid in. Fig units, like the figure.
+function sayBubble(lines, fx, cy, fk, p) {
+  const q = clamp((p - 0.1) / 0.12, 0, 1);
+  if (q <= 0) return;
+  const pop = q < 1 ? 1 + Math.sin(q * Math.PI) * 0.18 - (1 - q) * 0.5 : 1, out = clamp((p - 0.82) / 0.12, 0, 1);
+  g.save();
+  g.translate(fx, cy); g.scale(fk, fk);
+  g.translate(-66, -74); g.scale(pop, pop); g.globalAlpha = 1 - out;
+  const pts = [[-30, -30], [-4, -36], [24, -32], [40, -20], [42, 6], [36, 24], [14, 32], [8, 33], [-20, 31], [-38, 20], [-42, -4], [-38, -20]];
+  const shape = () => {
+    g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) {
+      g.lineTo(pts[i][0], pts[i][1]);
+      if (i === 6) { g.lineTo(34, 52); g.lineTo(22, 31); }      // the tail, toward his face
+    }
+    g.closePath();
+  };
+  g.lineJoin = 'round';
+  g.shadowColor = 'rgba(255,255,255,.9)'; g.shadowBlur = 14 * fk;
+  shape(); g.fillStyle = '#fff'; g.fill();
+  g.shadowBlur = 0;
+  g.lineWidth = 3.2; g.strokeStyle = INK; g.stroke();
+  g.fillStyle = INK; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = 'italic 800 12.5px Barlow, sans-serif';
+  lines.forEach((l, i) => { g.save(); g.translate(0, (i - (lines.length - 1) / 2) * 15); g.scale(0.92, 1.08); g.fillText(l, 0, 0); g.restore(); });
+  g.restore();
+}
 function cutGojo(t) {
   g.save(); g.translate(0, -4); g.scale(0.86, 0.86);
   const torso = (dx, dy) => {      // squared shoulders tapering to a narrow waist
@@ -3549,7 +3579,7 @@ const CUTS = {
   ss: { pal: ['#ff5cb4', '#d4157e', '#5e17c4'], acc: ['#2fb4ff', '#38e07a'], big: '魂', title: 'SOUL STRIKE', sub: '魂を捉える一撃', subCol: '#ffd1ea', fig: (t) => cutYuji(t) },
   maho: { pal: ['#3fe0ff', '#1f5fff', '#18196a'], acc: ['#38e07a', '#ff4fae'], big: '影', title: 'MAHORAGA', sub: '八握剣 異戒神将 魔虚羅', subCol: '#cfe4ff', fig: (t) => cutMegumi(t) },
   nr: { pal: ['#ffb347', '#ff5a1f', '#7a1035'], acc: ['#ff4fae', '#2fb4ff'], big: '釘', title: 'RAINING NAILS', sub: '芻霊呪法 · 釘の雨', subCol: '#ffe0c2', fig: (t) => cutNobara(t) },
-  dom: { pal: ['#a58bff', '#3b23a6', '#0c0a2e'], acc: ['#ffffff', '#3fe0ff'], big: '無', title: 'INFINITE VOID', sub: '領域展開 · 無量空処', subCol: '#e2dcff', fig: (t) => cutGojo(t) },
+  dom: { pal: ['#a58bff', '#3b23a6', '#0c0a2e'], acc: ['#ffffff', '#3fe0ff'], big: '無', title: 'INFINITE VOID', sub: '領域展開 · 無量空処', subCol: '#e2dcff', say: ['DOMAIN', 'EXPANSION'], fig: (t) => cutGojo(t) },
 };
 function cutMegumi(t) {
   g.save(); g.translate(-48, -6); g.rotate(t * 0.8);

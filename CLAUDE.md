@@ -618,7 +618,8 @@ mouse, touch), screens, multiplayer, main loop.
   `drawCutin()` clears and hides it when none plays; `paintCutin()` draws the slanted neon bands, rain
   and speed lines, the title, and the figure (`cutYuji`, `cutMegumi`) in panel units. The figures use
   the game's own flat style (`hair()`, `limb()`, ellipses and circles, no outlines and no faces).
-  `CUTS` holds each kind's colours, titles and figure (`cutYuji`, `cutMegumi`, `cutNobara`); Nobara's
+  `CUTS` holds each kind's colours, titles and figure (`cutYuji`, `cutMegumi`, `cutNobara`) and an optional
+  `say` (Gojo's DOMAIN EXPANSION), a manga speech bubble `sayBubble()` draws by the figure's head; Nobara's
   panel rains nails.
   Banners wait for a cut-in to finish (`cutLeft()`).
 - **Rules**: `RULES` (`RULES0` defaults, `cleanRules()` to validate) holds points to win, round time,
