@@ -1598,6 +1598,18 @@ function updPurple(dt) {
   }
   S.pu = S.pu.filter((p) => !p.dead);
 }
+// a closed domain has no way out: its edge is a wall for Gojo and everyone caught in it (e is a
+// fighter or the joiner's prediction, id whose it is)
+function domWall(e, id, r) {
+  for (const d of S.dm) {
+    if (d.t > DOM.dur || (d.own !== id && !d.vic.includes(id))) continue;
+    const dx = e.x - d.x, dy = e.y - d.y, l = Math.hypot(dx, dy), R = DOM.r - r;
+    if (l <= R || l === 0) continue;
+    const nx = dx / l, ny = dy / l, out = e.vx * nx + e.vy * ny;
+    e.x = d.x + nx * R; e.y = d.y + ny * R;
+    if (out > 0) { e.vx -= nx * out; e.vy -= ny * out; }
+  }
+}
 function updDomain(dt) {
   for (const d of S.dm) {
     const was = d.t;
@@ -1662,6 +1674,7 @@ function updFighter(f, dt) {
       f.vx += c.nx * into; f.vy += c.ny * into;
     }
   }
+  if (S.dm.length) domWall(f, f.id, f.r);
 }
 // bodies do not stack: fighters and Mahoraga push each other apart, except mid-dash (Mahoraga and a
 // Brute Curse are pushed less)
@@ -4524,6 +4537,7 @@ function predStep(me, dt) {
   pred.x += pred.vx * dt; pred.y += pred.vy * dt;
   const c = collide(pred, FR);
   if (c.hit) { const into = -(pred.vx * c.nx + pred.vy * c.ny); if (into > 0) { pred.vx += c.nx * into; pred.vy += c.ny * into; } }
+  if (S.dm.length) domWall(pred, me.id, FR);
 }
 // joiner frame: send input, coast and smooth everything toward the last snapshot, predict ourselves
 function joinTick(dt) {

@@ -254,7 +254,8 @@ cursed energy: every move has its own cooldown.
   ultimate, *Infinite Void*, takes about three times as long to charge. Blinding white light swells
   out of him for a moment (run!), then black ink splashes out of him with stars rushing through it
   (for over a second) and it closes on everyone still inside: they are frozen for 5 seconds
-  and see nothing but the void, splashed with white, and the people in it. From outside it is a black
+  and see nothing but the void, splashed with white, and the people in it. Nobody inside can leave it
+  until it ends, Gojo included. From outside it is a black
   sphere hanging over the street, which you can walk under without being caught.
 - **Practice** — you against 1 to 10 cursed spirits (Easy, Normal or Hard), first to 10, 20 or 40 points.
 - **Private party** — HOST PARTY gives a four-digit code; friends type it and press JOIN. Up to 20, with

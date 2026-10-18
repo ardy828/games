@@ -650,7 +650,7 @@ mouse, touch), screens, multiplayer, main loop.
   setting their `frz` (the 5 s start here); for the first `DOM.rush` s of them `drawRush()` splashes
   black ink out of him (`inkPath()`: spiky strokes, dabs and flecks, white shreds inside) with star
   streaks, just for show; the people inside see it over a white screen, out to its edges, and `domGrow()` follows the ink, so the void
-  and the sphere only show after it (the camera pulls back for the people inside). A frozen fighter neither moves nor acts (`control()`, `updFighter()`), a frozen
+  and the sphere only show after it (the camera pulls back for the people inside). While it is closed its edge is a wall for Gojo and his victims (`domWall()`, in `updFighter()` and the joiner's `predStep()`). A frozen fighter neither moves nor acts (`control()`, `updFighter()`), a frozen
   Mahoraga stands still; it ends, and `frz` clears, after `DOM.dur` or when Gojo dies. `inDomain(d)`
   says whether this device sees it from inside (`drawDomains()` blacks out everything, splatters the
   void, hangs its black hole above them, and redraws the people in it; `outside()` drops orbs, shots, particles, tags and minimap dots
