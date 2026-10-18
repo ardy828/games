@@ -445,7 +445,7 @@ const TIPS = [
   'A Brute Curse winds up before it slams the ground. Get out of the purple ring.',
   'Spitter bile slows you down. Keep moving sideways.',
   'Block (right click) soaks 75% of a hit from the front, but Black Flash and ultimates break it.',
-  'Dismantle always does the same damage. Blocking will not shrink it.',
+  'Dismantle cuts through everyone in its path and always does the same damage. Blocking will not shrink it.',
   'Mahoraga attacks whoever is closest, Megumi included. Summon him, then run.',
   'Mahoraga adapts: the second time a move hits him, it does far less.',
   'Watch for the red line: Piercing Blood fires along it a moment later.',
@@ -1426,10 +1426,11 @@ function updMaho(dt) {
   }
   S.maho = S.maho.filter((m) => !m.dead);
 }
-// Shots in flight, by k: 0 is Dismantle (one slash, always the same damage), 1 a Spitter's bile (slows)
+// Shots in flight, by k: 0 is Dismantle (one wide slash, always the same damage, cutting through everyone
+// in its path; `hit` is the host's list of who it has cut), 1 a Spitter's bile (slows)
 // and 2 one of Nobara's nails (sticks in whoever it hits)
 // and 3 Gojo's Red (bursts on whatever it meets, see redBlast)
-const SHOT = [{ spd: 1500, range: 760, w: 34 }, { spd: 640, range: 640, w: 10 }, { spd: 1250, range: 720, w: 8 }, { spd: 1100, range: 620, w: 16 }];
+const SHOT = [{ spd: 1500, range: 900, w: 56 }, { spd: 640, range: 640, w: 10 }, { spd: 1250, range: 720, w: 8 }, { spd: 1100, range: 620, w: 16 }];
 function shotHit(b, t) {
   if (b.k !== 3 && infinity(t)) { fx(['inf', r1(t.x), r1(t.y)]); return true; }      // it stops at Infinity
   if (b.k === 3) { b.x = t.x - Math.cos(b.a) * t.r; b.y = t.y - Math.sin(b.a) * t.r; redBlast(b); return true; }
@@ -1444,9 +1445,10 @@ function shotHit(b, t) {
     fx(['bile', r1(t.x), r1(t.y)]);
     return true;
   }
-  if (!hurt(t, 115, { by: b.own, a: b.a, kb: 90, fixed: true, kind: 'dis' })) return false;
-  fx(['dsh', r1(t.x), r1(t.y), r2(b.a)]);
-  return true;
+  if ((b.hit ||= []).includes(t.id)) return false;
+  b.hit.push(t.id);
+  if (hurt(t, 160, { by: b.own, a: b.a, kb: 110, fixed: true, kind: 'dis' })) fx(['dsh', r1(t.x), r1(t.y), r2(b.a)]);
+  return false;      // it keeps going
 }
 function updShots(dt) {
   for (const b of S.sh) {
@@ -1876,7 +1878,7 @@ function think(f, ai) {
       if (d < 175 && ready('q')) { inp.aim = aimAt(lead(0.15)); inp.q++; }
       else if (d > 150 && d < 430 && ready('u') && (t.hp < maxHp(t) * 0.55 || Math.random() < 0.12)) { inp.aim = aimAt(lead(0.35)); inp.u++; }
       else if (d > 200 && d < 820 && ready('e')) { inp.aim = aimAt(lead(0.42)); inp.e++; }
-      else if (d > 90 && d < 700 && ready('c')) { inp.aim = aimAt(lead(d / 1500)); inp.c++; }
+      else if (d > 90 && d < 850 && ready('c')) { inp.aim = aimAt(lead(d / 1500)); inp.c++; }
     } else if (f.ch === 'gojo') {
       const near = targets(f.id).filter((o) => Math.hypot(o.x - f.x, o.y - f.y) < DOM.r * 0.8).length;
       if (near && d < DOM.r * 0.7 && ready('u')) inp.u++;
@@ -3044,6 +3046,7 @@ function drawShots() {
       g.restore(); continue;
     }
     // Dismantle: a wide white crescent with streaks trailing it
+    g.scale(1.6, 1.6);
     g.strokeStyle = 'rgba(220,240,255,.35)'; g.lineWidth = 2.5;
     g.beginPath(); g.moveTo(-70, -24); g.lineTo(-18, -24); g.moveTo(-90, 0); g.lineTo(-24, 0); g.moveTo(-76, 24); g.lineTo(-20, 24); g.stroke();
     g.strokeStyle = '#ffffff'; g.lineWidth = 6; g.shadowColor = '#bfe0ff'; g.shadowBlur = 14;
