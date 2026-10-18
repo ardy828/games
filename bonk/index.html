@@ -173,6 +173,22 @@
   #netwarn{position:absolute;left:50%;top:50%;translate:-50% -50%;background:var(--red);color:#fff;border:3px solid var(--ink);border-radius:14px;
     padding:8px 14px;font-family:var(--disp);font-size:18px;letter-spacing:.05em;display:none}
   #netwarn.on{display:block}
+  /* touch: a joystick on the left half (it floats to your thumb and springs home), a dash button on the right */
+  #pad{display:none}
+  #pad.on{display:block}
+  #stickZone{position:absolute;left:0;top:64px;bottom:0;width:50%;pointer-events:auto;touch-action:none}
+  #stickBase{position:absolute;width:132px;height:132px;margin:-66px 0 0 -66px;border-radius:50%;
+    background:rgba(255,255,255,.1);border:3px solid rgba(255,255,255,.55);box-shadow:0 0 0 3px rgba(27,21,48,.3)}
+  #stickZone.held #stickBase{background:rgba(255,255,255,.18)}
+  #stickKnob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;
+    background:rgba(255,248,236,.9);border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink)}
+  #stickHint{position:absolute;left:0;right:0;bottom:14px;text-align:center;font-weight:900;font-size:12px;letter-spacing:.08em;color:rgba(255,255,255,.6)}
+  #stickZone.used #stickHint{display:none}
+  #dashBtn{position:absolute;right:22px;bottom:30px;width:104px;height:104px;padding:6px;border-radius:50%;pointer-events:auto;touch-action:none;
+    background:conic-gradient(var(--gold) calc(var(--cd,1) * 360deg),rgba(255,255,255,.25) 0);border:3px solid var(--ink);box-shadow:0 4px 0 var(--ink)}
+  #dashBtn span{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:rgba(27,21,48,.85);color:#fff;font-family:var(--disp);font-size:20px;letter-spacing:.04em}
+  #dashBtn.down span{background:var(--gold);color:var(--ink)}
+  body.tui #feed{bottom:150px}
 
 /* Locked down: no selecting, copying, long-press menus or image dragging (text fields excepted),
    and no rubber-band scrolling or pull-to-refresh */
@@ -195,6 +211,10 @@ img,svg,canvas,a{-webkit-user-drag:none}
   <button id="pauseBtn" class="ico" aria-label="Pause">II</button>
   <button id="muteBtn" class="ico" aria-label="Mute">♪</button>
   <div id="netwarn"></div>
+  <div id="pad">
+    <div id="stickZone"><div id="stickBase"><i id="stickKnob"></i></div><span id="stickHint">DRAG TO ROLL</span></div>
+    <button id="dashBtn" aria-label="Dash"><span>DASH</span></button>
+  </div>
 </div>
 
 <div id="menu" class="screen">
@@ -1170,7 +1190,7 @@ function render(dt) {
   c.globalAlpha = 1;
   if (!S) return;
   const top = $('hud').classList.contains('on') ? $('topbar').getBoundingClientRect().bottom + 6 : 0;
-  const bottom = TOUCH && screen === null ? 20 : 8;
+  const bottom = TOUCH && screen === null ? (H > W ? 150 : 20) : 8;
   camR += (Math.max(S.platR, 140) + 70 - camR) * Math.min(1, dt * 2.5);
   const availH = H - top - bottom;
   const sc = Math.min(W / (2 * camR), availH / (2 * camR * TILT + DEPTH + 90));
@@ -1286,7 +1306,6 @@ function render(dt) {
     }
   }
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
-  if (TOUCH && screen === null) drawTouch(c);
 }
 function drawPlatform(c, R, th, warn) {
   c.fillStyle = th[2];
@@ -1370,29 +1389,6 @@ function drawParts(c) {
     }
   }
   c.globalAlpha = 1; c.lineCap = 'butt';
-}
-function drawTouch(c) {
-  if (stick.id >= 0) {
-    c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = 4;
-    c.beginPath(); c.arc(stick.bx, stick.by, STICK_R, 0, TAU); c.stroke();
-    const v = stickVec();
-    c.fillStyle = 'rgba(255,255,255,.55)';
-    c.beginPath(); c.arc(stick.bx + v[0] * STICK_R, stick.by + v[1] * STICK_R, 26, 0, TAU); c.fill();
-  } else {
-    c.fillStyle = 'rgba(255,255,255,.4)'; c.font = '800 13px Nunito, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText('drag here to roll', W * 0.25, H - 26);
-  }
-  const me = S && S.balls.find((b) => mine(b.id));
-  const full = me ? clamp(1 - me.dashCd / DASH_CD, 0, 1) : 1;
-  const x = W - 66, y = H - 70, r = 44;
-  c.fillStyle = dashPress > 0 ? 'rgba(255,211,77,.65)' : 'rgba(255,255,255,.18)';
-  c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
-  c.strokeStyle = full >= 1 ? '#ffd34d' : 'rgba(255,255,255,.7)'; c.lineWidth = 5;
-  c.beginPath(); c.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + TAU * full); c.stroke();
-  c.fillStyle = '#fff'; c.font = '400 18px "Lilita One", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillText('DASH', x, y + 1);
-  c.font = '800 11px Nunito, sans-serif'; c.fillStyle = 'rgba(255,255,255,.5)';
-  c.fillText('or tap anywhere on the right', W * 0.75, H - 14);
 }
 
 // ───────────────────────── HUD ─────────────────────────
@@ -1510,7 +1506,9 @@ document.addEventListener('visibilitychange', () => {
   if (screen === null && canPause()) togglePause();
 });
 
-// Touch: a floating stick anywhere on the left, a tap anywhere on the right dashes.
+// Touch: a joystick on the left half (#stickZone; it floats to wherever the thumb lands and springs
+// home when let go) and a DASH button on the right (#dashBtn, its ring the dash cooldown); a tap
+// anywhere else on the right half dashes too. syncPad() shows them and moves the knob every frame.
 let TOUCH = matchMedia('(hover: none) and (pointer: coarse)').matches;
 const STICK_R = 62;
 const stick = { id: -1, bx: 0, by: 0, x: 0, y: 0 };
@@ -1524,23 +1522,45 @@ function stickVec() {
 }
 addEventListener('touchstart', () => { TOUCH = true; }, { passive: true, capture: true });
 addEventListener('pointerdown', () => audioInit(), true);
-cv.addEventListener('pointerdown', (e) => {
-  if (e.pointerType !== 'touch' || screen !== null) return;
+const zone = $('stickZone'), dashBtn = $('dashBtn');
+zone.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  if (screen !== null || stick.id >= 0) return;
   TOUCH = true;
-  if (e.clientX < W * 0.5 && stick.id < 0) {
-    stick.id = e.pointerId; stick.bx = stick.x = e.clientX; stick.by = stick.y = e.clientY;
-    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* already released */ }
-  } else { dashN[0]++; dashPress = 0.15; }
+  stick.id = e.pointerId; stick.bx = stick.x = e.clientX; stick.by = stick.y = e.clientY;
+  zone.classList.add('used');
+  try { zone.setPointerCapture(e.pointerId); } catch (err) { /* already released */ }
 });
-cv.addEventListener('pointermove', (e) => {
+zone.addEventListener('pointermove', (e) => {
   if (e.pointerId !== stick.id) return;
   stick.x = e.clientX; stick.y = e.clientY;
   const dx = stick.x - stick.bx, dy = stick.y - stick.by, l = Math.hypot(dx, dy);
   if (l > STICK_R * 1.6) { stick.bx = stick.x - dx / l * STICK_R * 1.6; stick.by = stick.y - dy / l * STICK_R * 1.6; }   // the base follows a long drag
 });
 const stickUp = (e) => { if (e.pointerId === stick.id) stick.id = -1; };
-cv.addEventListener('pointerup', stickUp);
-cv.addEventListener('pointercancel', stickUp);
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) zone.addEventListener(ev, stickUp);
+function touchDash() { if (screen !== null) return; dashN[0]++; dashPress = 0.15; }
+dashBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); TOUCH = true; touchDash(); });
+cv.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'touch' || screen !== null) return;
+  TOUCH = true;
+  if (e.clientX >= W * 0.5) touchDash();
+});
+function syncPad() {
+  document.body.classList.toggle('tui', TOUCH);
+  const on = TOUCH && screen === null && !!S && S.mode !== 'demo';
+  $('pad').classList.toggle('on', on);
+  if (!on) return;
+  const r = zone.getBoundingClientRect(), held = stick.id >= 0, base = $('stickBase');
+  base.style.left = (held ? stick.bx - r.left : Math.min(116, r.width / 2)) + 'px';
+  base.style.top = (held ? stick.by - r.top : r.height - 116) + 'px';
+  const v = held ? stickVec() : [0, 0];
+  $('stickKnob').style.transform = `translate(${(v[0] * STICK_R).toFixed(1)}px,${(v[1] * STICK_R).toFixed(1)}px)`;
+  zone.classList.toggle('held', held);
+  const me = S.balls.find((o) => mine(o.id));
+  dashBtn.style.setProperty('--cd', me ? clamp(1 - me.dashCd / DASH_CD, 0, 1).toFixed(3) : 1);
+  dashBtn.classList.toggle('down', dashPress > 0);
+}
 
 // ───────────────────────── Screens ─────────────────────────
 const SCREENS = ['menu', 'lobby', 'shop', 'pause', 'over'];
@@ -2142,6 +2162,7 @@ function frame(now) {
   if (!(paused && canPause())) { updParts(dt); animBalls(dt); }
   render(dt);
   hud();
+  syncPad();
 }
 setMute(!!save.mute);
 toMenu();
