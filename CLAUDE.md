@@ -650,7 +650,7 @@ mouse, touch), screens, multiplayer, main loop.
   setting their `frz`: a frozen fighter neither moves nor acts (`control()`, `updFighter()`), a frozen
   Mahoraga stands still; it ends, and `frz` clears, after `DOM.dur` or when Gojo dies. `inDomain(d)`
   says whether this device sees it from inside (`drawDomains()` blacks out everything, splatters the
-  void and redraws the people in it; `outside()` drops orbs, shots, particles, tags and minimap dots
+  void, hangs its black hole above them, and redraws the people in it; `outside()` drops orbs, shots, particles, tags and minimap dots
   beyond its edge) or outside (a black sphere `DOM.lift` up; `hidden()` keeps what is under it out of
   sight). `CHARS.gojo.ur` slows his ultimate meter. His banner is a band like the others (`CUTS.dom`,
   `cutGojo()`: the sign, a fist with two fingers up).

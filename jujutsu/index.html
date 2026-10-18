@@ -2737,22 +2737,25 @@ function drawDomains() {
       g.beginPath(); g.arc(d.x, d.y, r, 0, TAU); g.clip();
       g.fillStyle = 'rgba(200,220,255,.5)';
       for (let i = 0; i < 50; i++) circ(d.x + (hash1(i * 2.1 + d.id) - 0.5) * 2 * r, d.y + (hash1(i * 4.7 + d.id) - 0.5) * 2 * r, 0.8 + hash1(i) * 1.4);
+      const hx = d.x, hy = d.y - r * 0.56, rr = r * 0.28;      // the black hole hangs above them, at the top of the void
       g.fillStyle = '#f2f2f6';
-      for (let i = 0; i < 26; i++) {      // white splatters spreading out over the void as it opens
+      for (let i = 0; i < 26; i++) {      // white splatters spreading out over the void as it opens, clear of the hole
         const sp = clamp((age - hash1(i + 30) * 0.6) / 0.35, 0, 1), sk = 1 - (1 - sp) ** 3;
         if (sk <= 0) continue;
-        const a = hash1(d.id + i) * TAU, dd = DOM.r * (0.5 + 0.5 * Math.sqrt(hash1(d.id * 3 + i + 0.5))), bx = d.x + Math.cos(a) * dd, by = d.y + Math.sin(a) * dd, br = (8 + 26 * hash1(i + d.id * 7)) * sk;
+        const a = hash1(d.id + i) * TAU, dd = DOM.r * (0.45 + 0.55 * Math.sqrt(hash1(d.id * 3 + i + 0.5))), br = (8 + 26 * hash1(i + d.id * 7)) * sk;
+        let bx = d.x + Math.cos(a) * dd, by = d.y + Math.sin(a) * dd;
+        const hd = Math.hypot(bx - hx, by - hy), keep = rr * 1.45 + br;
+        if (hd < keep) { bx = hx + (bx - hx) / (hd || 1) * keep; by = hy + (by - hy) / (hd || 1) * keep; }
         circ(bx, by, br); ell(bx, by + br * 1.3, br * 0.18, br * 0.7);
         for (let j = 0; j < 4; j++) { const q = hash1(i * 9 + j) * TAU, qd = br * (1.3 + hash1(i + j * 5)); circ(bx + Math.cos(q) * qd, by + Math.sin(q) * qd, br * 0.22); }
       }
-      const rr = r * 0.42;
       g.shadowColor = '#cfe6ff'; g.shadowBlur = 24;
-      g.strokeStyle = 'rgba(220,236,255,.85)'; g.lineWidth = 10;
-      g.beginPath(); g.arc(d.x, d.y, rr, T * 0.7, T * 0.7 + TAU * 0.92); g.stroke();
+      g.strokeStyle = 'rgba(220,236,255,.85)'; g.lineWidth = 9;
+      g.beginPath(); g.arc(hx, hy, rr, T * 0.7, T * 0.7 + TAU * 0.92); g.stroke();
       g.strokeStyle = 'rgba(150,190,255,.6)'; g.lineWidth = 4;
-      g.beginPath(); g.arc(d.x, d.y, rr * 1.12, -T * 0.5, -T * 0.5 + TAU * 0.85); g.stroke();
+      g.beginPath(); g.arc(hx, hy, rr * 1.14, -T * 0.5, -T * 0.5 + TAU * 0.85); g.stroke();
       g.shadowBlur = 0;
-      g.fillStyle = '#000'; circ(d.x, d.y, rr * 0.8);
+      g.fillStyle = '#000'; circ(hx, hy, rr * 0.8);
       g.restore();
       for (const f of S.f) if (f.alive && Math.hypot(f.rx - d.x, f.ry - d.y) < r + 20) { drawFighter(f); if (f.nl && f.nl.length) nailsIn(f); }
       for (const m of S.maho) if (Math.hypot(m.rx - d.x, m.ry - d.y) < r + 40) drawMaho(m);
