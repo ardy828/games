@@ -217,6 +217,7 @@
   body.tui #me{bottom:auto;top:12px;left:104px;translate:none;width:min(240px,40vw)}
   body.tui #goal{top:auto;bottom:8px;font-size:13px}
   body.tui #mini{width:96px;height:96px}
+  body.fmap #mini{position:fixed;left:50%;top:50%;right:auto;width:min(94vw,86vh);height:min(94vw,86vh);transform:translate(-50%,-50%);z-index:40;pointer-events:auto;cursor:crosshair;touch-action:none;box-shadow:0 0 0 100vmax rgba(5,4,10,.6)}
   body.tui #feed{top:114px}
   body.tui #deadBox{top:auto;bottom:40%}
   #stickZone{position:absolute;left:0;top:110px;bottom:0;width:45%;pointer-events:auto;touch-action:none}
@@ -408,7 +409,7 @@ const CHARS = {
     n: 'Ryomen Sukuna', s: 'SUKUNA', hp: 1150, spd: 325, m1: [60, 60, 65, 105], reach: 56, col: '#ff5a6e', ur: 0.4,
     blurb: 'King of Curses: slashes, Cleave and Divine Flame.',
     moves: {
-      q: { n: 'Dismantle', k: '解', cd: 7 },
+      q: { n: 'Dismantle', k: '解', cd: 5 },
       e: { n: 'Cleave', k: '捌', cd: 22 },
       c: { n: 'Divine Flame', k: '竈', cd: 32 },
       u: { n: 'Malevolent Shrine', k: '伏魔御廚子' },
@@ -1776,13 +1777,13 @@ function updDomain(dt) {
 // Sukuna. Cleave takes CLEAVE.share of one target's full health, whoever they are, through any block.
 // Divine Flame (S.fl, one entity per arrow, t counting up from -(charge + flight)): he stands in a ring
 // of fire drawing a flame bow (hurting anyone right beside him), looses at the spot he chose, and it
-// bursts into a ring of fire FUGA.r wide that burns and slows everyone in it for FUGA.dur s. Malevolent
+// bursts into a ring of fire FUGA.r wide (he picks the spot anywhere on the map: openFugaMap()) that burns and slows everyone in it for FUGA.dur s. Malevolent
 // Shrine (S.ms) has no barrier: once it has risen (MS.rise s, lifting him onto its roof, where he stays
 // until it sinks) it cuts everyone within MS.r every MS.tick s, and whoever has been inside (s.in, host
 // only) cannot leave until it ends, MS.dur s later or when he dies.
 const CLEAVE = { range: 270, wind: 0.22, share: 0.4 };
-const FUGA = { charge: 1.15, flight: 0.35, range: 760, r: 230, dur: 6, hit: 200, tick: 0.4, burn: 30, ring: 78, ringDmg: 10 };
-const MS = { r: DOM.r, rise: 1, dur: 10, tick: 0.25, dmg: 14, lift: 18 };
+const FUGA = { charge: 1.15, flight: 0.45, range: MAP * 1.5, bot: 900, r: 380, dur: 6, hit: 200, tick: 0.4, burn: 30, ring: 78, ringDmg: 10 };
+const MS = { r: 620, rise: 1, dur: 10, tick: 0.1, dmg: 9, lift: 18 };
 function cleaveTarget(f) {
   let best = null, bs = 1e9;
   for (const t of targets(f.id)) {
@@ -2036,7 +2037,7 @@ function think(f, ai) {
       const near = targets(f.id).filter((o) => Math.hypot(o.x - f.x, o.y - f.y) < MS.r * 0.8).length;
       if (near && d < MS.r * 0.6 && ready('u')) inp.u++;
       else if (d < CLEAVE.range && ready('e') && (t.isM || t.hp > maxHp(t) * 0.35)) { inp.aim = aimAt(t); inp.e++; }
-      else if (d > 200 && d < FUGA.range && ready('c')) { const p = lead(FUGA.charge + FUGA.flight); inp.aim = aimAt(p); inp.ad = Math.hypot(p.x - f.x, p.y - f.y); inp.c++; }
+      else if (d > 200 && d < FUGA.bot && ready('c')) { const p = lead(FUGA.charge + FUGA.flight); inp.aim = aimAt(p); inp.ad = Math.hypot(p.x - f.x, p.y - f.y); inp.c++; }
       else if (d > 80 && d < 950 && ready('q')) { inp.aim = aimAt(lead(d / SHOT[4].spd)); inp.q++; }
     } else if (f.ch === 'nobara') {
       const nails = t.nl ? t.nl.filter((o) => o === f.id).length : 0;
@@ -2179,7 +2180,8 @@ function doFx(a) {
     case 'fl':      // Divine Flame lands
       SFX.red(v); SFX.elephant(v); shake(x, y, 24);
       ring(x, y, 20, FUGA.r + 60, 0.55, '#ffcf5a', 10); ring(x, y, 10, FUGA.r, 0.45, '#ff6a1a', 6);
-      sparks(x, y, 44, '#ff8a2a', 700, 0.6, 3.5); sparks(x, y, 18, '#fff1c0', 520, 0.4, 2.5); puffs(x, y, 16, '#3a1a10', 220, 20, 70, 1, 0.6);
+      sparks(x, y, 60, '#ff8a2a', 900, 0.7, 4); sparks(x, y, 30, '#fff1c0', 700, 0.5, 3); puffs(x, y, 24, '#3a1a10', 320, 30, 110, 1.2, 0.6);
+      sparks(x, y, 50, '#ffb347', 1300, 0.9, 4, -Math.PI / 2, 0.9);      // shooting up
       decal({ k: 'scorch', x, y, r: FUGA.r, life: 30 });
       if (v > 0.5) { cam.flash = 0.45; cam.flashC = '#ff7a1a'; }
       break;
@@ -2544,7 +2546,7 @@ function arms(f, sleeve) {
   else if (act === 'purple') { const k = clamp(t / PURPLE.wind, 0, 1); L = [14 + 4 * k, -14 + 10 * k]; R = [14 + 4 * k, 14 - 10 * k]; }
   else if (act === 'domain') { R = [14, 2]; L = [6, -14]; }
   else if (act === 'cleave') { if (t < CLEAVE.wind) { R = [-6, 16]; L = [8, -14]; } else { R = [28, -10]; L = [4, -15]; } }
-  else if (act === 'fuga') { const k = clamp(t / FUGA.charge, 0, 1); L = [24, -2]; R = t < FUGA.charge ? [10 - k * 10, 2] : [16, 3]; }
+  else if (act === 'fuga') { const k = clamp(t / FUGA.charge, 0, 1); L = [34, -1]; R = t < FUGA.charge ? [10 - k * 10, 2] : [16, 3]; }
   else if (act === 'shrine') { L = [15, -3]; R = [15, 3]; }
   else if (act === 'cast') { const p = clamp(t / 0.16, 0, 1); R = [20, 12 - p * 24]; }
   const band = f.ch === 'sukuna' ? '#111014' : null;
@@ -2633,14 +2635,8 @@ function drawFighter(f) {
     if (k > 0.7) { g.fillStyle = `rgba(200,120,255,${(k - 0.7) / 0.3})`; circ(24, 0, 10 * k); }
   } else if (f.act === 'domain') { g.fillStyle = 'rgba(160,140,255,.6)'; circ(R[0] + 3, R[1], 6); }
   else if (f.act === 'fuga' && f.actT < FUGA.charge + 0.05) {      // the flame bow, drawn back with a burning arrow on it
-    const k = clamp(f.actT / FUGA.charge, 0, 1), fl = 0.8 + 0.2 * Math.sin(T * 30);
-    g.lineCap = 'round';
-    g.strokeStyle = 'rgba(255,120,30,.55)'; g.lineWidth = 6; g.beginPath(); g.arc(14, 0, 16, -1.1, 1.1); g.stroke();
-    g.strokeStyle = '#ffcf5a'; g.lineWidth = 2.6; g.beginPath(); g.arc(14, 0, 16, -1.1, 1.1); g.stroke();
-    const bx = 14 + Math.cos(1.1) * 16, by = Math.sin(1.1) * 16, nx = R[0];
-    g.strokeStyle = 'rgba(255,230,180,.8)'; g.lineWidth = 1; g.beginPath(); g.moveTo(bx, -by); g.lineTo(nx, 0); g.lineTo(bx, by); g.stroke();
-    g.strokeStyle = '#ff8a2a'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(nx, 0); g.lineTo(38, 0); g.stroke();
-    g.fillStyle = `rgba(255,140,40,${0.5 * fl})`; circ(40, 0, 6 + 4 * k); g.fillStyle = '#fff1c0'; circ(40, 0, 2.5 + 2 * k);
+    const k = clamp(f.actT / FUGA.charge, 0, 1);
+    flameBow(0.55 + 0.45 * Math.min(1, f.actT / 0.35), k, R[0]);
   } else if (f.act === 'cleave' && f.actT >= CLEAVE.wind && f.actT < CLEAVE.wind + 0.12) { g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 3; g.beginPath(); g.arc(8, 0, 30, -1.2, 1.2); g.stroke(); }
   g.restore();
   if (f.flash > 0) { g.globalAlpha = f.flash * 0.55; g.fillStyle = '#fff'; circ(x, y, 24); g.globalAlpha = 1; }
@@ -2744,10 +2740,46 @@ function flame(x, y, s, seed) {
   g.fillStyle = 'rgba(255,214,110,.9)';
   g.beginPath(); g.moveTo(x - w * 0.5, y); g.quadraticCurveTo(x - w * 0.45, y - h * 0.4, x, y - h * 0.6); g.quadraticCurveTo(x + w * 0.45, y - h * 0.4, x + w * 0.5, y); g.closePath(); g.fill();
 }
+// Divine Flame's bow, after the anime: a great crescent of fire like a pair of swept-back wings, held
+// out in his left hand, flames licking off its front edge, bright veins through it, the burning arrow
+// drawn back to his right hand at nx. Fighter-local units (+x forward); sc grows it in, k is the draw.
+function flameBow(sc, k, nx) {
+  const fl = Math.sin(T * 26), w = (n) => n * sc;
+  g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+  const bowPath = (grow) => {
+    g.beginPath();
+    g.moveTo(w(-6), w(-66 - grow));      // a tip, swept back
+    g.bezierCurveTo(w(30 + grow), w(-58), w(58 + grow), w(-30), w(60 + grow), 0);
+    g.bezierCurveTo(w(58 + grow), w(30), w(30 + grow), w(58), w(-6), w(66 + grow));
+    g.bezierCurveTo(w(20), w(40), w(34), w(18), w(34), 0);
+    g.bezierCurveTo(w(34), w(-18), w(20), w(-40), w(-6), w(-66 - grow));
+    g.closePath();
+  };
+  g.fillStyle = 'rgba(255,90,20,.22)'; bowPath(10); g.fill();      // the glow round it
+  for (let i = 0; i < 9; i++) {      // flames licking forward off the front edge
+    const t = (i + 0.5) / 9, a = (t - 0.5) * 2.1, bx = w(28 + 30 * Math.cos(a)), by = w(62 * Math.sin(a)) * 0.95, L = w(16 + 10 * Math.abs(Math.sin(T * 13 + i * 1.7)));
+    g.fillStyle = i % 2 ? 'rgba(255,120,30,.85)' : 'rgba(255,170,60,.85)';
+    g.beginPath(); g.moveTo(bx - Math.sin(a) * w(5), by - Math.cos(a) * w(5)); g.lineTo(bx + Math.cos(a) * L, by + Math.sin(a) * L); g.lineTo(bx + Math.sin(a) * w(5), by + Math.cos(a) * w(5)); g.closePath(); g.fill();
+  }
+  const gr = g.createLinearGradient(w(34), 0, w(62), 0);
+  gr.addColorStop(0, '#ff4a12'); gr.addColorStop(0.5, '#ff8a2a'); gr.addColorStop(1, '#ffc65a');
+  g.fillStyle = gr; bowPath(0); g.fill();
+  g.strokeStyle = '#ffe9a8'; g.lineWidth = w(2.2);      // bright veins through the fire
+  for (const o of [0.35, 0.65]) {
+    g.beginPath(); g.moveTo(w(-2), w(-60 * o - 4)); g.bezierCurveTo(w(30), w(-50 * o), w(36 + 18 * o + fl), w(-22 * o), w(36 + 18 * o), 0); g.bezierCurveTo(w(36 + 18 * o - fl), w(22 * o), w(30), w(50 * o), w(-2), w(60 * o + 4)); g.stroke();
+  }
+  // the string and the burning arrow, drawn back to his right hand
+  g.strokeStyle = 'rgba(255,236,190,.85)'; g.lineWidth = 1.2;
+  g.beginPath(); g.moveTo(w(-6), w(-66)); g.lineTo(nx, 0); g.lineTo(w(-6), w(66)); g.stroke();
+  g.strokeStyle = 'rgba(255,120,30,.6)'; g.lineWidth = 7; g.beginPath(); g.moveTo(nx, 0); g.lineTo(w(78), 0); g.stroke();
+  g.strokeStyle = '#ffd56a'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(nx, 0); g.lineTo(w(78), 0); g.stroke();
+  g.fillStyle = `rgba(255,140,40,${0.45 + 0.2 * fl})`; circ(w(82), 0, 8 + 7 * k); g.fillStyle = '#fff3c8'; circ(w(82), 0, 3 + 3 * k);
+  g.restore();
+}
 // Divine Flame on the ground: the target ring while he draws (for everyone to see), then the fire
 function drawFugaGround() {
   for (const e of S.fl) {
-    if (!vis(e.x, e.y, FUGA.r + 60) || outside(e.x, e.y)) continue;
+    if (!vis(e.x, e.y, FUGA.r + 320) || outside(e.x, e.y)) continue;
     if (e.t < 0) {
       const p = 1 + e.t / (FUGA.charge + FUGA.flight);
       g.strokeStyle = `rgba(255,140,40,${0.35 + 0.35 * Math.sin(T * 14)})`; g.lineWidth = 4; g.setLineDash([16, 10]);
@@ -2760,11 +2792,11 @@ function drawFugaGround() {
     const gr = g.createRadialGradient(e.x, e.y, 0, e.x, e.y, FUGA.r);
     gr.addColorStop(0, 'rgba(255,190,80,.55)'); gr.addColorStop(0.7, 'rgba(255,80,20,.42)'); gr.addColorStop(1, 'rgba(120,20,10,.2)');
     g.fillStyle = gr; circ(e.x, e.y, FUGA.r);
-    for (let i = 0; i < 16; i++) {      // flames all through it
-      const a = hash1(e.id * 7 + i) * TAU, d = Math.sqrt(hash1(e.id * 3 + i * 5)) * FUGA.r * 0.85;
-      flame(e.x + Math.cos(a) * d, e.y + Math.sin(a) * d, 26 + 22 * hash1(i + e.id), i);
+    for (let i = 0; i < 26; i++) {      // flames all through it
+      const a = hash1(e.id * 7 + i) * TAU, d = Math.sqrt(hash1(e.id * 3 + i * 5)) * FUGA.r * 0.88;
+      flame(e.x + Math.cos(a) * d, e.y + Math.sin(a) * d, 40 + 34 * hash1(i + e.id), i);
     }
-    for (let i = 0; i < 34; i++) { const a = i / 34 * TAU; flame(e.x + Math.cos(a) * FUGA.r, e.y + Math.sin(a) * FUGA.r, 40 + 16 * hash1(i * 3 + e.id), i + 40); }      // the ring
+    for (let i = 0; i < 48; i++) { const a = i / 48 * TAU; flame(e.x + Math.cos(a) * FUGA.r, e.y + Math.sin(a) * FUGA.r, 62 + 26 * hash1(i * 3 + e.id), i + 40); }      // the ring
     g.restore();
   }
 }
@@ -2774,6 +2806,17 @@ function drawFugaAir() {
     if (!f.alive || f.act !== 'fuga' || f.actT >= FUGA.charge + 0.2 || !vis(f.rx, f.ry, 120)) continue;
     const k = clamp(f.actT / 0.3, 0, 1), n = 18;
     for (let i = 0; i < n; i++) { const a = i / n * TAU + T * 1.5; flame(f.rx + Math.cos(a) * FUGA.ring, f.ry + Math.sin(a) * FUGA.ring * 0.9, 22 * k + 6, i); }
+  }
+  for (const e of S.fl) {      // as it lands the fire blasts up, over the rooftops: tall tongues all over it and a column in the middle
+    if (e.t < 0 || e.t >= 1.1 || !vis(e.x, e.y, FUGA.r + 320) || outside(e.x, e.y)) continue;
+    const p = e.t / 1.1, up = p < 0.15 ? p / 0.15 : 1 - (p - 0.15) / 0.85;
+    g.save(); g.globalAlpha = clamp(up * 1.4, 0, 1);
+    for (let i = 0; i < 30; i++) {
+      const a = hash1(e.id * 11 + i * 3) * TAU, d = Math.sqrt(hash1(e.id + i * 7)) * FUGA.r;
+      flame(e.x + Math.cos(a) * d, e.y + Math.sin(a) * d, (120 + 160 * hash1(i * 5 + e.id)) * up, i + 80);
+    }
+    flame(e.x - 40, e.y + 30, 420 * up, 3); flame(e.x + 40, e.y + 30, 380 * up, 5); flame(e.x, e.y + 40, 520 * up, 7);
+    g.restore();
   }
   for (const e of S.fl) {
     if (e.t < -FUGA.flight || e.t >= 0) continue;
@@ -2793,7 +2836,7 @@ function drawShrines() {
     if (!vis(s.x, s.y, MS.r + 60) || outside(s.x, s.y)) continue;
     const up = s.t < MS.rise ? 1 - (1 - s.t / MS.rise) ** 3 : 1, down = clamp((MS.rise + MS.dur - s.t) / 0.6, 0, 1), k = up * down;
     if (s.t >= MS.rise) {      // the cuts
-      const n = 14, seed = Math.floor(T * 14);
+      const n = 34, seed = Math.floor(T * 24);
       for (let i = 0; i < n; i++) {
         const a = hash1(seed * 13 + i) * TAU, d = Math.sqrt(hash1(seed * 7 + i * 3)) * MS.r, x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d, b = hash1(i + seed) * Math.PI, L = 18 + 26 * hash1(seed + i * 5);
         g.strokeStyle = i % 3 ? 'rgba(255,255,255,.7)' : 'rgba(255,60,90,.75)'; g.lineWidth = 2.5;
@@ -3603,6 +3646,8 @@ function drawMini() {
     mg.strokeStyle = ok ? 'rgba(200,130,255,.35)' : 'rgba(200,130,255,.14)'; mg.lineWidth = Math.max(d, PURPLE.r * 2 * k); mg.lineCap = 'round';
     mg.beginPath(); mg.moveTo(x, y); mg.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); mg.stroke(); mg.lineCap = 'butt';
   }
+  for (const e of S.fl) { mg.fillStyle = e.t < 0 ? 'rgba(255,140,40,.25)' : 'rgba(255,90,20,.45)'; mg.beginPath(); mg.arc(e.x * k, e.y * k, FUGA.r * k, 0, TAU); mg.fill(); }
+  for (const s of S.ms) { mg.strokeStyle = 'rgba(255,60,90,.6)'; mg.lineWidth = d; mg.beginPath(); mg.arc(s.x * k, s.y * k, MS.r * k, 0, TAU); mg.stroke(); }
   for (const dm of S.dm) { mg.fillStyle = 'rgba(0,0,0,.8)'; mg.strokeStyle = '#9b7bff'; mg.lineWidth = d; mg.beginPath(); mg.arc(dm.x * k, dm.y * k, DOM.r * k * domGrow(dm), 0, TAU); mg.fill(); mg.stroke(); }
   for (const f of S.f) {
     if (!f.alive || f.id === meId || outside(f.rx, f.ry)) continue;
@@ -3617,6 +3662,20 @@ function drawMini() {
   if (me && me.alive) {
     mg.fillStyle = '#fff'; mg.strokeStyle = '#000'; mg.lineWidth = d;
     mg.beginPath(); mg.arc(me.rx * k, me.ry * k, 3.6 * d, 0, TAU); mg.fill(); mg.stroke();
+  }
+  if (fmap) {      // aiming Divine Flame: the blast's size round the pointer
+    if (!fugaMapFor()) { closeFugaMap(); return; }
+    const fs = Math.round(n / 40);
+    mg.font = `800 ${fs}px Barlow, sans-serif`; mg.textAlign = 'center'; mg.fillStyle = '#ffcf9a';
+    mg.fillText(TOUCH ? 'TAP WHERE DIVINE FLAME LANDS' : 'CLICK WHERE DIVINE FLAME LANDS  ·  ESC CANCELS', n / 2, fs * 1.6);
+    if (fmap.x >= 0) {
+      const x = fmap.x, y = fmap.y, R = FUGA.r * k, pulse = 1 + 0.04 * Math.sin(T * 10);
+      mg.strokeStyle = 'rgba(255,200,120,.5)'; mg.lineWidth = d; mg.setLineDash([5 * d, 4 * d]);
+      mg.beginPath(); mg.moveTo(me.rx * k, me.ry * k); mg.lineTo(x, y); mg.stroke(); mg.setLineDash([]);
+      mg.fillStyle = 'rgba(255,110,30,.28)'; mg.beginPath(); mg.arc(x, y, R * pulse, 0, TAU); mg.fill();
+      mg.strokeStyle = '#ff9a3a'; mg.lineWidth = 2.5 * d; mg.beginPath(); mg.arc(x, y, R * pulse, 0, TAU); mg.stroke();
+      mg.fillStyle = '#fff1c0'; mg.beginPath(); mg.arc(x, y, 2.5 * d, 0, TAU); mg.fill();
+    }
   }
 }
 
@@ -4379,7 +4438,9 @@ addEventListener('keydown', (e) => {
   if (screen === null && (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow'))) e.preventDefault();
   if (!e.repeat) {
     const k = KEYMAP[e.code];
-    if (k && screen === null) press[k]++;
+    if (k === 'c' && screen === null && fugaMapFor()) openFugaMap();
+    else if (fmap && e.code === 'Escape') { closeFugaMap(); return; }
+    else if (k && screen === null) press[k]++;
     if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
     if (e.code === 'KeyM') setMute(!save.mute);
   }
@@ -4394,7 +4455,38 @@ cv.addEventListener('mousedown', (e) => {
 });
 addEventListener('mouseup', (e) => { if (e.button === 0) mouse.l = false; if (e.button === 2) mouse.r = false; });
 addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
-function releaseInput() { keys.clear(); mouse.l = mouse.r = false; tabHeld = false; releaseTouch(); }
+function releaseInput() { keys.clear(); mouse.l = mouse.r = false; tabHeld = false; releaseTouch(); closeFugaMap(); }
+// Divine Flame is aimed on the map: C (or the touch button) blows the minimap up to fill the screen,
+// a ring the size of the blast follows the pointer, and a click or a lifted finger fires it there.
+// Esc, a right click or a second C cancels. The spot goes out as an ordinary aim and distance.
+let fmap = null;
+function fugaMapFor() {
+  const me = S && S.mode !== 'demo' && byId(meId);
+  return me && me.alive && me.ch === 'sukuna' && !(me.cd.c > 0) && !me.act && S.phase === 'play' ? me : null;
+}
+function openFugaMap() {
+  if (fmap) { closeFugaMap(); return; }
+  fmap = { x: -1, y: -1 };
+  document.body.classList.add('fmap'); sizeMini();
+}
+function closeFugaMap() {
+  if (!fmap) return;
+  fmap = null;
+  document.body.classList.remove('fmap'); sizeMini();
+}
+function fmapAt(e) { const b = mini.getBoundingClientRect(); fmap.x = (e.clientX - b.left) / b.width * mini.width; fmap.y = (e.clientY - b.top) / b.height * mini.height; }
+mini.addEventListener('pointermove', (e) => { if (fmap) fmapAt(e); });
+mini.addEventListener('pointerdown', (e) => { if (!fmap) return; e.preventDefault(); if (e.button === 2) { closeFugaMap(); return; } fmapAt(e); });
+mini.addEventListener('pointerup', (e) => {
+  if (!fmap || e.button === 2) return;
+  fmapAt(e);
+  const me = fugaMapFor(), k = mini.width / MAP, wx = fmap.x / k, wy = fmap.y / k;
+  closeFugaMap();
+  if (!me) return;
+  forceAim = { a: Math.atan2(wy - me.y, wx - me.x), ad: Math.hypot(wy - me.y, wx - me.x), until: T + 0.25 };
+  press.c++;
+});
+mini.addEventListener('contextmenu', (e) => e.preventDefault());
 addEventListener('blur', releaseInput);
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) return;
@@ -4429,6 +4521,7 @@ function localInput(me) {
     const wx = cam.x + (mouse.x - W / 2) / cam.z, wy = cam.y + (mouse.y - H / 2) / cam.z;
     v.aim = Math.atan2(wy - me.ry, wx - me.rx); v.ad = Math.hypot(wy - me.ry, wx - me.rx);
     v.m1 = mouse.l; v.blk = mouse.r;
+    if (forceAim && T < forceAim.until) { v.aim = forceAim.a; v.ad = forceAim.ad; }
   }
   v.aim = r2(v.aim); v.ad = Math.round(v.ad);
   lastAim = v.aim;
@@ -4498,7 +4591,7 @@ const AIM_LEN = {
   megumi: { q: [90, 0], e: [RAB.max, RAB.r, 1], c: [450, ELE_HIT, 1], u: [90, 0] },
   nobara: { q: [720, 0], e: [1, 0], c: [1, 0], u: [1, RAIN.r] },
   gojo: { q: [BLUE.range, BLUE.r, 1], e: [620, RED.r], c: [PURPLE.range, 0], u: [1, DOM.r] },
-  sukuna: { q: [SHOT[4].range, 0], e: [CLEAVE.range, 0], c: [FUGA.range, FUGA.r, 1], u: [1, MS.r] },
+  sukuna: { q: [SHOT[4].range, 0], e: [CLEAVE.range, 0], c: [1, 0], u: [1, MS.r] },      // c: aimed on the map instead
 };
 const dragLen = (spec, len) => (spec[2] ? 140 + clamp(len / 80, 0, 1) * (spec[0] - 140) : spec[0]);
 function buildPad(ch) {
@@ -4543,6 +4636,7 @@ function buildPad(ch) {
       o.pid = -1; el.classList.remove('down');
       if (k === 'm1') touchHeld.m1 = false;
       else if (k === 'blk') touchHeld.blk = false;
+      else if (ch === 'sukuna' && k === 'c' && e.type === 'touchend') { if (fugaMapFor()) openFugaMap(); }
       else if (AIM_LEN[ch][k] && e.type === 'touchend' && o.aimA !== 'x') {
         const me = S && byId(meId);
         if (typeof o.aimA === 'number') forceAim = { a: o.aimA, ad: dragLen(AIM_LEN[ch][k], o.len), until: T + 0.25 };
@@ -4944,7 +5038,7 @@ function readInput(inp, m) {
   const n = (v, a, b) => (Number.isFinite(v) ? clamp(v, a, b) : 0);
   inp.mx = n(m.mx, -1, 1); inp.my = n(m.my, -1, 1);
   if (Number.isFinite(m.aim)) inp.aim = m.aim;
-  inp.ad = n(m.ad, 0, 3000) || 300;
+  inp.ad = n(m.ad, 0, 6000) || 300;
   inp.m1 = !!m.m1; inp.blk = !!m.blk;
   if (Array.isArray(m.k)) KEYS.forEach((k, i) => { if (Number.isInteger(m.k[i])) inp[k] = m.k[i]; });
 }

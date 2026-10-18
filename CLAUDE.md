@@ -691,7 +691,10 @@ mouse, touch), screens, multiplayer, main loop.
 - **Sukuna**: his Dismantle is `SHOT` kind 4 (bigger, further, harder than Yuji's kind 0). Cleave
   (`ACTS.cleave`, `CLEAVE`) picks `cleaveTarget()` into `f.lk` and deals exactly `CLEAVE.share` of its full
   health (divided by `RULES.dmg`, which `hurt()` multiplies back in), ignoring blocks. Divine Flame
-  (`ACTS.fuga`, `FUGA`, `S.fl`): an entity whose `t` counts up from `-(charge + flight)`; while he draws
+  is aimed on the map: C (or the touch button) calls `openFugaMap()`, which blows `#mini` up to fill the
+  screen (`body.fmap`); `drawMini()` draws the blast's ring at the pointer and a click or lifted finger
+  sends the spot as `forceAim` (aim and distance, which the desktop input now honours too) with a C
+  press. `flameBow()` draws the bow (`ACTS.fuga`, `FUGA`, `S.fl`): an entity whose `t` counts up from `-(charge + flight)`; while he draws
   the bow a ring of fire around him singes anyone beside him, then `updFuga()` lands it (`fx 'fl'`) and
   burns and slows everyone inside for `FUGA.dur` s; it is cancelled if he dies or is stopped while
   drawing. Malevolent Shrine (`S.ms`, `MS`, `updShrine()`): no barrier; after `MS.rise` s it pins him
