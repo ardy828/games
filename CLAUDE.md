@@ -704,7 +704,7 @@ mouse, touch), screens, multiplayer, main loop.
   on its roof (position reset every step, and the joiner's `predStep()` holds him there), cuts everyone
   within `MS.r` every `MS.tick` s, and keeps whoever has been inside (`s.in`, host only) from leaving
   until it ends; while it stands `hurt()` refuses every hit on him. `drawShrines()` tints the domain red,
-  draws the shrine from the front (`shrineFront()`, rising out of the ground) and redraws him on its ridge;
+  draws the shrine from the front (`shrineFront()`, squeezed to `SHRINE_W` of its width, rising out of the ground) and redraws him on its ridge;
   `fireColumn()` is Divine Flame's cylinder (it stands for the whole `FUGA.dur`) and `flame()` the layered flame everything uses; `cutSukuna()` is his banner
   (the Malevolent Shrine sign, his face marks).
 - **Domain clash** (`CLASH`, `S.cl`, synced): `tryClash()` runs after either domain starts and pairs it
@@ -718,7 +718,8 @@ mouse, touch), screens, multiplayer, main loop.
   (`clashWhite()`, drawn in `render()` for anyone near) applies the result: `closeDomain()` closes the
   void mid-rush with `d.ext` extra seconds, or `d.fail` (synced) shrinks the rush away in
   `CLASH.fail` s and the shrine runs for `s.dur`. While clashing, `updDomain()` lets the rush play to
-  `CLASH.age` s and holds it there, and `drawRush()` keeps its streaks moving on `T`. Nothing shows
+  `CLASH.age` s and holds it there, and `drawRush()` draws it round the shrine (`d.sx/sy`, synced) out to
+  `MS.r`, a full disc of starry space with the ink's spikes at its rim, its streaks moving on `T`. Nothing shows
   the count; `drawClash()`'s meeting point drifts at random. Shrines are drawn after `drawDomains()`
   while any domain clashes (`drawShrines(true)`), and `drawClash()` redraws Gojo, so both sit over his
   ink; `updCam()` frames a participant's camera on the clash.

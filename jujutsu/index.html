@@ -1872,7 +1872,7 @@ const clashEnd = () => CLASH.intro + CLASH.T;
 function startClash(go, su, d, s) {
   if (!d || !s || S.cl.some((c) => c.gd === d.id || c.sm === s.id)) return;
   for (const id of d.vic) { const t = foeById(id); if (t) t.frz = 0; }      // if it had already closed, it lets go
-  d.vic = []; d.cl = true; d.t = clamp(d.t, DOM.shut - CLASH.age, DOM.shut); s.cl = true;
+  d.vic = []; d.cl = true; d.t = clamp(d.t, DOM.shut - CLASH.age, DOM.shut); d.sx = s.x; d.sy = s.y; s.cl = true;
   let gx = s.x, gy = s.y + CLASH.stand;      // where Gojo stands: at the shrine's foot, facing its maw, or the nearest open spot round it
   for (const da of [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2, 1.6, -1.6]) {
     const a = Math.PI / 2 + da, p = { x: s.x + Math.cos(a) * CLASH.stand, y: s.y + Math.sin(a) * CLASH.stand };
@@ -2994,7 +2994,7 @@ function drawFugaAir() {
 // gold, great horns with fire on their tips. It rises out of the ground under him (clipped at the
 // ground line, dust and cracks at its foot) and he stands on its ridge. While it is up the whole domain
 // is tinted red and slashes flicker everywhere in it, but there is no wall to see.
-const SHRINE_BASE = 170, SHRINE_H = 232;      // its foot below him, and from foot to ridge, in world units
+const SHRINE_BASE = 170, SHRINE_H = 232, SHRINE_W = 0.66;      // its foot below him, from foot to ridge, in world units, and how much narrower than shrineFront() draws it
 function drawShrines(clash) {      // a shrine in a domain clash (or just won one) is drawn later, over Gojo's ink (clash = true)
   const late = S.dm.some((d) => d.cl);
   for (const s of S.ms) {
@@ -3015,16 +3015,16 @@ function drawShrines(clash) {      // a shrine in a domain clash (or just won on
     }
     if (k <= 0) continue;
     const bx = s.x, by = s.y + SHRINE_BASE, rise = (1 - k) * (SHRINE_H + 60);
-    g.fillStyle = `rgba(0,0,0,${0.4 * k})`; ell(bx + 30, by + 8, 230, 60);      // its shadow on the street
+    g.fillStyle = `rgba(0,0,0,${0.4 * k})`; ell(bx + 20, by + 8, 230 * SHRINE_W, 60);      // its shadow on the street
     g.save();
     g.beginPath(); g.rect(bx - 420, by - SHRINE_H - 400, 840, SHRINE_H + 400); g.clip();      // nothing below the ground line
-    g.translate(bx, by + rise);
+    g.translate(bx, by + rise); g.scale(SHRINE_W, 1);
     shrineFront(k);
     g.restore();
     if (s.t < MS.rise) {      // the street breaking open at its foot
       g.strokeStyle = 'rgba(20,10,10,.7)'; g.lineWidth = 3;
-      for (let i = 0; i < 9; i++) { const a = Math.PI + i / 8 * Math.PI, L = 120 + 80 * hash1(i + s.id); g.beginPath(); g.moveTo(bx + Math.cos(a) * 200, by + 6); g.lineTo(bx + Math.cos(a) * (200 + L), by + 6 - Math.sin(a) * L * 0.25); g.stroke(); }
-      g.fillStyle = 'rgba(90,70,60,.5)'; for (let i = 0; i < 10; i++) circ(bx - 230 + i * 51, by + 4 - 20 * Math.abs(Math.sin(T * 9 + i)), 18 + 10 * hash1(i));
+      for (let i = 0; i < 9; i++) { const a = Math.PI + i / 8 * Math.PI, L = 120 + 80 * hash1(i + s.id), w = 200 * SHRINE_W; g.beginPath(); g.moveTo(bx + Math.cos(a) * w, by + 6); g.lineTo(bx + Math.cos(a) * (w + L), by + 6 - Math.sin(a) * L * 0.25); g.stroke(); }
+      g.fillStyle = 'rgba(90,70,60,.5)'; for (let i = 0; i < 10; i++) circ(bx + (-230 + i * 51) * SHRINE_W, by + 4 - 20 * Math.abs(Math.sin(T * 9 + i)), 18 + 10 * hash1(i));
     }
     const o = byId(s.own);      // he stands on its ridge
     if (o && o.alive) { const ox = o.rx, oy = o.ry; o.rx = s.x; o.ry = by + rise - SHRINE_H - 10; drawFighter(o); o.rx = ox; o.ry = oy; }
@@ -3410,49 +3410,56 @@ function drawBurst(d) {
 // Gojo with dabs and flecks beyond them and shreds of the white world caught inside, red, blue, violet
 // and white streaks rushing out through it, until it is solid black. The people inside see nothing
 // but the white and the ink; for them it splashes out to the edges of the screen.
-function inkPath(d, L) {
+function inkPath(d, L, cx = d.x, cy = d.y) {
   const P = new Path2D(), lop = d.id * 1.7;
   const dot = (x, y, r) => { P.moveTo(x + r, y); P.arc(x, y, r, 0, TAU); };
-  dot(d.x, d.y, L * 0.4);
-  for (let i = 0; i < 7; i++) { const a = hash1(i * 4.1 + d.id) * TAU, r = L * (0.25 + 0.25 * hash1(i + 8)); dot(d.x + Math.cos(a) * r, d.y + Math.sin(a) * r, L * (0.16 + 0.12 * hash1(i * 2.9))); }
+  dot(cx, cy, L * 0.4);
+  for (let i = 0; i < 7; i++) { const a = hash1(i * 4.1 + d.id) * TAU, r = L * (0.25 + 0.25 * hash1(i + 8)); dot(cx + Math.cos(a) * r, cy + Math.sin(a) * r, L * (0.16 + 0.12 * hash1(i * 2.9))); }
   for (let i = 0; i < 36; i++) {      // the strokes: wide at the root, ragged, to a point
     const a = (i + hash1(i * 2.3 + d.id) - 0.5) / 36 * TAU, w = 0.07 + 0.09 * hash1(i + 3.3);
-    const l = L * (0.5 + 0.65 * hash1(i * 7.1 + d.id) ** 1.4) * (1 + 0.28 * Math.cos(a - lop)), at = (q, r) => [d.x + Math.cos(a + q) * r, d.y + Math.sin(a + q) * r];
+    const l = L * (0.5 + 0.65 * hash1(i * 7.1 + d.id) ** 1.4) * (1 + 0.28 * Math.cos(a - lop)), at = (q, r) => [cx + Math.cos(a + q) * r, cy + Math.sin(a + q) * r];
     const pts = [at(-w * 1.6, l * 0.3), at(-w, l * 0.62), at(-w * 0.55, l * (0.8 + 0.08 * hash1(i + 5))), at(0, l), at(w * 0.45, l * 0.84), at(w * 0.9, l * 0.66), at(w * 1.6, l * 0.3)];
-    P.moveTo(d.x, d.y); for (const [x, y] of pts) P.lineTo(x, y); P.closePath();
-    for (let j = 0; j < 2; j++) { const r = l * (1.06 + 0.22 * hash1(i * 3 + j)), q = (hash1(i + j * 7) - 0.5) * w * 2; dot(d.x + Math.cos(a + q) * r, d.y + Math.sin(a + q) * r, L * (0.012 + 0.03 * hash1(i * 5 + j))); }
+    P.moveTo(cx, cy); for (const [x, y] of pts) P.lineTo(x, y); P.closePath();
+    for (let j = 0; j < 2; j++) { const r = l * (1.06 + 0.22 * hash1(i * 3 + j)), q = (hash1(i + j * 7) - 0.5) * w * 2; dot(cx + Math.cos(a + q) * r, cy + Math.sin(a + q) * r, L * (0.012 + 0.03 * hash1(i * 5 + j))); }
   }
   return P;
 }
-function drawRush(d) {
+function drawRush(d) {      // in a domain clash (d.cl) it fills the shrine's whole reach instead, round the shrine (d.sx, d.sy)
+  const cl = d.cl && d.sx != null, cx = cl ? d.sx : d.x, cy = cl ? d.sy : d.y, R0 = cl ? MS.r : DOM.r;
   const gone = d.fail > 0 ? clamp(d.fail / CLASH.fail, 0, 1) : 1, age = domAge(d), run = d.cl ? age + T % 600 : age, p = age / DOM.rush, k = inkR(d) * gone, me = inDomain(d);
   const fade = 1 - clamp((p - 0.82) / 0.18, 0, 1), dark = clamp((p - 0.62) / 0.33, 0, 1);
-  let reach = DOM.r * 1.1;
-  if (me) for (const [x, y] of [[view.L, view.T], [view.R, view.T], [view.L, view.B], [view.R, view.B]]) reach = Math.max(reach, Math.hypot(x - d.x, y - d.y) * 1.05);
+  let reach = R0 * 1.12;
+  if (me) for (const [x, y] of [[view.L, view.T], [view.R, view.T], [view.L, view.B], [view.R, view.B]]) reach = Math.max(reach, Math.hypot(x - cx, y - cy) * 1.05);
   const L = reach * k;
   g.save(); g.globalAlpha = Math.min(1, gone * 2);
   if (me) { g.fillStyle = '#fbf8f3'; g.fillRect(view.L - 50, view.T - 50, view.R - view.L + 100, view.B - view.T + 100); }
-  else whiteDisc(d, DOM.r * gone, 1 - clamp((p - 0.45) / 0.4, 0, 1));
+  else if (!cl) whiteDisc(d, DOM.r * gone, 1 - clamp((p - 0.45) / 0.4, 0, 1));
   g.fillStyle = '#0a0918';
   for (let i = 0; i < 46; i++) {      // flecks flung ahead of the splash
     const a = hash1(i * 5.3 + d.id) * TAU, dd = L * (1.05 + 0.5 * hash1(i + 11)), br = (2 + 9 * hash1(i * 2.2) ** 2) * (0.6 + k);
-    circ(d.x + Math.cos(a) * dd, d.y + Math.sin(a) * dd, br);
+    circ(cx + Math.cos(a) * dd, cy + Math.sin(a) * dd, br);
   }
-  const P = inkPath(d, L), gr = g.createRadialGradient(d.x, d.y, 0, d.x, d.y, L * 1.2);
+  const P = inkPath(d, L, cx, cy), gr = g.createRadialGradient(cx, cy, 0, cx, cy, L * 1.2);
   gr.addColorStop(0, '#1d1a46'); gr.addColorStop(0.35, '#0e0c26'); gr.addColorStop(0.8, '#07060f'); gr.addColorStop(1, '#0d1030');
   g.fillStyle = gr; g.fill(P);
-  g.clip(P);
+  if (cl) { circ(cx, cy, L); g.beginPath(); g.arc(cx, cy, L * 1.12, 0, TAU); g.clip(); } else g.clip(P);      // a clash's rush swallows all of it
+  if (cl) {      // and its sky is full of stars
+    for (let i = 0; i < 140; i++) {
+      const a = hash1(i * 3.3 + 7) * TAU, r = Math.sqrt(hash1(i * 1.9 + 2)) * L, tw = 0.45 + 0.55 * Math.sin(T * (2 + 3 * hash1(i + 5)) + i), sz = 1 + 2.6 * hash1(i * 4.4) ** 2;
+      g.fillStyle = `rgba(${i % 4 ? '235,240,255' : '200,180,255'},${clamp(tw, 0, 1) * Math.min(1, gone * 2)})`; circ(cx + Math.cos(a) * r, cy + Math.sin(a) * r, sz);
+    }
+  }
   if (fade > 0) {
     g.globalAlpha = fade * Math.min(1, gone * 2); g.lineCap = 'round';
     const cols = ['#ff4a5a', '#4a6bff', '#9b6bff', '#ffffff', '#ff6a8a', '#5a7dff', '#cfd8ff'];
     for (let i = 0; i < 110; i++) {      // warp streaks, longer and thicker as it goes
       const q = hash1(i * 1.7 + d.id) * TAU, sp = 0.5 + hash1(i + 4), r0 = 15 + ((hash1(i + 2) * reach * 0.6 + run * reach * 0.9 * sp) % (reach * 1.1)), len = reach * (0.05 + 0.32 * Math.min(1, p * 1.3)) * (0.35 + hash1(i + 9));
       g.strokeStyle = cols[i % 7]; g.lineWidth = (1 + hash1(i + 6) * 2.2) * (1 + p);
-      g.beginPath(); g.moveTo(d.x + Math.cos(q) * r0, d.y + Math.sin(q) * r0); g.lineTo(d.x + Math.cos(q) * (r0 + len), d.y + Math.sin(q) * (r0 + len)); g.stroke();
+      g.beginPath(); g.moveTo(cx + Math.cos(q) * r0, cy + Math.sin(q) * r0); g.lineTo(cx + Math.cos(q) * (r0 + len), cy + Math.sin(q) * (r0 + len)); g.stroke();
     }
     for (let i = 0; i < 16; i++) {      // shreds of the white world, torn up and carried out
       const a = (i + hash1(i * 7.9 + d.id + 3)) / 16 * TAU, r = L * (0.25 + 0.6 * hash1(i + 21)) * (0.8 + 0.5 * p), sz = (5 + 12 * hash1(i + 13)) * (1.1 - 0.6 * p);
-      const ux = Math.cos(a), uy = Math.sin(a), x = d.x + ux * r, y = d.y + uy * r;
+      const ux = Math.cos(a), uy = Math.sin(a), x = cx + ux * r, y = cy + uy * r;
       g.fillStyle = 'rgba(255,190,235,.16)'; ell(x, y, sz * 2.4, sz * 1.4, a);
       g.fillStyle = i % 3 ? '#fff6fb' : '#ffd9ef'; g.beginPath();
       for (let j = 0; j < 7; j++) { const q = j / 7 * TAU, rr = sz * (0.45 + 0.75 * hash1(i * 7 + j)), lu = Math.cos(q) * rr * (2 + 1.5 * p), lv = Math.sin(q) * rr * 0.55; g.lineTo(x + ux * lu - uy * lv, y + uy * lu + ux * lv); }
@@ -3461,7 +3468,7 @@ function drawRush(d) {
     g.fillStyle = '#ffffff';
     for (let i = 0; i < 12; i++) {      // bright splinters flying past
       const q = hash1(i * 3.9 + d.id + 9) * TAU, r0 = 40 + ((hash1(i + 31) * reach * 0.5 + run * reach * 1.3) % reach), len = 30 + 120 * p, w = 2 + 3 * hash1(i + 17), c = Math.cos(q), sn = Math.sin(q);
-      const x0 = d.x + c * r0, y0 = d.y + sn * r0;
+      const x0 = cx + c * r0, y0 = cy + sn * r0;
       g.beginPath(); g.moveTo(x0 - sn * w, y0 + c * w); g.lineTo(x0 + c * len, y0 + sn * len); g.lineTo(x0 + sn * w, y0 - c * w); g.closePath(); g.fill();
     }
     g.lineCap = 'butt';
@@ -3469,10 +3476,10 @@ function drawRush(d) {
   g.restore();
   if (dark > 0) {      // and at last it is all black: the void (inside) or the sphere (outside) follows
     g.fillStyle = `rgba(2,1,6,${dark})`;
-    if (me) g.fillRect(view.L - 50, view.T - 50, view.R - view.L + 100, view.B - view.T + 100); else circ(d.x, d.y, DOM.r);
+    if (me) g.fillRect(view.L - 50, view.T - 50, view.R - view.L + 100, view.B - view.T + 100); else circ(cx, cy, R0);
   }
-  for (const f of S.f) if (f.alive && Math.hypot(f.rx - d.x, f.ry - d.y) < DOM.r + 20) { drawFighter(f); if (f.nl && f.nl.length) nailsIn(f); }
-  for (const m of S.maho) if (Math.hypot(m.rx - d.x, m.ry - d.y) < DOM.r + 40) drawMaho(m);
+  for (const f of S.f) if (f.alive && Math.hypot(f.rx - cx, f.ry - cy) < R0 + 20) { drawFighter(f); if (f.nl && f.nl.length) nailsIn(f); }
+  for (const m of S.maho) if (Math.hypot(m.rx - cx, m.ry - cy) < R0 + 40) drawMaho(m);
 }
 // The void, from inside: deep blue space with stars and a haze, the black hole hanging above them in
 // its swirling blue disc splashed with ink, and white splatters spreading out from the middle and on
@@ -3562,7 +3569,7 @@ function drawHole(d, hx, hy) {
 function drawDomains() {
   for (const d of S.dm) {
     if (!domOpen(d)) { if (vis(d.x, d.y, DOM.r)) drawBurst(d); continue; }
-    if (rushing(d)) { if (inDomain(d) || vis(d.x, d.y, DOM.r * 1.6)) drawRush(d); continue; }
+    if (rushing(d)) { if (inDomain(d) || vis(d.cl ? d.sx : d.x, d.cl ? d.sy : d.y, (d.cl ? MS.r : DOM.r) * 1.6)) drawRush(d); continue; }
     const k = domGrow(d), r = DOM.r * k, age = domAge(d) - DOM.rush;
     if (k <= 0) continue;
     if (inDomain(d)) {
@@ -5136,7 +5143,7 @@ const SPEC = {
   n: 'id own x:1 y:1 t:2',
   b: 'id own x:1 y:1 t:2',
   u: 'id own x:1 y:1 a:2 d:1',
-  d: 'id own x:1 y:1 t:2 vic ext:1 cl:b fail:2',
+  d: 'id own x:1 y:1 t:2 vic ext:1 cl:b fail:2 sx:1 sy:1',
   l: 'id own x:1 y:1 sx:1 sy:1 t:2',
   s: 'id own x:1 y:1 t:2 cl:b dur:1',
   c: 'id go su gd sm x:1 y:1 t:2 win',
