@@ -1348,7 +1348,7 @@ function hurt(t, dmg, o) {
   if (!t.alive || t.prot > 0 || t.iframe > 0 || S.phase !== 'play') return false;
   if (S.ms.length && S.ms.some((m) => m.own === t.id)) return false;      // nothing touches Sukuna up on his shrine
   if (S.cl.length && S.cl.some((c) => !c.done && (c.go === t.id || c.su === t.id))) return false;      // nor either of them in a domain clash
-  if (infinity(t)) { fx(['inf', r1(t.x), r1(t.y)]); return false; }
+  if (infinity(t) && o.kind !== 'shrine') { fx(['inf', r1(t.x), r1(t.y)]); return false; }      // Infinity stops everything but the shrine's cuts
   let blocked = false;
   if (t.blk && o.a != null && Math.abs(angD(t.aim, o.a + Math.PI)) < 1.31) {
     if (o.gb) guardBreak(t);

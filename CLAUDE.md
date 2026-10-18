@@ -685,7 +685,7 @@ mouse, touch), screens, multiplayer, main loop.
   redrawn; `outside()` drops orbs, shots, particles, tags and minimap dots
   beyond its edge) or outside (a black sphere `DOM.lift` up; `hidden()` keeps what is under it out of
   sight). `CHARS.gojo.ur` slows his ultimate meter. His block is Infinity (`CHARS.gojo.moves.blk`,
-  `infinity()`): held, `hurt()` refuses every hit and nothing breaks it, `shotHit()` stops shots on
+  `infinity()`): held, `hurt()` refuses every hit (but Malevolent Shrine's cuts, `kind: 'shrine'`) and nothing breaks it, `shotHit()` stops shots on
   him and Blue does not pull him, and `tryMove()` refuses his attacks while it is up (dash and RCT
   still work). For a living Gojo, `drawMini()` draws Hollow Purple's reach and path and rings
   anyone in it. His banner is a band like the others (`CUTS.dom`,

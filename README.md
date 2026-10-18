@@ -275,8 +275,8 @@ cursed energy: every move has its own cooldown.
   everyone in it for 6 seconds. Esc or a right click cancels. His ultimate, *Malevolent
   Shrine*, has no barrier: the shrine rises out of the ground under him and lifts him onto its roof,
   where nothing can hurt him, the whole domain turns red,
-  and for 10 seconds everyone near him (well past Gojo's domain's reach) is cut ten times a second, and anyone who
-  steps inside cannot leave until it ends.
+  and for 10 seconds everyone near him (well past Gojo's domain's reach) is cut ten times a second, even
+  through Gojo's Infinity, and anyone who steps inside cannot leave until it ends.
 - **Domain clash.** If Gojo and Sukuna expand their domains within a second of each other, with Gojo
   inside the shrine's reach, the domains clash. Both banners cut in from opposite sides of the screen
   while Gojo walks up to the foot of the rising shrine and his star rush swallows everything in starry
