@@ -6,6 +6,9 @@
 <title>Jujutsu Arena</title>
 <meta name="description" content="A top-down sorcerer brawler on a city map. Play Yuji, Megumi, Nobara or Gojo against cursed spirits, in a private party with friends, or on the public server.">
 <meta name="theme-color" content="#0b0b12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@500;600;700;800&family=Yuji+Syuku&display=swap">
@@ -112,6 +115,8 @@
     font-family:var(--disp);font-size:16px;pointer-events:auto;display:grid;place-items:center}
   #pauseBtn{left:10px}
   #muteBtn{left:56px}
+  #fsBtn{left:102px}
+  #fsBtn svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round}
   #mini{position:absolute;right:10px;top:10px;width:150px;height:150px;border:1px solid var(--line);background:#101018}
   #goal{position:absolute;left:0;right:0;top:12px;text-align:center;font-weight:800;font-size:15px;letter-spacing:.04em;text-shadow:0 2px 6px #000}
   #goal em{font-style:normal;color:var(--gold)}
@@ -135,6 +140,7 @@
   #chat.open #chatIn{display:block}
   #chatBtn{left:10px;top:56px;display:none;font-size:18px}
   body.tui #chatBtn{display:grid}
+  body.tui #fsBtn{left:56px;top:56px}
   body.tui #chat{bottom:auto;top:104px;width:min(300px,46vw)}
   #banner{position:absolute;left:0;right:0;top:24%;text-align:center;opacity:0;padding:0 10px}
   #banner.on{animation:ban var(--d,1.6s) ease forwards}
@@ -210,7 +216,7 @@
   body.tui #mini{width:96px;height:96px}
   body.tui #feed{top:114px}
   body.tui #deadBox{top:auto;bottom:40%}
-  #stickZone{position:absolute;left:0;top:100px;bottom:0;width:45%;pointer-events:auto;touch-action:none}
+  #stickZone{position:absolute;left:0;top:110px;bottom:0;width:45%;pointer-events:auto;touch-action:none}
   .stk{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);opacity:.55;pointer-events:none}
   .stk i{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,255,255,.3)}
   .stk.on{opacity:1}
@@ -262,6 +268,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
   <button id="pauseBtn" class="ico" aria-label="Pause">II</button>
   <button id="muteBtn" class="ico" aria-label="Mute">♪</button>
   <button id="chatBtn" class="ico" aria-label="Chat">💬</button>
+  <button id="fsBtn" class="ico" aria-label="Full screen"><svg viewBox="0 0 24 24"><path id="fsPath" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
   <div id="netwarn"></div>
 </div>
 
@@ -4291,6 +4298,18 @@ $('bQuit').onclick = () => { SFX.click(); toMenu(); };
 $('pauseBtn').onclick = () => togglePause();
 $('muteBtn').onclick = () => setMute(!save.mute);
 $('chatBtn').onclick = () => openChat();
+// full screen: the Fullscreen API where there is one (Android, desktop, iPad); an iPhone has none for
+// a page, so there the button says how to get it from the home screen instead
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+$('fsBtn').onclick = () => {
+  const d = document.documentElement, req = d.requestFullscreen || d.webkitRequestFullscreen, exit = document.exitFullscreen || document.webkitExitFullscreen;
+  if (fsEl()) { exit.call(document); return; }
+  if (!req) { feed([['For full screen on iPhone: Share, then Add to Home Screen, and open it from there', 1]]); return; }
+  try { const pr = req.call(d, { navigationUI: 'hide' }); if (pr && pr.catch) pr.catch(() => {}); } catch (e) { /* refused */ }
+};
+const fsIcon = () => $('fsPath').setAttribute('d', fsEl() ? 'M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5' : 'M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5');
+document.addEventListener('fullscreenchange', fsIcon);
+document.addEventListener('webkitfullscreenchange', fsIcon);
 $('chatIn').addEventListener('blur', () => closeChat());
 $('name').addEventListener('change', () => { save.name = myName(); persist(); });
 for (const b of $('deadBox').querySelectorAll('[data-ch]')) b.onclick = () => { SFX.click(); pickFighter(b.dataset.ch); };
