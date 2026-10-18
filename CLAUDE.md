@@ -645,15 +645,17 @@ mouse, touch), screens, multiplayer, main loop.
 - **Gojo**: Blue (`BLUE`, `S.bl`, `updBlue()`) pulls by setting velocity and `push` on everyone in range
   each step and ticks damage; Red is `SHOT` kind 3 and bursts through `redBlast()`; Hollow Purple
   (`PURPLE`, `S.pu`, `updPurple()`) ignores walls and keeps a host-only `hit` list. Infinite Void
-  (`DOM`, `S.dm`) counts `d.t` down from `DOM.form + DOM.dur`: for `DOM.form` s white light swells out
+  (`DOM`, `S.dm`) counts `d.t` down from `DOM.form + DOM.shut` (`DOM.shut` = `DOM.rush + DOM.dur`): for `DOM.form` s white light swells out
   of Gojo in the world (`drawBurst()`), then `updDomain()` closes it on everyone inside, recording them in `vic` and
-  setting their `frz` (the 5 s start here); for the first `DOM.rush` s of them `drawRush()` splashes
+  setting their `frz` to `DOM.shut`, and Gojo's to `DOM.rush`; for those first `DOM.rush` s `drawRush()` splashes
   black ink out of him (`inkPath()`: spiky strokes, dabs and flecks, white shreds inside) with star
   streaks, just for show; the people inside see it over a white screen, out to its edges, and `domGrow()` follows the ink, so the void
   and the sphere only show after it (the camera pulls back for the people inside). While it is closed it is a space of its own for Gojo and his victims (`voidOf(id)`): its edge is their one wall (`domWall()`), they skip `collide()` with the city (in `updFighter()` and the joiner's `predStep()`), `separate()` never pushes them against anyone outside, and Blue's placement and shots in it run to its edge (`voidLen()`) instead of `rayLen()`. A frozen fighter neither moves nor acts (`control()`, `updFighter()`), a frozen
-  Mahoraga stands still; it ends, and `frz` clears, after `DOM.dur` or when Gojo dies. `inDomain(d)`
-  says whether this device sees it from inside (`drawDomains()` blacks out everything, splatters the
-  void, hangs its black hole above them, and redraws the people in it; `outside()` drops orbs, shots, particles, tags and minimap dots
+  Mahoraga stands still; it ends, and `frz` clears, `DOM.dur` s after the rush or when Gojo dies. `inDomain(d)`
+  says whether this device sees it from inside (`drawVoid()`: blue-black space over the whole view, the black hole
+  in its swirling disc above them (`drawHole()`), and white splatters that spread from the middle and
+  go on across the screen, one clump per world cell, past the domain's edge; then the people in it are
+  redrawn; `outside()` drops orbs, shots, particles, tags and minimap dots
   beyond its edge) or outside (a black sphere `DOM.lift` up; `hidden()` keeps what is under it out of
   sight). `CHARS.gojo.ur` slows his ultimate meter. His block is Infinity (`CHARS.gojo.moves.blk`,
   `infinity()`): held, `hurt()` refuses every hit and nothing breaks it, `shotHit()` stops shots on

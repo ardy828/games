@@ -253,8 +253,9 @@ cursed energy: every move has its own cooldown.
   pull him), but he cannot attack while it is up. His
   ultimate, *Infinite Void*, takes about three times as long to charge. Blinding white light swells
   out of him for a moment (run!), then black ink splashes out of him with stars rushing through it
-  (for over a second) and it closes on everyone still inside: they are frozen for 5 seconds
-  and see nothing but the void, splashed with white, and the people in it. Nobody inside can leave it
+  and it closes on everyone still inside. They are frozen through the star rush (Gojo cannot move
+  during it either) and then 5 more seconds in the void: deep space, the black hole above them, and
+  white splatters spreading out as far as they can see. Nobody inside can leave it
   until it ends, Gojo included, and nothing of the city is in there with them: no buildings or cars
   to bump into or to stop his Blue and Red, and nobody outside to shove them. From outside it is a black
   sphere hanging over the street, which you can walk under without being caught.

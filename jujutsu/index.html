@@ -1145,7 +1145,7 @@ const MOVES = {
     e(f) { startAct(f, 'red'); fx(['snd', 'redCharge', r1(f.x), r1(f.y)]); },
     c(f) { startAct(f, 'purple'); fx(['snd', 'purpleCharge', r1(f.x), r1(f.y)]); },
     u(f) {      // Infinite Void: a burst for DOM.form s, then it closes on whoever is still inside (updDomain)
-      S.dm.push({ id: S.nid++, own: f.id, x: r1(f.x), y: r1(f.y), t: DOM.form + DOM.dur, vic: [] });
+      S.dm.push({ id: S.nid++, own: f.id, x: r1(f.x), y: r1(f.y), t: DOM.form + DOM.shut, vic: [] });
       startAct(f, 'domain');
       f.iframe = Math.max(f.iframe, CUT_T);
       fx(['snd', 'domain', r1(f.x), r1(f.y)]);
@@ -1545,13 +1545,15 @@ function updRain(dt) {
 // middle (they slide, as in a knockback, but a dash still breaks free) and hurting them every BLUE.dt,
 // then implodes. Red is a shot (SHOT kind 3) that bursts on whatever it meets and hurls everyone near
 // it away. Hollow Purple (S.pu) is a huge orb that goes through everyone and every wall, hitting each
-// once with no knockback. Infinite Void (S.dm, its d.t counting down from DOM.form + DOM.dur) first
-// swells out of him as white light for DOM.form s; then black ink bursts out of him, it closes on
-// everyone inside it and freezes them (f.frz) for DOM.dur s, or until he dies. It hangs DOM.lift above the street, and anyone outside can walk under it.
+// once with no knockback. Infinite Void (S.dm, its d.t counting down from DOM.form + DOM.shut) first
+// swells out of him as white light for DOM.form s; then black ink bursts out of him and it closes on
+// everyone inside it, freezing them (f.frz) through the star rush (DOM.rush s, when Gojo cannot move
+// either) and DOM.dur s of void, or until he dies. It hangs DOM.lift above the street, and anyone outside can walk under it.
 const BLUE = { r: 230, T: 1.6, dt: 0.1, dmg: 9, pull: 330, pop: 70, popDmg: 60, range: 420 };
 const RED = { r: 125, dmg: 240, kb: 380, wind: 0.35 };
 const PURPLE = { wind: 0.75, spd: 950, r: 58, range: 1400, dmg: 420 };
-const DOM = { r: 430, dur: 5, lift: 70, form: 0.55, rush: 1.6 };
+const DOM = { r: 430, dur: 5, lift: 70, form: 0.55, rush: 2.4 };
+DOM.shut = DOM.rush + DOM.dur;      // how long it stays closed: the star rush, then DOM.dur s of void
 function updBlue(dt) {
   for (const b of S.bl) {
     const was = b.t;
@@ -1601,7 +1603,7 @@ function updPurple(dt) {
 // A closed domain is a space of its own. For Gojo and everyone caught in it (voidOf) nothing of the city
 // is there: no buildings, cars or trees to bump into or to stop his Blue and Red, and nobody outside
 // to shove them. Its edge is the one wall, and there is no way out through it.
-const voidOf = (id) => S.dm.find((d) => d.t <= DOM.dur && (d.own === id || d.vic.includes(id)));
+const voidOf = (id) => S.dm.find((d) => d.t <= DOM.shut && (d.own === id || d.vic.includes(id)));
 const NO_HIT = { hit: false };
 // how far something travelling from (x, y) along a gets inside domain d before its edge
 function voidLen(d, x, y, a, max) {
@@ -1611,7 +1613,7 @@ function voidLen(d, x, y, a, max) {
 // e is a fighter or the joiner's prediction, id whose it is
 function domWall(e, id, r) {
   for (const d of S.dm) {
-    if (d.t > DOM.dur || (d.own !== id && !d.vic.includes(id))) continue;
+    if (d.t > DOM.shut || (d.own !== id && !d.vic.includes(id))) continue;
     const dx = e.x - d.x, dy = e.y - d.y, l = Math.hypot(dx, dy), R = DOM.r - r;
     if (l <= R || l === 0) continue;
     const nx = dx / l, ny = dy / l, out = e.vx * nx + e.vy * ny;
@@ -1624,10 +1626,11 @@ function updDomain(dt) {
     const was = d.t;
     d.t -= dt;
     const o = byId(d.own);
-    if (was > DOM.dur && d.t <= DOM.dur && o && o.alive) {      // the burst is over: it closes on everyone inside
+    if (was > DOM.shut && d.t <= DOM.shut && o && o.alive) {      // the white is over: it closes on everyone inside
       const vic = targets(d.own).filter((t) => Math.hypot(t.x - d.x, t.y - d.y) < DOM.r + t.r);
       d.vic = vic.map((t) => t.id);
-      for (const t of vic) { t.frz = DOM.dur; if (!t.isM) { t.act = ''; t.blk = false; t.vx = t.vy = 0; } }
+      for (const t of vic) { t.frz = DOM.shut; if (!t.isM) { t.act = ''; t.blk = false; t.vx = t.vy = 0; } }
+      Object.assign(o, { frz: DOM.rush, act: '', blk: false, vx: 0, vy: 0 });      // and Gojo stands still through the star rush
       fx(['snd', 'void', d.x, d.y]);
     }
     if (d.t > 0 && o && o.alive) continue;
@@ -2730,14 +2733,14 @@ function drawPurples() {
     for (let i = 0; i < 4; i++) { const a = T * 8 + i * TAU / 4; g.beginPath(); g.arc(x, y, PURPLE.r * 0.95, a, a + 0.9); g.stroke(); }
   }
 }
-// Infinite Void. While it forms (d.t > DOM.dur) everyone sees white light swell out of Gojo. When it
+// Infinite Void. While it forms (d.t > DOM.shut) everyone sees white light swell out of Gojo. When it
 // closes, black ink bursts out of him with stars rushing past (drawRush, the first DOM.rush s, just for
 // show). After that the people inside (Gojo and his victims) see nothing but the void: black, white
 // splatters spreading over it, the black hole above them, and the people in it; everyone else sees a
 // black sphere floating DOM.lift over the street with its shadow under it, hiding whatever is under it.
-const domOpen = (d) => d.t <= DOM.dur;
+const domOpen = (d) => d.t <= DOM.shut;
 const inDomain = (d) => meId != null && domOpen(d) && (d.own === meId || (d.vic || []).includes(meId));
-const domAge = (d) => DOM.dur - d.t;      // time since it closed
+const domAge = (d) => DOM.shut - d.t;      // time since it closed
 const rushing = (d) => domOpen(d) && domAge(d) < DOM.rush;
 const inkR = (d) => 0.1 + 0.9 * (1 - (1 - clamp(domAge(d) / (DOM.rush * 0.85), 0, 1)) ** 2);      // the ink's reach, 0..1
 function domGrow(d) { return !domOpen(d) ? 0 : rushing(d) ? inkR(d) : clamp(d.t / 0.35, 0, 1); }
@@ -2763,7 +2766,7 @@ function whiteDisc(d, R, al) {
   g.restore();
 }
 function drawBurst(d) {
-  const p = clamp((DOM.form + DOM.dur - d.t) / DOM.form, 0, 1), e = 1 - (1 - p) ** 3, R = DOM.r * (0.05 + 0.95 * e);
+  const p = clamp((DOM.form + DOM.shut - d.t) / DOM.form, 0, 1), e = 1 - (1 - p) ** 3, R = DOM.r * (0.05 + 0.95 * e);
   whiteDisc(d, R, 1);
   for (const f of S.f) if (f.alive && Math.hypot(f.rx - d.x, f.ry - d.y) < R + 20) drawFighter(f);      // so everyone can see to run
 }
@@ -2835,6 +2838,91 @@ function drawRush(d) {
   for (const f of S.f) if (f.alive && Math.hypot(f.rx - d.x, f.ry - d.y) < DOM.r + 20) { drawFighter(f); if (f.nl && f.nl.length) nailsIn(f); }
   for (const m of S.maho) if (Math.hypot(m.rx - d.x, m.ry - d.y) < DOM.r + 40) drawMaho(m);
 }
+// The void, from inside: deep blue space with stars and a haze, the black hole hanging above them in
+// its swirling blue disc splashed with ink, and white splatters spreading out from the middle and on
+// across everything you can see (cells of the world, so it never ends)
+function drawVoid(d, age) {
+  const L = view.L - 80, R = view.R + 80, Tp = view.T - 80, B = view.B + 80, hx = d.x, hy = d.y - DOM.r * 0.62;
+  g.fillStyle = '#050b14'; g.fillRect(L, Tp, R - L, B - Tp);
+  let gr = g.createRadialGradient(hx, hy, 0, hx, hy, 900);
+  gr.addColorStop(0, 'rgba(40,70,105,.55)'); gr.addColorStop(1, 'rgba(40,70,105,0)');
+  g.fillStyle = gr; g.fillRect(L, Tp, R - L, B - Tp);
+  const cells = (n, fn) => { for (let cy = Math.floor(Tp / n); cy * n < B; cy++) for (let cx = Math.floor(L / n); cx * n < R; cx++) fn(cx, cy); };
+  g.fillStyle = 'rgba(200,225,255,.55)';
+  cells(150, (cx, cy) => { const h = cx * 71.3 + cy * 13.7; for (let j = 0; j < 2; j++) circ((cx + hash1(h + j * 3.1)) * 150, (cy + hash1(h + j * 5.7 + 1)) * 150, 0.6 + hash1(h + j) * 1.3); });
+  for (let i = 0; i < 9; i++) {      // the haze drifting through the hole
+    const x = hx + (i - 4) * 170 + Math.sin(T * 0.3 + i) * 30, y = hy + Math.sin(i * 1.7) * 40;
+    g.fillStyle = 'rgba(120,160,205,.07)'; ell(x, y, 230 + 60 * hash1(i), 70 + 30 * hash1(i + 3), Math.sin(i) * 0.2);
+  }
+  drawHole(d, hx, hy);
+  const keep = 200;      // white splatters, in clumps, one to a cell, clear of the hole's disc
+  cells(300, (cx, cy) => {
+    const h = cx * 37.1 + cy * 91.7 + d.id * 3;
+    if (hash1(h) < 0.3) return;
+    const sz0 = 12 + 30 * hash1(h + 2) ** 1.4, dir = hash1(h + 3) * TAU, n = 3 + Math.floor(hash1(h + 1) * 5), ux = Math.cos(dir), uy = Math.sin(dir);
+    let x = (cx + 0.2 + 0.6 * hash1(h + 4)) * 300, y = (cy + 0.2 + 0.6 * hash1(h + 6)) * 300;
+    const hd = Math.hypot(x - hx, y - hy), need = keep + sz0 * n * 0.6;
+    if (hd < need) { x = hx + (x - hx) / (hd || 1) * need; y = hy + (y - hy) / (hd || 1) * need; }
+    const sp = clamp((age - Math.hypot(x - d.x, y - d.y) / 1400 - hash1(h + 8) * 0.25) / 0.35, 0, 1), sk = 1 - (1 - sp) ** 3, sz = sz0 * sk;
+    if (sk <= 0) return;
+    if (hash1(h + 9) > 0.55) {      // some of them glow
+      const gw = g.createRadialGradient(x, y, 0, x, y, sz * n * 1.1);
+      gw.addColorStop(0, 'rgba(255,255,255,.55)'); gw.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gw; circ(x, y, sz * n * 1.1);
+    }
+    g.fillStyle = '#ececf1';
+    circ(x, y, sz);
+    const lobes = [];
+    for (let j = 0; j < n; j++) {      // lobes merging into one splat, longer along its direction
+      const t = (hash1(h + j * 2.3) - 0.5) * sz * n * 0.75, w = (hash1(h + j * 4.1) - 0.5) * sz * 1.3, rr = sz * (0.5 + 0.45 * hash1(h + j * 1.7));
+      lobes.push([x + ux * t - uy * w, y + uy * t + ux * w, rr]); circ(lobes[j][0], lobes[j][1], rr);
+    }
+    for (let j = 0; j < 14; j++) {      // lumps round its edge
+      const [lx, ly, lr] = lobes[j % n], q = hash1(h + j * 7.7) * TAU;
+      circ(lx + Math.cos(q) * lr * 0.9, ly + Math.sin(q) * lr * 0.9, lr * (0.18 + 0.25 * hash1(h + j * 3.3)));
+    }
+    for (let j = 0; j < 9; j++) {      // droplets
+      const q = hash1(h + j * 6.1) * TAU, r = sz * (1.2 + 2.2 * hash1(h + j * 3.7)) + Math.abs(Math.cos(q - dir)) * sz * n * 0.5;
+      circ(x + Math.cos(q) * r, y + Math.sin(q) * r, sz * (0.08 + 0.2 * hash1(h + j * 2.9)));
+    }
+    for (let j = 0; j < 7; j++) {      // and streaks flung out along it
+      const side = j % 2 ? 1 : -1, r = sz * n * (0.6 + 0.8 * hash1(h + j * 5.3)), w = (hash1(h + j * 8.1) - 0.5) * sz * 2.5;
+      ell(x + ux * r * side - uy * w, y + uy * r * side + ux * w, sz * (0.25 + 0.3 * hash1(h + j)), Math.max(0.8, sz * 0.06), dir);
+    }
+  });
+}
+// the black hole: a black core with a bright blue rim in a glowing blue disc that swirls round it,
+// splashed with black ink
+function drawHole(d, hx, hy) {
+  const c = 62, o = 160;
+  let gr = g.createRadialGradient(hx, hy, c, hx, hy, o * 1.3);
+  gr.addColorStop(0, 'rgba(180,220,255,.95)'); gr.addColorStop(0.3, 'rgba(95,145,200,.6)'); gr.addColorStop(0.62, 'rgba(55,95,150,.45)');
+  gr.addColorStop(0.8, 'rgba(150,200,250,.5)'); gr.addColorStop(0.86, 'rgba(70,115,170,.25)'); gr.addColorStop(1, 'rgba(60,100,160,0)');
+  g.fillStyle = gr; circ(hx, hy, o * 1.3);
+  g.lineCap = 'round';
+  for (let i = 0; i < 40; i++) {      // the swirl, faster nearer the middle
+    const rr = c * 1.12 + (o - c * 1.12) * hash1(i * 3.3 + 1), a0 = hash1(i + 7) * TAU + T * (1.4 - rr / o), len = 0.5 + 1.4 * hash1(i * 1.9);
+    g.strokeStyle = `rgba(215,236,255,${0.1 + 0.28 * hash1(i + 4)})`; g.lineWidth = 1 + 3.5 * hash1(i + 2);
+    g.beginPath(); g.arc(hx, hy, rr, a0, a0 + len); g.stroke();
+  }
+  g.lineCap = 'butt';
+  g.fillStyle = 'rgba(230,242,255,.7)';
+  for (let i = 0; i < 40; i++) { const a = hash1(i * 2.7 + 5) * TAU + T * 0.5, r = c * 1.1 + (o - c * 1.1) * hash1(i * 1.3 + 9); circ(hx + Math.cos(a) * r, hy + Math.sin(a) * r, 0.6 + hash1(i) * 1.2); }
+  g.strokeStyle = 'rgba(170,215,255,.45)'; g.lineWidth = 7; g.beginPath(); g.arc(hx, hy, o * 1.03, 0, TAU); g.stroke();
+  g.strokeStyle = 'rgba(210,238,255,.35)'; g.lineWidth = 2; g.beginPath(); g.arc(hx, hy, o * 1.12, 0, TAU); g.stroke();
+  gr = g.createRadialGradient(hx, hy, c * 0.5, hx, hy, c * 1.18);
+  gr.addColorStop(0, '#000'); gr.addColorStop(0.7, '#01040a'); gr.addColorStop(0.84, '#0c2238'); gr.addColorStop(0.9, 'rgba(150,205,255,.95)'); gr.addColorStop(1, 'rgba(150,205,255,0)');
+  g.fillStyle = gr; circ(hx, hy, c * 1.18);
+  g.fillStyle = '#020306';
+  for (let k = 0; k < 2; k++) {      // ink splashed on the disc
+    const a = (k ? 0.55 : 3.5) + 0.3 * hash1(d.id + k), r = (c + o) * 0.52;
+    for (let j = 0; j < 7; j++) {
+      const q = a + (hash1(k * 9 + j) - 0.5) * 0.7, rj = r + (hash1(k * 5 + j * 3) - 0.5) * (o - c) * 0.7;
+      circ(hx + Math.cos(q) * rj, hy + Math.sin(q) * rj, 6 + 13 * hash1(k * 7 + j * 1.3));
+    }
+  }
+  for (let i = 0; i < 26; i++) { const a = hash1(i * 4.3 + 2) * TAU, r = c * 1.2 + (o * 1.15 - c * 1.2) * hash1(i * 2.1 + 3); ell(hx + Math.cos(a) * r, hy + Math.sin(a) * r, 1.5 + 3 * hash1(i), 1, a + 1.3); }
+}
 function drawDomains() {
   for (const d of S.dm) {
     if (!domOpen(d)) { if (vis(d.x, d.y, DOM.r)) drawBurst(d); continue; }
@@ -2842,33 +2930,11 @@ function drawDomains() {
     const k = domGrow(d), r = DOM.r * k, age = domAge(d) - DOM.rush;
     if (k <= 0) continue;
     if (inDomain(d)) {
-      g.save();
-      g.fillStyle = '#000'; g.fillRect(view.L - 50, view.T - 50, view.R - view.L + 100, view.B - view.T + 100);
-      g.beginPath(); g.arc(d.x, d.y, r, 0, TAU); g.clip();
-      g.fillStyle = 'rgba(200,220,255,.5)';
-      for (let i = 0; i < 50; i++) circ(d.x + (hash1(i * 2.1 + d.id) - 0.5) * 2 * r, d.y + (hash1(i * 4.7 + d.id) - 0.5) * 2 * r, 0.8 + hash1(i) * 1.4);
-      const hx = d.x, hy = d.y - r * 0.56, rr = r * 0.28;      // the black hole hangs above them, at the top of the void
-      g.fillStyle = '#f2f2f6';
-      for (let i = 0; i < 26; i++) {      // white splatters spreading out over the void as it opens, clear of the hole
-        const sp = clamp((age - hash1(i + 30) * 0.6) / 0.35, 0, 1), sk = 1 - (1 - sp) ** 3;
-        if (sk <= 0) continue;
-        const a = hash1(d.id + i) * TAU, dd = DOM.r * (0.45 + 0.55 * Math.sqrt(hash1(d.id * 3 + i + 0.5))), br = (8 + 26 * hash1(i + d.id * 7)) * sk;
-        let bx = d.x + Math.cos(a) * dd, by = d.y + Math.sin(a) * dd;
-        const hd = Math.hypot(bx - hx, by - hy), keep = rr * 1.45 + br;
-        if (hd < keep) { bx = hx + (bx - hx) / (hd || 1) * keep; by = hy + (by - hy) / (hd || 1) * keep; }
-        circ(bx, by, br); ell(bx, by + br * 1.3, br * 0.18, br * 0.7);
-        for (let j = 0; j < 4; j++) { const q = hash1(i * 9 + j) * TAU, qd = br * (1.3 + hash1(i + j * 5)); circ(bx + Math.cos(q) * qd, by + Math.sin(q) * qd, br * 0.22); }
-      }
-      g.shadowColor = '#cfe6ff'; g.shadowBlur = 24;
-      g.strokeStyle = 'rgba(220,236,255,.85)'; g.lineWidth = 9;
-      g.beginPath(); g.arc(hx, hy, rr, T * 0.7, T * 0.7 + TAU * 0.92); g.stroke();
-      g.strokeStyle = 'rgba(150,190,255,.6)'; g.lineWidth = 4;
-      g.beginPath(); g.arc(hx, hy, rr * 1.14, -T * 0.5, -T * 0.5 + TAU * 0.85); g.stroke();
-      g.shadowBlur = 0;
-      g.fillStyle = '#000'; circ(hx, hy, rr * 0.8);
+      g.save(); g.globalAlpha = k;
+      drawVoid(d, age);
       g.restore();
-      for (const f of S.f) if (f.alive && Math.hypot(f.rx - d.x, f.ry - d.y) < r + 20) { drawFighter(f); if (f.nl && f.nl.length) nailsIn(f); }
-      for (const m of S.maho) if (Math.hypot(m.rx - d.x, m.ry - d.y) < r + 40) drawMaho(m);
+      for (const f of S.f) if (f.alive && Math.hypot(f.rx - d.x, f.ry - d.y) < DOM.r + 20) { drawFighter(f); if (f.nl && f.nl.length) nailsIn(f); }
+      for (const m of S.maho) if (Math.hypot(m.rx - d.x, m.ry - d.y) < DOM.r + 40) drawMaho(m);
     } else {
       const y = d.y - DOM.lift * k * clamp(age / 0.4, 0, 1), gr = g.createRadialGradient(d.x - r * 0.3, y - r * 0.35, r * 0.1, d.x, y, r);
       gr.addColorStop(0, '#1d1630'); gr.addColorStop(0.6, '#07050d'); gr.addColorStop(1, '#000');
