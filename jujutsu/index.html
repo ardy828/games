@@ -58,7 +58,7 @@
   .name label{font-size:11px;letter-spacing:.16em;color:var(--muted);white-space:nowrap}
   .name input{flex:1;min-width:0;border:0;background:none;font-size:20px;font-weight:800;color:var(--ink);outline:none}
 
-  .pick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .pick{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
   .fcard{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;
     background:var(--panel2);border:1px solid var(--line);padding:8px 6px;transition:border-color 120ms,box-shadow 120ms}
   .fcard canvas{width:64px;height:64px}
@@ -264,7 +264,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     <h3 id="killer"></h3>
     <p id="lost"></p>
     <p id="respIn"></p>
-    <div class="swap"><button data-ch="yuji">YUJI</button><button data-ch="megumi">MEGUMI</button><button data-ch="nobara">NOBARA</button><button data-ch="gojo">GOJO</button></div>
+    <div class="swap"><button data-ch="yuji">YUJI</button><button data-ch="megumi">MEGUMI</button><button data-ch="nobara">NOBARA</button><button data-ch="gojo">GOJO</button><button data-ch="sukuna">SUKUNA</button></div>
   </div>
   <div id="board"><table><thead><tr><th>SORCERER</th><th>FIGHTER</th><th class="n">PTS</th><th class="n">K</th><th class="n">D</th></tr></thead><tbody id="boardBody"></tbody></table></div>
   <div id="results"><h3 id="resT"></h3><p id="resS"></p><table><tbody id="resBody"></tbody></table></div>
@@ -404,6 +404,16 @@ const CHARS = {
       blk: { n: 'Infinity', k: '無限' },      // his block (see infinity())
     },
   },
+  sukuna: {
+    n: 'Ryomen Sukuna', s: 'SUKUNA', hp: 1150, spd: 325, m1: [60, 60, 65, 105], reach: 56, col: '#ff5a6e', ur: 0.4,
+    blurb: 'King of Curses: slashes, Cleave and Divine Flame.',
+    moves: {
+      q: { n: 'Dismantle', k: '解', cd: 7 },
+      e: { n: 'Cleave', k: '捌', cd: 22 },
+      c: { n: 'Divine Flame', k: '竈', cd: 32 },
+      u: { n: 'Malevolent Shrine', k: '伏魔御廚子' },
+    },
+  },
   // Cursed spirits: not playable. They fill the city instead of bots and hunt sorcerers (see Curses in
   // the bots section). r = body radius, sw = swing time (times a sorcerer's), kbm = share of a knockback
   // they take, q = the distances between which they use their one move, want = the distance they keep.
@@ -420,7 +430,7 @@ const CHARS = {
     q: [0, 125], want: 20, moves: { q: { n: 'Ground Slam', k: '叩', cd: 6 } },
   },
 };
-const SORCERERS = ['yuji', 'megumi', 'nobara', 'gojo'];
+const SORCERERS = ['yuji', 'megumi', 'nobara', 'gojo', 'sukuna'];
 const cursed = (f) => !!CHARS[f.ch].curse;
 const COMMON = { r: { n: 'RCT', k: '反転', cd: 50 }, d: { n: 'Dash', k: '疾', cd: 2.5 } };
 const KEYS = ['q', 'e', 'c', 'r', 'u', 'd'];
@@ -429,8 +439,8 @@ const cdOf = (ch, k) => (CHARS[ch].moves[k] || COMMON[k]).cd * RULES.cd;
 // from the server, where the admin page sets them. RULES0 and cleanRules() must match the copies in
 // server/worker.js. points / time: 0 = no limit; rounds: false = endless; curses: cursed spirits on the
 // map; skill: theirs; dmg cd ur spd hp: multipliers (ur = how fast ultimates fill); yuji / megumi /
-// nobara / gojo: who may be picked; ults: whether F works at all.
-const RULES0 = { rounds: true, points: 20, time: 0, brk: 7, resp: 4, curses: 6, skill: 1, dmg: 1, cd: 1, ur: 1, spd: 1, hp: 1, yuji: true, megumi: true, nobara: true, gojo: true, ults: true };
+// nobara / gojo / sukuna: who may be picked; ults: whether F works at all.
+const RULES0 = { rounds: true, points: 20, time: 0, brk: 7, resp: 4, curses: 6, skill: 1, dmg: 1, cd: 1, ur: 1, spd: 1, hp: 1, yuji: true, megumi: true, nobara: true, gojo: true, sukuna: true, ults: true };
 let RULES = { ...RULES0 };
 function cleanRules(c) {
   c = c && typeof c === 'object' ? c : {};
@@ -439,9 +449,9 @@ function cleanRules(c) {
   const r = {
     rounds: b('rounds'), points: n('points', 0, 200, 1), time: n('time', 0, 30, 0.5), brk: n('brk', 3, 30, 1), resp: n('resp', 0.5, 15, 0.5),
     curses: n('curses', 0, MAX_CURSES, 1), skill: n('skill', 0, 2, 1), dmg: n('dmg', 0.25, 4, 0.05), cd: n('cd', 0.1, 3, 0.05), ur: n('ur', 0.25, 4, 0.05), spd: n('spd', 0.5, 2, 0.05),
-    hp: n('hp', 0.25, 4, 0.05), yuji: b('yuji'), megumi: b('megumi'), nobara: b('nobara'), gojo: b('gojo'), ults: b('ults'),
+    hp: n('hp', 0.25, 4, 0.05), yuji: b('yuji'), megumi: b('megumi'), nobara: b('nobara'), gojo: b('gojo'), sukuna: b('sukuna'), ults: b('ults'),
   };
-  if (!r.yuji && !r.megumi && !r.nobara && !r.gojo) r.yuji = true;
+  if (!r.yuji && !r.megumi && !r.nobara && !r.gojo && !r.sukuna) r.yuji = true;
   return r;
 }
 const DIFF = [   // how far bots and curses see, how quickly they rethink, how well they aim, how often they block, dodge and use moves
@@ -453,6 +463,8 @@ const BOT_MEMORY = 2.5;   // seconds a bot keeps heading for where it last saw i
 const BOT_NAMES = ['Panda', 'Toge', 'Maki', 'Junpei', 'Todo', 'Mai', 'Momo', 'Kamo', 'Miwa', 'Nanami',
   'Ino', 'Choso', 'Yuta', 'Hakari', 'Kirara', 'Mechamaru', 'Utahime', 'Yaga', 'Takaba', 'Higuruma'];
 const TIPS = [
+  'Sukuna\'s Malevolent Shrine has no wall you can see: anyone near him is cut over and over, and once inside nobody gets out until it ends.',
+  'Cleave always takes 40% of its target\'s full health. Divine Flame leaves its ring of fire burning for 6 seconds: get out of it.',
   'Gojo\'s Infinite Void freezes everyone inside it for 5 seconds. From outside it is a black sphere: stay out from under it.',
   'Hollow Purple goes through everyone and every wall in its path. Watch for the purple line and get off it.',
   'Nobara\'s nails stay in whoever they hit. Hairpin bursts all of them at once: the more nails, the bigger the blast. The last one she hit takes a burst too, even from a plain strike.',
@@ -887,7 +899,7 @@ let meId = 0;          // the fighter played on this device
 function newState(mode, o = {}) {
   parts.length = 0; decals.length = 0;
   return { mode, time: 0, phase: 'play', overT: 0, toWin: o.toWin ?? 10, diff: o.diff ?? 1, win: '', nid: 1, roundT: RULES.time * 60,
-    f: [], maho: [], ele: [], rab: [], sh: [], rn: [], bl: [], pu: [], dm: [] };
+    f: [], maho: [], ele: [], rab: [], sh: [], rn: [], bl: [], pu: [], dm: [], fl: [], ms: [] };
 }
 function mkFighter(id, name, ch, ctl) {
   return {
@@ -1060,6 +1072,31 @@ const ACTS = {
     if (f.actT >= PURPLE.wind + 0.3) f.act = '';
   } },
   domain: { lock: true, armor: true, step(f) { f.vx = f.vy = 0; if (f.actT >= DOM.form) f.act = ''; } },
+  // Sukuna
+  cleave: { lock: true, step(f) {      // a short wind-up turned on the target (f.lk), then one huge slash
+    f.vx = f.vy = 0;
+    const t = foeById(f.lk);
+    if (f.actT < CLEAVE.wind) { if (t) f.actA = f.aim = ang(f, t); return; }
+    if (!f.hitDone) {
+      f.hitDone = true;
+      if (t && (t.isM ? t.hp > 0 : t.alive) && dist(f, t) - t.r < CLEAVE.range * 1.4) {
+        const a = ang(f, t), full = t.isM ? MAHO.hp : maxHp(t);
+        // exactly CLEAVE.share of the target's full health: hurt() multiplies by RULES.dmg, so divide it back out
+        if (hurt(t, full * CLEAVE.share / RULES.dmg, { by: f.id, a, kb: 260, ub: true, fixed: true, kind: 'cleave' })) fx(['clv', r1(t.x), r1(t.y), r2(a)]);
+      }
+    }
+    if (f.actT >= CLEAVE.wind + 0.3) f.act = '';
+  } },
+  fuga: { lock: true, armor: true, step(f, dt) {      // draws the flame bow in a ring of fire, then looses at the spot (S.fl)
+    f.vx = f.vy = 0;
+    const e = S.fl.find((o) => o.own === f.id && o.t < 0);
+    if (e) f.actA = f.aim = Math.atan2(e.y - f.y, e.x - f.x);
+    if (f.actT < FUGA.charge && Math.floor(f.actT / 0.3) > Math.floor((f.actT - dt) / 0.3)) {
+      for (const t of targets(f.id)) if (dist(f, t) < FUGA.ring + t.r) hurt(t, FUGA.ringDmg, { by: f.id, a: ang(f, t), kb: 60, kind: 'fuga' });
+    }
+    if (f.actT >= FUGA.charge + 0.3) f.act = '';
+  } },
+  shrine: { lock: true, armor: true, step(f) { f.vx = f.vy = 0; if (f.actT >= MS.rise) f.act = ''; } },
   // cursed spirits
   pounce: { lock: true, step(f) {      // Fly Head: crouches, then leaps and bites the first one in the way
     if (f.actT < 0.22) { f.vx = f.vy = 0; f.actA = f.aim = f.inp.aim; return; }
@@ -1185,6 +1222,32 @@ const MOVES = {
       event(['C', 'dom', f.id, null, f.name]);
     },
   },
+  sukuna: {
+    q(f) {      // his Dismantle: a far bigger slash than Yuji's, SHOT kind 4
+      startAct(f, 'cast', 0.22);
+      const c = Math.cos(f.aim), s = Math.sin(f.aim);
+      S.sh.push({ id: S.nid++, own: f.id, k: 4, x: f.x + c * 30, y: f.y + s * 30, a: f.aim, d: 0 });
+      fx(['snd', 'slash', r1(f.x), r1(f.y)]);
+    },
+    e(f) {
+      const t = cleaveTarget(f);
+      if (!t) { fx(['say', r1(f.x), r1(f.y), 'NO ONE IN REACH', f.id]); return false; }
+      f.lk = t.id;
+      startAct(f, 'cleave'); fx(['snd', 'crouch', r1(f.x), r1(f.y)]);
+    },
+    c(f) {      // Divine Flame lands where he aims, up to FUGA.range away
+      const vd = voidOf(f.id), far = clamp(f.inp.ad || 400, 160, FUGA.range), d = vd ? voidLen(vd, f.x, f.y, f.aim, far) : far;
+      S.fl.push({ id: S.nid++, own: f.id, x: r1(f.x + Math.cos(f.aim) * d), y: r1(f.y + Math.sin(f.aim) * d), sx: r1(f.x), sy: r1(f.y), t: -(FUGA.charge + FUGA.flight) });
+      startAct(f, 'fuga'); fx(['snd', 'purpleCharge', r1(f.x), r1(f.y)]);
+    },
+    u(f) {      // Malevolent Shrine: rises under him and holds him up while it cuts everyone near (updShrine)
+      S.ms.push({ id: S.nid++, own: f.id, x: r1(f.x), y: r1(f.y), t: 0, in: [] });
+      startAct(f, 'shrine');
+      f.iframe = Math.max(f.iframe, CUT_T);
+      fx(['snd', 'summon', r1(f.x), r1(f.y)]);
+      event(['C', 'ms', f.id, null, f.name]);
+    },
+  },
   fly: { q(f) { startAct(f, 'pounce'); fx(['snd', 'buzz', r1(f.x), r1(f.y)]); } },
   spitter: { q(f) { startAct(f, 'spit'); } },
   brute: { q(f) { startAct(f, 'slam'); fx(['snd', 'roar', r1(f.x), r1(f.y)]); } },
@@ -1256,7 +1319,7 @@ function guardBreak(t) {
   t.guard = 0; t.gdT = 1.8; t.blk = false;
   fx(['gb', r1(t.x), r1(t.y)]);
 }
-const KIND_CODE = { m1: 0, bf: 1, pb: 2, dis: 3, ss: 4, nue: 5, rab: 6, ele: 7, maho: 8, wall: 9, cu: 10, nail: 11, res: 12, pin: 13, blue: 14, red: 15, purple: 16 };
+const KIND_CODE = { m1: 0, bf: 1, pb: 2, dis: 3, ss: 4, nue: 5, rab: 6, ele: 7, maho: 8, wall: 9, cu: 10, nail: 11, res: 12, pin: 13, blue: 14, red: 15, purple: 16, sdis: 17, cleave: 18, fuga: 19, shrine: 20 };
 // Gojo's block is Infinity: held, nothing reaches him from any side and nothing breaks it, but he
 // cannot attack while it is up. It does not stop Infinite Void.
 const infinity = (t) => !t.isM && t.blk && !!CHARS[t.ch].moves.blk;
@@ -1323,7 +1386,7 @@ const standings = () => ranked().map((f) => [f.id, f.name, f.ch, f.pts, f.kills,
 const goalText = () => (!RULES.rounds ? 'Endless free-for-all' : S.toWin > 0 ? 'First to ' + S.toWin + ' points' : 'Most points');
 function newMatch() {
   S.phase = 'play'; S.win = ''; S.roundT = RULES.time * 60;
-  S.maho = []; S.ele = []; S.rab = []; S.sh = []; S.rn = []; S.bl = []; S.pu = []; S.dm = [];
+  S.maho = []; S.ele = []; S.rab = []; S.sh = []; S.rn = []; S.bl = []; S.pu = []; S.dm = []; S.fl = []; S.ms = [];
   let i = 0;
   for (const f of S.f) { f.pts = 0; f.kills = 0; f.deaths = 0; f.ult = 0; f.alive = false; f.resp = 0.2 + 0.08 * i++; }
   event(['N', 'New match. ' + goalText() + (RULES.rounds && RULES.time > 0 ? ' in ' + RULES.time + ' min' : '') + '.']);
@@ -1446,8 +1509,8 @@ function updMaho(dt) {
 // Shots in flight, by k: 0 is Dismantle (one wide slash, always the same damage, cutting through everyone
 // in its path; `hit` is the host's list of who it has cut), 1 a Spitter's bile (slows)
 // and 2 one of Nobara's nails (sticks in whoever it hits)
-// and 3 Gojo's Red (bursts on whatever it meets, see redBlast)
-const SHOT = [{ spd: 1500, range: 900, w: 56 }, { spd: 640, range: 640, w: 10 }, { spd: 1250, range: 720, w: 8 }, { spd: 1100, range: 620, w: 16 }];
+// and 3 Gojo's Red (bursts on whatever it meets, see redBlast), 4 Sukuna's Dismantle (a huge kind 0)
+const SHOT = [{ spd: 1500, range: 900, w: 56 }, { spd: 640, range: 640, w: 10 }, { spd: 1250, range: 720, w: 8 }, { spd: 1100, range: 620, w: 16 }, { spd: 1700, range: 1150, w: 100 }];
 function shotHit(b, t) {
   if (b.k !== 3 && infinity(t)) { fx(['inf', r1(t.x), r1(t.y)]); return true; }      // it stops at Infinity
   if (b.k === 3) { b.x = t.x - Math.cos(b.a) * t.r; b.y = t.y - Math.sin(b.a) * t.r; redBlast(b); return true; }
@@ -1464,7 +1527,8 @@ function shotHit(b, t) {
   }
   if ((b.hit ||= []).includes(t.id)) return false;
   b.hit.push(t.id);
-  if (hurt(t, 160, { by: b.own, a: b.a, kb: 110, fixed: true, kind: 'dis' })) fx(['dsh', r1(t.x), r1(t.y), r2(b.a)]);
+  const big = b.k === 4;      // Sukuna's: wider, further and harder
+  if (hurt(t, big ? 260 : 160, { by: b.own, a: b.a, kb: big ? 170 : 110, fixed: true, kind: big ? 'sdis' : 'dis' })) fx(['dsh', r1(t.x), r1(t.y), r2(b.a), big ? 1 : 0]);
   return false;      // it keeps going
 }
 function updShots(dt) {
@@ -1709,6 +1773,70 @@ function updDomain(dt) {
   }
   S.dm = S.dm.filter((d) => !d.dead);
 }
+// Sukuna. Cleave takes CLEAVE.share of one target's full health, whoever they are, through any block.
+// Divine Flame (S.fl, one entity per arrow, t counting up from -(charge + flight)): he stands in a ring
+// of fire drawing a flame bow (hurting anyone right beside him), looses at the spot he chose, and it
+// bursts into a ring of fire FUGA.r wide that burns and slows everyone in it for FUGA.dur s. Malevolent
+// Shrine (S.ms) has no barrier: once it has risen (MS.rise s, lifting him onto its roof, where he stays
+// until it sinks) it cuts everyone within MS.r every MS.tick s, and whoever has been inside (s.in, host
+// only) cannot leave until it ends, MS.dur s later or when he dies.
+const CLEAVE = { range: 270, wind: 0.22, share: 0.4 };
+const FUGA = { charge: 1.15, flight: 0.35, range: 760, r: 230, dur: 6, hit: 200, tick: 0.4, burn: 30, ring: 78, ringDmg: 10 };
+const MS = { r: DOM.r, rise: 1, dur: 10, tick: 0.25, dmg: 14, lift: 18 };
+function cleaveTarget(f) {
+  let best = null, bs = 1e9;
+  for (const t of targets(f.id)) {
+    const d = dist(f, t) - t.r, off = Math.abs(angD(f.aim, ang(f, t)));
+    if (d > CLEAVE.range || !los(f, t) || (off > 1 && d > 40)) continue;
+    const sc = d * (1 + off * 1.5);
+    if (sc < bs) { bs = sc; best = t; }
+  }
+  return best;
+}
+function updFuga(dt) {
+  for (const e of S.fl) {
+    const was = e.t;
+    e.t += dt;
+    const o = byId(e.own);
+    if (was < -FUGA.flight && (!o || !o.alive || o.act !== 'fuga')) { e.dead = true; continue; }      // killed or stopped while drawing the bow
+    if (was < -FUGA.flight && e.t >= -FUGA.flight) fx(['snd', 'whistle', r1(e.sx), r1(e.sy)]);      // loosed
+    if (was < 0 && e.t >= 0) {      // it lands
+      for (const t of targets(e.own)) if (Math.hypot(t.x - e.x, t.y - e.y) < FUGA.r + t.r) hurt(t, FUGA.hit, { by: e.own, a: Math.atan2(t.y - e.y, t.x - e.x), kb: 220, kind: 'fuga' });
+      fx(['fl', r1(e.x), r1(e.y)]);
+    } else if (e.t > 0 && Math.floor(e.t / FUGA.tick) > Math.floor(was / FUGA.tick)) {
+      for (const t of targets(e.own)) {
+        if (Math.hypot(t.x - e.x, t.y - e.y) >= FUGA.r + t.r) continue;
+        if (hurt(t, FUGA.burn, { by: e.own, kind: 'fuga' }) && !t.isM) t.slow = Math.max(t.slow, 0.5);
+      }
+    }
+    if (e.t >= FUGA.dur) e.dead = true;
+  }
+  S.fl = S.fl.filter((e) => !e.dead);
+}
+function updShrine(dt) {
+  for (const s of S.ms) {
+    const was = s.t;
+    s.t += dt;
+    const o = byId(s.own);
+    if (!o || !o.alive || s.t >= MS.rise + MS.dur) { s.dead = true; fx(['msend', s.x, s.y]); continue; }
+    o.x = s.x; o.y = s.y; o.vx = o.vy = 0; o.push = 0;      // he stands on its roof
+    if (s.t < MS.rise) continue;
+    if (!Array.isArray(s.in)) s.in = [];
+    const tick = Math.floor((s.t - MS.rise) / MS.tick) > Math.floor((was - MS.rise) / MS.tick);
+    for (const t of targets(s.own)) {
+      if (spaceOf(t.id) !== spaceOf(s.own)) continue;      // not into or out of an Infinite Void
+      const dx = t.x - s.x, dy = t.y - s.y, l = Math.hypot(dx, dy);
+      if (l < MS.r && !s.in.includes(t.id)) s.in.push(t.id);
+      if (s.in.includes(t.id) && l > MS.r - t.r) {      // no way out
+        const nx = l ? dx / l : 1, ny = l ? dy / l : 0, out = t.vx * nx + t.vy * ny;
+        t.x = s.x + nx * (MS.r - t.r); t.y = s.y + ny * (MS.r - t.r);
+        if (out > 0) { t.vx -= nx * out; t.vy -= ny * out; }
+      }
+      if (tick && l < MS.r + t.r && hurt(t, MS.dmg, { by: s.own, fixed: true, kind: 'shrine' })) fx(['msc', r1(t.x), r1(t.y), r2(rnd(0, TAU))]);
+    }
+  }
+  S.ms = S.ms.filter((s) => !s.dead);
+}
 function updFighter(f, dt) {
   control(f, dt);
   if (!f.alive) { if (S.phase === 'play' && (f.resp -= dt) <= 0) respawn(f); return; }
@@ -1785,7 +1913,7 @@ function step(dt) {
   for (const f of s.f) if (f.ctl === 'bot') botThink(f, dt);
   for (const f of s.f) updFighter(f, dt);
   separate();
-  updShots(dt); updEle(dt); updRabbits(dt); updMaho(dt); updRain(dt); updBlue(dt); updPurple(dt); updDomain(dt);
+  updShots(dt); updEle(dt); updRabbits(dt); updMaho(dt); updRain(dt); updBlue(dt); updPurple(dt); updDomain(dt); updFuga(dt); updShrine(dt);
 }
 
 // ───────────────────────── Bots ─────────────────────────
@@ -1866,6 +1994,7 @@ function think(f, ai) {
   // dodge whatever is about to hit
   let threat = null;
   for (const e of S.ele) if (e.t < 0 && e.own !== f.id && Math.hypot(e.x - f.x, e.y - f.y) < ELE_HIT + 15 + FR) threat = Math.atan2(f.y - e.y, f.x - e.x);
+  for (const e of S.fl) if (e.own !== f.id && Math.hypot(e.x - f.x, e.y - f.y) < FUGA.r + 15 + FR) threat = Math.atan2(f.y - e.y, f.x - e.x);
   for (const o of S.f) {
     if (o === f || !o.alive) continue;
     if (o.act === 'slam' && o.actT < SLAM.wind && dist(o, f) < SLAM.r + FR + 20) { threat = ang(o, f); continue; }
@@ -1903,6 +2032,12 @@ function think(f, ai) {
       else if (d < 1100 && ready('c') && (t.frz > 0 || Math.random() < 0.35)) { inp.aim = aimAt(lead(PURPLE.wind + d / PURPLE.spd)); inp.c++; }
       else if (d > 110 && d < 560 && ready('e')) { inp.aim = aimAt(lead(RED.wind + d / SHOT[3].spd)); inp.e++; }
       else if (d < BLUE.range + 60 && ready('q')) { const p = lead(0.25); inp.aim = aimAt(p); inp.ad = Math.hypot(p.x - f.x, p.y - f.y); inp.q++; }
+    } else if (f.ch === 'sukuna') {
+      const near = targets(f.id).filter((o) => Math.hypot(o.x - f.x, o.y - f.y) < MS.r * 0.8).length;
+      if (near && d < MS.r * 0.6 && ready('u')) inp.u++;
+      else if (d < CLEAVE.range && ready('e') && (t.isM || t.hp > maxHp(t) * 0.35)) { inp.aim = aimAt(t); inp.e++; }
+      else if (d > 200 && d < FUGA.range && ready('c')) { const p = lead(FUGA.charge + FUGA.flight); inp.aim = aimAt(p); inp.ad = Math.hypot(p.x - f.x, p.y - f.y); inp.c++; }
+      else if (d > 80 && d < 950 && ready('q')) { inp.aim = aimAt(lead(d / SHOT[4].spd)); inp.q++; }
     } else if (f.ch === 'nobara') {
       const nails = t.nl ? t.nl.filter((o) => o === f.id).length : 0;
       if (d < RAIN.r * 0.7 && ready('u')) inp.u++;
@@ -1918,7 +2053,7 @@ function think(f, ai) {
   }
   inp.m1 = d < FR * 2 + C.reach + 10 && Math.random() < D.m1;
   ai.goal = t; ai.see = see;
-  ai.want = f.ch === 'yuji' ? 46 : f.ch === 'nobara' ? 240 : f.ch === 'gojo' ? 200 : own ? 420 : d < 110 ? 46 : 250;
+  ai.want = f.ch === 'yuji' ? 46 : f.ch === 'nobara' ? 240 : f.ch === 'gojo' ? 200 : f.ch === 'sukuna' ? 120 : own ? 420 : d < 110 ? 46 : 250;
   if (Math.random() < 0.18) ai.st = -ai.st;
 }
 function botThink(f, dt) {
@@ -1984,7 +2119,7 @@ function puffs(x, y, n, col, sp, r0, r1, life, alpha) {
 }
 const ring = (x, y, r0, r1, life, col, w) => part({ k: 'rg', x, y, r0, r1, life, col, w });
 const txt = (x, y, s, col, size, life, vy) => part({ k: 'tx', x, y, vy: vy ?? -50, s, col, size, life: life || 0.9 });
-const HIT_COL = ['#ffffff', '#ff3b55', '#ff4a66', '#dff0ff', '#9fe3ff', '#a8c8ff', '#f4f2fa', '#7fd0ff', '#f0c24f', '#c9c2b5', '#d2b6ff', '#dfe3ec', '#ff7a3a', '#ffb35c', '#8fc8ff', '#ff4a4a', '#d58bff'];
+const HIT_COL = ['#ffffff', '#ff3b55', '#ff4a66', '#dff0ff', '#9fe3ff', '#a8c8ff', '#f4f2fa', '#7fd0ff', '#f0c24f', '#c9c2b5', '#d2b6ff', '#dfe3ec', '#ff7a3a', '#ffb35c', '#8fc8ff', '#ff4a4a', '#d58bff', '#ff6b7a', '#ff2a4a', '#ff8a2a', '#ff5a6e'];
 function decal(o) { o.t = 0; decals.push(o); if (decals.length > 80) decals.shift(); }
 function doFx(a) {
   const k = a[0];
@@ -1993,7 +2128,7 @@ function doFx(a) {
   switch (k) {
     case 'h': {
       const [, , , dmg, kc, bl, id] = a;
-      if (kc === 14 && dmg < 20) { const e = S && (id >= 1e6 ? mahoById(id) : byId(id)); if (e) e.flash = 0.5; txt(x + rnd(-14, 14), y - 26, String(dmg), '#8fc8ff', 12, 0.5, -60); break; }
+      if ((kc === 14 || kc === 20) && dmg < 20) { const e = S && (id >= 1e6 ? mahoById(id) : byId(id)); if (e) e.flash = 0.5; txt(x + rnd(-14, 14), y - 26, String(dmg), '#8fc8ff', 12, 0.5, -60); break; }
       if (kc === 6 && dmg < 10) { const e = S && byId(id); if (e) e.flash = 0.6; SFX.nibble(v); txt(x + rnd(-14, 14), y - 26, String(dmg), '#f4f2fa', 12, 0.5, -60); break; }
       const e = S ? (id >= 1e6 ? mahoById(id) : byId(id)) : null;
       if (e) e.flash = 1;
@@ -2030,7 +2165,26 @@ function doFx(a) {
       sparks(x, y, 8, '#d9d4c8', 220, 0.3, 2, a[3] + Math.PI, 0.9); puffs(x, y, 3, '#9c968a', 60, 4, 14, 0.5, 0.5);
       break;
     }
-    case 'dsh': part({ k: 'sl', x, y, a: a[3] + Math.PI / 2, life: 0.26, r: 52, col: '#ffffff' }); sparks(x, y, 12, '#ffffff', 360, 0.28, 2.5); break;
+    case 'dsh':
+      if (a[4]) { part({ k: 'sl', x, y, a: a[3] + Math.PI / 2, life: 0.32, r: 110, col: '#ffd6dc' }); sparks(x, y, 20, '#ff5a6e', 480, 0.32, 3); sparks(x, y, 12, '#ffffff', 420, 0.3, 2.5); shake(x, y, 6); }
+      else { part({ k: 'sl', x, y, a: a[3] + Math.PI / 2, life: 0.26, r: 52, col: '#ffffff' }); sparks(x, y, 12, '#ffffff', 360, 0.28, 2.5); }
+      break;
+    case 'clv':      // Cleave: two crossing cuts through the target
+      SFX.smash(v); SFX.slash(v); shake(x, y, 16);
+      part({ k: 'cv', x, y, a: a[3] + 0.6, len: 120, life: 0.5 }); part({ k: 'cv', x, y, a: a[3] - 0.6, len: 105, life: 0.45 });
+      sparks(x, y, 30, '#ff3a5a', 620, 0.42, 3.2); sparks(x, y, 14, '#ffffff', 520, 0.32, 2.4);
+      decal({ k: 'cut', x, y, a: a[3] + 0.6, life: 24 });
+      if (v > 0.55) { cam.flash = 0.3; cam.flashC = '#ff1a3a'; }
+      break;
+    case 'fl':      // Divine Flame lands
+      SFX.red(v); SFX.elephant(v); shake(x, y, 24);
+      ring(x, y, 20, FUGA.r + 60, 0.55, '#ffcf5a', 10); ring(x, y, 10, FUGA.r, 0.45, '#ff6a1a', 6);
+      sparks(x, y, 44, '#ff8a2a', 700, 0.6, 3.5); sparks(x, y, 18, '#fff1c0', 520, 0.4, 2.5); puffs(x, y, 16, '#3a1a10', 220, 20, 70, 1, 0.6);
+      decal({ k: 'scorch', x, y, r: FUGA.r, life: 30 });
+      if (v > 0.5) { cam.flash = 0.45; cam.flashC = '#ff7a1a'; }
+      break;
+    case 'msc': part({ k: 'sl', x, y, a: a[3], life: 0.2, r: 30, col: '#ffffff' }); sparks(x, y, 5, '#ff4a66', 260, 0.2, 2); SFX.cut(v * 0.6); break;
+    case 'msend': puffs(x, y, 18, '#2a1020', 200, 30, 80, 1.1, 0.55); shake(x, y, 8); break;
     case 'ss': {
       SFX.soul(v); shake(x, y, 22);
       ring(x, y, 10, 170, 0.5, '#bfeaff', 10); ring(x, y, 10, 110, 0.4, '#ffffff', 4); ring(x, y, 30, 230, 0.7, '#4fb8ff', 3);
@@ -2359,8 +2513,9 @@ function spiky(cx, cy, r0, r1, n, rot, col, jit, front) {
   }
   g.closePath(); g.fill();
 }
-function hand(x, y, sleeve) {
+function hand(x, y, sleeve, band) {
   g.fillStyle = sleeve; ell(x - 5, y, 6.5, 5.2);
+  if (band) { g.fillStyle = band; ell(x - 7.5, y, 1.4, 5); ell(x - 10.5, y, 1.2, 4.6); }      // Sukuna's black sleeve bands
   g.fillStyle = SKIN; circ(x, y, 5);
 }
 function arms(f, sleeve) {
@@ -2388,8 +2543,12 @@ function arms(f, sleeve) {
   else if (act === 'red' || (act === 'cast' && f.ch === 'gojo')) { R = [22, 4]; }
   else if (act === 'purple') { const k = clamp(t / PURPLE.wind, 0, 1); L = [14 + 4 * k, -14 + 10 * k]; R = [14 + 4 * k, 14 - 10 * k]; }
   else if (act === 'domain') { R = [14, 2]; L = [6, -14]; }
+  else if (act === 'cleave') { if (t < CLEAVE.wind) { R = [-6, 16]; L = [8, -14]; } else { R = [28, -10]; L = [4, -15]; } }
+  else if (act === 'fuga') { const k = clamp(t / FUGA.charge, 0, 1); L = [24, -2]; R = t < FUGA.charge ? [10 - k * 10, 2] : [16, 3]; }
+  else if (act === 'shrine') { L = [15, -3]; R = [15, 3]; }
   else if (act === 'cast') { const p = clamp(t / 0.16, 0, 1); R = [20, 12 - p * 24]; }
-  hand(L[0], L[1], sleeve); hand(R[0], R[1], sleeve);
+  const band = f.ch === 'sukuna' ? '#111014' : null;
+  hand(L[0], L[1], sleeve, band); hand(R[0], R[1], sleeve, band);
   return R;
 }
 function drawFighter(f) {
@@ -2409,16 +2568,22 @@ function drawFighter(f) {
   g.save(); g.translate(x, y); g.rotate(a); g.scale(1.18, 1.18);
   if (f.prot > 0) g.globalAlpha = 0.55 + 0.3 * Math.sin(T * 22);
   const mv = Math.min(1, f.spd / 120), w = Math.sin(f.walk) * 7 * mv;
-  const gojo = f.ch === 'gojo', coat = yuji ? '#22273d' : nob ? '#1f2236' : gojo ? '#111218' : '#1b1e30';
+  const gojo = f.ch === 'gojo', suk = f.ch === 'sukuna', coat = yuji ? '#22273d' : nob ? '#1f2236' : gojo ? '#111218' : suk ? '#ece6da' : '#1b1e30';
   if (gojo) {      // baggy light grey trousers and black shoes
     g.fillStyle = '#b9bcc4'; ell(w, -8, 9, 6); ell(-w, 8, 9, 6);
     g.fillStyle = '#121218'; ell(w + 7, -8, 3, 3.5); ell(-w + 7, 8, 3, 3.5);
+  } else if (suk) {      // wide white hakama and dark sandals
+    g.fillStyle = '#d6cfc0'; ell(w, -9, 10.5, 7); ell(-w, 9, 10.5, 7);
+    g.fillStyle = '#2a2018'; ell(w + 8, -9, 3, 3.2); ell(-w + 8, 9, 3, 3.2);
   } else { g.fillStyle = '#121218'; ell(w, -8, 7, 4.5); ell(-w, 8, 7, 4.5); }
   g.fillStyle = 'rgba(0,0,0,.45)'; ell(0, 0, 13.5, gojo ? 22 : 20.5);
   g.fillStyle = coat; ell(0, 0, 12, gojo ? 20.5 : 19);      // Gojo: a tight black T-shirt over broad shoulders
   g.fillStyle = 'rgba(255,255,255,.06)'; ell(2, -4, 8, 11);
   if (yuji) { g.fillStyle = '#b8283a'; ell(-10, 0, 6.5, 11.5); g.fillStyle = '#8a1b2b'; ell(-11, 0, 3.6, 7); }
-  else if (!nob) { g.fillStyle = '#10121e'; ell(0, 0, 9.5, 12.5); }
+  else if (suk) {      // the kimono's crossed collar, open on a black undershirt, and the black obi's knot behind
+    g.fillStyle = '#111014'; g.beginPath(); g.moveTo(11.5, 0); g.lineTo(2, -9); g.lineTo(5, 0); g.lineTo(2, 9); g.closePath(); g.fill();
+    g.fillStyle = '#111014'; ell(-11, 0, 3, 6);
+  } else if (!nob) { g.fillStyle = '#10121e'; ell(0, 0, 9.5, 12.5); }
   const R = arms(f, gojo ? SKIN : coat);       // Gojo's arms are bare
   if (nob) {       // her hammer, in the right hand; and in Resonance, the straw doll in the left
     const sw = f.act === 'swing' || f.act === 'res' ? 0.6 : 0;
@@ -2435,6 +2600,10 @@ function drawFighter(f) {
     g.fillStyle = '#4a2a22'; circ(-0.5, 0, 9.6);
     spiky(0.5, 0, 6.5, 11.5, 11, f.id * 0.7, '#f39ab5', 0.12, 0.72);
     g.fillStyle = '#ffc6d6'; circ(1.5, -2.5, 2.6);
+  } else if (suk) {      // black spiky hair, and the marks on his face
+    spiky(-1, 0, 8, 13.5, 12, f.id * 0.6, '#14121a', 0.2, 0.66);
+    spiky(-1, 0, 5, 9, 9, f.id * 0.6 + 0.3, '#2a2636', 0.15, 0.7);
+    g.fillStyle = '#14121a'; ell(10.6, 0, 0.9, 1.6); ell(10.2, -4.4, 0.7, 1.4); ell(10.2, 4.4, 0.7, 1.4);
   } else if (gojo) {     // white hair, sticking up every way
     spiky(-0.5, 0, 8.5, 14, 13, f.id * 0.4, '#e9eef6', 0.18, 0.75);
     spiky(-0.5, 0, 5.5, 10, 10, f.id * 0.4 + 0.3, '#ffffff', 0.12, 0.8);
@@ -2463,6 +2632,16 @@ function drawFighter(f) {
     g.fillStyle = 'rgba(90,150,255,.8)'; circ(22, -12 + 12 * k, 6); g.fillStyle = 'rgba(255,70,70,.8)'; circ(22, 12 - 12 * k, 6);
     if (k > 0.7) { g.fillStyle = `rgba(200,120,255,${(k - 0.7) / 0.3})`; circ(24, 0, 10 * k); }
   } else if (f.act === 'domain') { g.fillStyle = 'rgba(160,140,255,.6)'; circ(R[0] + 3, R[1], 6); }
+  else if (f.act === 'fuga' && f.actT < FUGA.charge + 0.05) {      // the flame bow, drawn back with a burning arrow on it
+    const k = clamp(f.actT / FUGA.charge, 0, 1), fl = 0.8 + 0.2 * Math.sin(T * 30);
+    g.lineCap = 'round';
+    g.strokeStyle = 'rgba(255,120,30,.55)'; g.lineWidth = 6; g.beginPath(); g.arc(14, 0, 16, -1.1, 1.1); g.stroke();
+    g.strokeStyle = '#ffcf5a'; g.lineWidth = 2.6; g.beginPath(); g.arc(14, 0, 16, -1.1, 1.1); g.stroke();
+    const bx = 14 + Math.cos(1.1) * 16, by = Math.sin(1.1) * 16, nx = R[0];
+    g.strokeStyle = 'rgba(255,230,180,.8)'; g.lineWidth = 1; g.beginPath(); g.moveTo(bx, -by); g.lineTo(nx, 0); g.lineTo(bx, by); g.stroke();
+    g.strokeStyle = '#ff8a2a'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(nx, 0); g.lineTo(38, 0); g.stroke();
+    g.fillStyle = `rgba(255,140,40,${0.5 * fl})`; circ(40, 0, 6 + 4 * k); g.fillStyle = '#fff1c0'; circ(40, 0, 2.5 + 2 * k);
+  } else if (f.act === 'cleave' && f.actT >= CLEAVE.wind && f.actT < CLEAVE.wind + 0.12) { g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 3; g.beginPath(); g.arc(8, 0, 30, -1.2, 1.2); g.stroke(); }
   g.restore();
   if (f.flash > 0) { g.globalAlpha = f.flash * 0.55; g.fillStyle = '#fff'; circ(x, y, 24); g.globalAlpha = 1; }
   if (f.blk && CHARS[f.ch].moves.blk) {      // Infinity: a faint shimmering shell all round him
@@ -2554,6 +2733,104 @@ function drawBrute(f, t) {
     g.fillStyle = '#35294a'; circ(fx0, fy0, 11 * sc);
     g.fillStyle = '#4f3d68'; circ(fx0 - 2, fy0 - 2, 7 * sc);
     g.fillStyle = '#e6dcc4'; for (const o of [-5, 0, 5]) circ(fx0 + 9 * sc, fy0 + o * sc, 2.1 * sc);
+  }
+}
+// ── Sukuna ──
+// a flickering tongue of flame standing at (x, y), s tall
+function flame(x, y, s, seed) {
+  const fl = 0.75 + 0.25 * Math.sin(T * 18 + seed * 7), h = s * fl, w = s * 0.42;
+  g.fillStyle = 'rgba(255,90,20,.75)';
+  g.beginPath(); g.moveTo(x - w, y); g.quadraticCurveTo(x - w, y - h * 0.55, x + Math.sin(T * 9 + seed) * w * 0.4, y - h); g.quadraticCurveTo(x + w, y - h * 0.55, x + w, y); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(255,214,110,.9)';
+  g.beginPath(); g.moveTo(x - w * 0.5, y); g.quadraticCurveTo(x - w * 0.45, y - h * 0.4, x, y - h * 0.6); g.quadraticCurveTo(x + w * 0.45, y - h * 0.4, x + w * 0.5, y); g.closePath(); g.fill();
+}
+// Divine Flame on the ground: the target ring while he draws (for everyone to see), then the fire
+function drawFugaGround() {
+  for (const e of S.fl) {
+    if (!vis(e.x, e.y, FUGA.r + 60) || outside(e.x, e.y)) continue;
+    if (e.t < 0) {
+      const p = 1 + e.t / (FUGA.charge + FUGA.flight);
+      g.strokeStyle = `rgba(255,140,40,${0.35 + 0.35 * Math.sin(T * 14)})`; g.lineWidth = 4; g.setLineDash([16, 10]);
+      g.beginPath(); g.arc(e.x, e.y, FUGA.r, 0, TAU); g.stroke(); g.setLineDash([]);
+      g.fillStyle = `rgba(255,90,20,${0.08 + 0.12 * p})`; circ(e.x, e.y, FUGA.r * p);
+      continue;
+    }
+    const al = clamp(Math.min(e.t / 0.2, (FUGA.dur - e.t) / 0.6), 0, 1);
+    g.save(); g.globalAlpha = al;
+    const gr = g.createRadialGradient(e.x, e.y, 0, e.x, e.y, FUGA.r);
+    gr.addColorStop(0, 'rgba(255,190,80,.55)'); gr.addColorStop(0.7, 'rgba(255,80,20,.42)'); gr.addColorStop(1, 'rgba(120,20,10,.2)');
+    g.fillStyle = gr; circ(e.x, e.y, FUGA.r);
+    for (let i = 0; i < 16; i++) {      // flames all through it
+      const a = hash1(e.id * 7 + i) * TAU, d = Math.sqrt(hash1(e.id * 3 + i * 5)) * FUGA.r * 0.85;
+      flame(e.x + Math.cos(a) * d, e.y + Math.sin(a) * d, 26 + 22 * hash1(i + e.id), i);
+    }
+    for (let i = 0; i < 34; i++) { const a = i / 34 * TAU; flame(e.x + Math.cos(a) * FUGA.r, e.y + Math.sin(a) * FUGA.r, 40 + 16 * hash1(i * 3 + e.id), i + 40); }      // the ring
+    g.restore();
+  }
+}
+// in the air: the ring of fire round him while he draws, and the flaming arrow in flight
+function drawFugaAir() {
+  for (const f of S.f) {
+    if (!f.alive || f.act !== 'fuga' || f.actT >= FUGA.charge + 0.2 || !vis(f.rx, f.ry, 120)) continue;
+    const k = clamp(f.actT / 0.3, 0, 1), n = 18;
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + T * 1.5; flame(f.rx + Math.cos(a) * FUGA.ring, f.ry + Math.sin(a) * FUGA.ring * 0.9, 22 * k + 6, i); }
+  }
+  for (const e of S.fl) {
+    if (e.t < -FUGA.flight || e.t >= 0) continue;
+    const p = 1 + e.t / FUGA.flight, x = lerp(e.sx, e.x, p), y = lerp(e.sy, e.y, p) - Math.sin(p * Math.PI) * 60, a = Math.atan2(e.y - e.sy, e.x - e.sx);
+    g.save(); g.translate(x, y); g.rotate(a);
+    g.strokeStyle = 'rgba(255,110,30,.45)'; g.lineWidth = 14; g.lineCap = 'round'; g.beginPath(); g.moveTo(-70, 0); g.lineTo(0, 0); g.stroke();
+    g.strokeStyle = '#ffcf5a'; g.lineWidth = 4; g.beginPath(); g.moveTo(-40, 0); g.lineTo(10, 0); g.stroke();
+    g.fillStyle = 'rgba(255,140,40,.7)'; circ(10, 0, 12); g.fillStyle = '#fff6d0'; circ(10, 0, 5);
+    g.restore();
+  }
+}
+// Malevolent Shrine from above: it rises out of the ground under him (bigger, its shadow longer), roofs
+// in two tiers with gold ridges, curved horns at the corners and flames on them; he stands on top.
+// Inside its reach slashes flicker everywhere, but there is no wall to see.
+function drawShrines() {
+  for (const s of S.ms) {
+    if (!vis(s.x, s.y, MS.r + 60) || outside(s.x, s.y)) continue;
+    const up = s.t < MS.rise ? 1 - (1 - s.t / MS.rise) ** 3 : 1, down = clamp((MS.rise + MS.dur - s.t) / 0.6, 0, 1), k = up * down;
+    if (s.t >= MS.rise) {      // the cuts
+      const n = 14, seed = Math.floor(T * 14);
+      for (let i = 0; i < n; i++) {
+        const a = hash1(seed * 13 + i) * TAU, d = Math.sqrt(hash1(seed * 7 + i * 3)) * MS.r, x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d, b = hash1(i + seed) * Math.PI, L = 18 + 26 * hash1(seed + i * 5);
+        g.strokeStyle = i % 3 ? 'rgba(255,255,255,.7)' : 'rgba(255,60,90,.75)'; g.lineWidth = 2.5;
+        g.beginPath(); g.moveTo(x - Math.cos(b) * L, y - Math.sin(b) * L); g.lineTo(x + Math.cos(b) * L, y + Math.sin(b) * L); g.stroke();
+      }
+    }
+    if (k <= 0) continue;
+    const sc = 0.35 + 0.65 * k, lift = MS.lift * k;
+    g.save(); g.translate(s.x, s.y);
+    g.fillStyle = `rgba(0,0,0,${0.35 * k})`; ell(lift * 1.4, lift * 1.8, 96 * sc, 84 * sc);      // its shadow, longer the higher it is
+    g.translate(0, -lift); g.scale(sc, sc);
+    g.fillStyle = '#2a1424'; g.fillRect(-74, -74, 148, 148);      // the stone base
+    g.strokeStyle = '#120810'; g.lineWidth = 4; g.strokeRect(-74, -74, 148, 148);
+    const roof = (R, c1, c2) => {      // a pagoda roof from above: a square whose eaves sweep out at the corners
+      g.fillStyle = c1; g.beginPath();
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2 + Math.PI / 4, b = a + Math.PI / 2;
+        const cx = Math.cos(a) * R * 1.32, cy = Math.sin(a) * R * 1.32, nx = Math.cos(b) * R * 1.32, ny = Math.sin(b) * R * 1.32;
+        if (!i) g.moveTo(cx, cy);
+        g.quadraticCurveTo((cx + nx) * 0.36, (cy + ny) * 0.36, nx, ny);
+      }
+      g.closePath(); g.fill(); g.strokeStyle = '#120810'; g.lineWidth = 3; g.stroke();
+      g.strokeStyle = c2; g.lineWidth = 2; g.beginPath(); g.moveTo(-R * 0.93, -R * 0.93); g.lineTo(R * 0.93, R * 0.93); g.moveTo(R * 0.93, -R * 0.93); g.lineTo(-R * 0.93, R * 0.93); g.stroke();
+    };
+    roof(76, '#4a1a3a', '#e8b04a');
+    for (let i = 0; i < 4; i++) {      // the horns, curving out from the corners, flames at their tips
+      const a = i * Math.PI / 2 + Math.PI / 4, c = Math.cos(a), sn = Math.sin(a), tx = c * 150 - sn * 30, ty = sn * 150 + c * 30;
+      g.strokeStyle = '#120810'; g.lineWidth = 14; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(c * 90, sn * 90); g.quadraticCurveTo(c * 140, sn * 140, tx, ty); g.stroke();
+      g.strokeStyle = '#e9dcc8'; g.lineWidth = 9; g.stroke();
+      flame(tx, ty, 22 * k + 4, i);
+    }
+    roof(44, '#5a2048', '#e8b04a');
+    g.fillStyle = '#e8b04a'; circ(0, 0, 7);
+    g.restore();
+    const o = byId(s.own);      // he stands on the roof
+    if (o && o.alive) { const ox = o.rx, oy = o.ry; o.rx = s.x; o.ry = s.y - lift - 6 * k; drawFighter(o); o.rx = ox; o.ry = oy; }
   }
 }
 // The Ten Shadows shikigami, drawn from above after the anime: Nue, an orange owl-like bird with a white
@@ -3063,8 +3340,10 @@ function drawShots() {
       g.fillStyle = '#7fb84a'; circ(0, 0, 8); g.fillStyle = '#b8e36a'; circ(2, -2, 3.8);
       g.restore(); continue;
     }
-    // Dismantle: a wide white crescent with streaks trailing it
-    g.scale(1.6, 1.6);
+    // Dismantle: a wide white crescent with streaks trailing it (Sukuna's far bigger, edged in red)
+    const big = b.k === 4;
+    g.scale(big ? 3 : 1.6, big ? 3 : 1.6);
+    if (big) { g.strokeStyle = 'rgba(255,50,80,.55)'; g.lineWidth = 12; g.beginPath(); g.arc(-32, 0, 52, -1.05, 1.05); g.stroke(); }
     g.strokeStyle = 'rgba(220,240,255,.35)'; g.lineWidth = 2.5;
     g.beginPath(); g.moveTo(-70, -24); g.lineTo(-18, -24); g.moveTo(-90, 0); g.lineTo(-24, 0); g.moveTo(-76, 24); g.lineTo(-20, 24); g.stroke();
     g.strokeStyle = '#ffffff'; g.lineWidth = 6; g.shadowColor = '#bfe0ff'; g.shadowBlur = 14;
@@ -3098,6 +3377,13 @@ function drawParts() {
       case 'dr': g.globalAlpha = al; g.fillStyle = p.col; circ(p.x, p.y, p.r); break;
       case 'rg': g.globalAlpha = al; g.strokeStyle = p.col; g.lineWidth = p.w * (0.3 + 0.7 * al); g.beginPath(); g.arc(p.x, p.y, Math.max(0.1, lerp(p.r0, p.r1, 1 - (1 - q) * (1 - q))), 0, TAU); g.stroke(); break;
       case 'bl': g.globalAlpha = al; bolt(p, 1); break;
+      case 'cv': {      // Cleave: one long straight cut, red glow round a white core
+        const c = Math.cos(p.a), sn = Math.sin(p.a), L = p.len * (0.6 + 0.4 * Math.min(1, p.t / 0.06));
+        g.globalAlpha = al; g.lineCap = 'round';
+        g.strokeStyle = 'rgba(255,40,70,.45)'; g.lineWidth = 16 * al + 3; g.beginPath(); g.moveTo(p.x - c * L, p.y - sn * L); g.lineTo(p.x + c * L, p.y + sn * L); g.stroke();
+        g.strokeStyle = '#ffffff'; g.lineWidth = 4 * al + 1; g.stroke();
+        g.globalAlpha = 1; break;
+      }
       case 'sl': g.globalAlpha = al; g.strokeStyle = p.col; g.lineWidth = 4 * al + 1; g.beginPath(); g.arc(p.x - Math.cos(p.a) * 10, p.y - Math.sin(p.a) * 10, p.r, p.a - Math.PI / 2 - 0.9, p.a - Math.PI / 2 + 0.9); g.stroke(); break;
       case 'bm': {
         const c = Math.cos(p.a), s = Math.sin(p.a), ex = p.x + c * p.len, ey = p.y + s * p.len;
@@ -3185,6 +3471,7 @@ function render() {
   drawObjects();
   drawShadows();
   drawTelegraphs();
+  drawFugaGround();
   const list = [];
   for (const e of S.ele) if (e.t >= 0 && vis(e.x, e.y, 130)) list.push([e.y, 0, e]);
   for (const r of S.rab) if (vis((r.x + r.x0) / 2, (r.y + r.y0) / 2, RAB.max)) list.push([r.y, 1, r]);
@@ -3203,6 +3490,8 @@ function render() {
   drawTrees();
   for (const e of S.ele) if (e.t < 0 && e.t > -0.32) { const p = -e.t / 0.32; drawElephant(e.x, e.y - p * 180, e.a || 0, 1 + p * 0.9, 1 - p * 0.6); }
   for (const f of S.f) if (f.alive && f.nue > 0 && vis(f.rx, f.ry, 120)) drawNue(f);
+  drawShrines();
+  drawFugaAir();
   drawRain();
   drawDomains();
   drawBlues(); drawPurples();
@@ -3582,8 +3871,61 @@ const CUTS = {
   ss: { pal: ['#ff5cb4', '#d4157e', '#5e17c4'], acc: ['#2fb4ff', '#38e07a'], big: '魂', title: 'SOUL STRIKE', sub: '魂を捉える一撃', subCol: '#ffd1ea', fig: (t) => cutYuji(t) },
   maho: { pal: ['#3fe0ff', '#1f5fff', '#18196a'], acc: ['#38e07a', '#ff4fae'], big: '影', title: 'MAHORAGA', sub: '八握剣 異戒神将 魔虚羅', subCol: '#cfe4ff', fig: (t) => cutMegumi(t) },
   nr: { pal: ['#ffb347', '#ff5a1f', '#7a1035'], acc: ['#ff4fae', '#2fb4ff'], big: '釘', title: 'RAINING NAILS', sub: '芻霊呪法 · 釘の雨', subCol: '#ffe0c2', fig: (t) => cutNobara(t) },
+  ms: { pal: ['#ff4d6d', '#9c0f2e', '#1f040c'], acc: ['#ffe3e8', '#ff8a2a'], big: '伏', title: 'MALEVOLENT SHRINE', sub: '領域展開 · 伏魔御廚子', subCol: '#ffd0d8', say: ['DOMAIN', 'EXPANSION'], fig: (t) => cutSukuna(t) },
   dom: { pal: ['#a58bff', '#3b23a6', '#0c0a2e'], acc: ['#ffffff', '#3fe0ff'], big: '無', title: 'INFINITE VOID', sub: '領域展開 · 無量空処', subCol: '#e2dcff', say: ['DOMAIN', 'EXPANSION'], fig: (t) => cutGojo(t) },
 };
+// Sukuna for his banner: the white kimono over a black undershirt, the black obi, black bands on the
+// sleeves, black spiky hair and the marks on his face, both hands held up in front of his chest making
+// the Malevolent Shrine sign (fingers locked, the two middle fingers raised together)
+function cutSukuna(t) {
+  g.save(); g.translate(0, -4); g.scale(0.86, 0.86);
+  const robe = '#ece6da', ink = '#111014';
+  const torso = (dx, dy) => {
+    g.beginPath(); g.moveTo(-7 + dx, 4 + dy); g.lineTo(-28 + dx, 11 + dy); g.quadraticCurveTo(-36 + dx, 14 + dy, -35 + dx, 24 + dy);
+    g.lineTo(-30 + dx, 40 + dy); g.lineTo(-22 + dx, 90 + dy); g.lineTo(22 + dx, 90 + dy); g.lineTo(30 + dx, 40 + dy);
+    g.lineTo(35 + dx, 24 + dy); g.quadraticCurveTo(36 + dx, 14 + dy, 28 + dx, 11 + dy); g.lineTo(7 + dx, 4 + dy); g.closePath(); g.fill();
+  };
+  g.fillStyle = 'rgba(0,0,0,.35)'; torso(2, 3);
+  g.fillStyle = robe; torso(0, 0);
+  g.fillStyle = ink; g.beginPath(); g.moveTo(-7, 4); g.lineTo(7, 4); g.lineTo(2, 34); g.lineTo(-2, 34); g.closePath(); g.fill();      // the open collar, black beneath
+  g.strokeStyle = '#c9c1b2'; g.lineWidth = 2.2;
+  g.beginPath(); g.moveTo(-7, 4); g.lineTo(2, 34); g.moveTo(7, 4); g.lineTo(-2, 34); g.moveTo(-14, 70); g.lineTo(-16, 90); g.moveTo(12, 72); g.lineTo(14, 90); g.stroke();
+  g.fillStyle = ink; g.fillRect(-25, 56, 50, 9); ell(-12, 66, 5, 6); g.fillRect(-15, 64, 5, 14);      // the obi and its knot
+  // the arms: up from the elbows, the sleeves hanging wide, black bands near the cuffs
+  for (const sx of [-1, 1]) {
+    g.fillStyle = robe;
+    g.beginPath(); g.moveTo(sx * 31, 14); g.lineTo(sx * 38, 50); g.lineTo(sx * 14, 46); g.lineTo(sx * 8, 32); g.lineTo(sx * 20, 26); g.closePath(); g.fill();
+    g.strokeStyle = ink; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(sx * 16, 30); g.lineTo(sx * 30, 47); g.moveTo(sx * 12, 33); g.lineTo(sx * 25, 48); g.stroke();
+    limb([sx * 11, 34, sx * 4, 20], 8, SKIN);
+  }
+  // the sign: palms together, fingers locked, the two middle fingers raised side by side
+  g.fillStyle = '#dcab82'; ell(0, 22, 9, 7);
+  g.fillStyle = SKIN; ell(-3, 21, 6.5, 6.5); ell(3, 21, 6.5, 6.5);
+  g.fillStyle = '#e6b894'; for (const [x, y] of [[-6, 16], [6, 16], [-7.5, 19], [7.5, 19]]) circ(x, y, 2.4);      // the locked knuckles
+  limb([-1.4, 15, -1.4, 2], 3.2, SKIN); limb([1.4, 15, 1.4, 2], 3.2, '#e6b894');
+  const gl = 0.3 + 0.15 * Math.sin(t * 12);
+  g.fillStyle = `rgba(255,60,90,${gl})`; circ(0, 4, 7);
+  g.fillStyle = SKIN; g.fillRect(-6, -4, 12, 10);
+  g.fillStyle = SKIN; circ(0, -16, 15);
+  // the marks on his face, after the reference: a mark on his forehead, a line under each eye, and lines
+  // down from his cheeks that turn in under his jaw
+  g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1.3; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(-2.4, -27); g.quadraticCurveTo(-3.4, -24, -1.4, -22.5); g.moveTo(2.4, -27); g.quadraticCurveTo(3.4, -24, 1.4, -22.5); g.stroke();
+  ell(0, -25.5, 0.8, 1.3);
+  g.beginPath(); g.moveTo(-9.5, -16); g.lineTo(-5, -16.8); g.moveTo(9.5, -16); g.lineTo(5, -16.8); g.stroke();
+  g.beginPath(); g.moveTo(-4, -9.6); g.quadraticCurveTo(0, -11.6, 4, -9.6); g.stroke();
+  g.beginPath(); g.moveTo(-12.6, -14); g.lineTo(-11.4, -9); g.lineTo(-7, -3.5); g.lineTo(-3, -2.4); g.moveTo(12.6, -14); g.lineTo(11.4, -9); g.lineTo(7, -3.5); g.lineTo(3, -2.4); g.stroke();
+  // black spiky hair, swept up and back
+  hair(0, -19, 15, 30, Math.PI * 0.92, Math.PI * 2.08, 10, 0, '#15131c');
+  hair(0, -20, 13, 25, Math.PI * 1.02, Math.PI * 1.98, 8, -0.05, '#24202e');
+  g.fillStyle = '#15131c'; ell(0, -25, 15.5, 7.5);
+  for (let i = 0; i < 5; i++) {
+    const x = -11 + i * 5.5, tip = -15 - 5 * hash1(i * 2.3 + 5);
+    g.beginPath(); g.moveTo(x - 4, -27); g.lineTo(x + 4, -27); g.lineTo(x + (i - 2) * 1.4, tip); g.closePath(); g.fill();
+  }
+  g.restore();
+}
 function cutMegumi(t) {
   g.save(); g.translate(-48, -6); g.rotate(t * 0.8);
   g.globalAlpha = 0.5; g.fillStyle = '#e8c35a'; g.strokeStyle = '#e8c35a'; g.lineWidth = 4;
@@ -3751,6 +4093,40 @@ const ICON = {
     x.beginPath(); x.ellipse(32, 32, 24, 11, -0.35, 0, TAU); x.stroke(); x.restore();
     x.fillStyle = '#000'; x.beginPath(); x.arc(32, 32, 13, 0, TAU); x.fill();
     x.strokeStyle = '#9fd0ff'; x.lineWidth = 2; x.beginPath(); x.arc(32, 32, 13, 0, TAU); x.stroke();
+  },
+  'sukuna.q'(x) {      // his Dismantle: a huge crescent edged in red
+    x.save(); x.shadowColor = '#ff3a5a'; x.shadowBlur = 12;
+    x.strokeStyle = 'rgba(255,60,90,.8)'; x.lineWidth = 11; x.beginPath(); x.arc(10, 32, 40, -1.1, 1.1); x.stroke();
+    x.strokeStyle = '#fff'; x.lineWidth = 5; x.beginPath(); x.arc(10, 32, 40, -1.1, 1.1); x.stroke(); x.restore();
+    x.strokeStyle = 'rgba(255,200,210,.7)'; x.lineWidth = 2.5;
+    for (const y of [14, 26, 38, 50]) { x.beginPath(); x.moveTo(2, y); x.lineTo(24, y); x.stroke(); }
+  },
+  'sukuna.e'(x) {      // Cleave: two crossing cuts
+    x.save(); x.shadowColor = '#ff2a4a'; x.shadowBlur = 12;
+    for (const [a, b, c, d] of [[8, 10, 56, 54], [54, 8, 10, 56]]) {
+      x.strokeStyle = 'rgba(255,40,70,.75)'; x.lineWidth = 10; x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke();
+      x.strokeStyle = '#fff'; x.lineWidth = 3.5; x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke();
+    }
+    x.restore();
+  },
+  'sukuna.c'(x) {      // Divine Flame: the flame bow and its burning arrow
+    x.save(); x.shadowColor = '#ff7a1a'; x.shadowBlur = 12;
+    x.strokeStyle = '#ffb347'; x.lineWidth = 5; x.beginPath(); x.arc(14, 32, 24, -1.15, 1.15); x.stroke();
+    x.strokeStyle = 'rgba(255,240,210,.8)'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(14 + Math.cos(1.15) * 24, 32 - Math.sin(1.15) * 24); x.lineTo(8, 32); x.lineTo(14 + Math.cos(1.15) * 24, 32 + Math.sin(1.15) * 24); x.stroke();
+    x.strokeStyle = '#ff8a2a'; x.lineWidth = 4; x.beginPath(); x.moveTo(8, 32); x.lineTo(46, 32); x.stroke();
+    x.fillStyle = 'rgba(255,120,30,.85)'; x.beginPath(); x.moveTo(44, 22); x.quadraticCurveTo(64, 32, 44, 42); x.quadraticCurveTo(50, 32, 44, 22); x.fill();
+    x.fillStyle = '#fff1c0'; x.beginPath(); x.arc(48, 32, 4.5, 0, TAU); x.fill();
+    x.restore();
+  },
+  'sukuna.u'(x) {      // Malevolent Shrine: tiered roofs and curved horns
+    x.fillStyle = '#e9dcc8'; x.strokeStyle = '#120810'; x.lineWidth = 2.5;
+    for (const s of [-1, 1]) { x.beginPath(); x.moveTo(32 + s * 14, 30); x.quadraticCurveTo(32 + s * 30, 22, 32 + s * 26, 4); x.quadraticCurveTo(32 + s * 24, 20, 32 + s * 10, 34); x.closePath(); x.fill(); x.stroke(); }
+    x.fillStyle = '#a8335e';
+    x.beginPath(); x.moveTo(6, 40); x.quadraticCurveTo(32, 30, 58, 40); x.lineTo(50, 34); x.lineTo(32, 24); x.lineTo(14, 34); x.closePath(); x.fill(); x.stroke();
+    x.fillStyle = '#5e2a44'; x.fillRect(16, 40, 32, 16); x.strokeRect(16, 40, 32, 16);
+    x.fillStyle = '#ff4a66'; x.fillRect(24, 44, 16, 9);
+    x.fillStyle = '#e8b04a'; x.beginPath(); x.arc(32, 22, 3, 0, TAU); x.fill();
+    x.fillStyle = '#ff8a2a'; for (const s of [-1, 1]) { x.beginPath(); x.arc(32 + s * 26, 5, 3.5, 0, TAU); x.fill(); }
   },
   'gojo.blk'(x) {      // Infinity
     x.save(); x.shadowColor = '#9fd0ff'; x.shadowBlur = 12; x.strokeStyle = '#cfe8ff'; x.lineWidth = 7;
@@ -3924,7 +4300,7 @@ function doEvent(a) {
     const [, k, cid, tid, cn] = a, me = byId(meId), c = byId(cid);
     if (demoMode || !me) return;
     const role = cid === meId ? 'you' : tid === meId ? 'target'
-      : (k === 'maho' || k === 'nr') && c && dist(c, me) < 900 ? 'near' : k === 'dom' && c && dist(c, me) < DOM.r + 80 ? 'near' : '';
+      : (k === 'maho' || k === 'nr') && c && dist(c, me) < 900 ? 'near' : (k === 'dom' || k === 'ms') && c && dist(c, me) < DOM.r + 80 ? 'near' : '';
     if (role) startCutin(k, role, cn);
   }
 }
@@ -4122,6 +4498,7 @@ const AIM_LEN = {
   megumi: { q: [90, 0], e: [RAB.max, RAB.r, 1], c: [450, ELE_HIT, 1], u: [90, 0] },
   nobara: { q: [720, 0], e: [1, 0], c: [1, 0], u: [1, RAIN.r] },
   gojo: { q: [BLUE.range, BLUE.r, 1], e: [620, RED.r], c: [PURPLE.range, 0], u: [1, DOM.r] },
+  sukuna: { q: [SHOT[4].range, 0], e: [CLEAVE.range, 0], c: [FUGA.range, FUGA.r, 1], u: [1, MS.r] },
 };
 const dragLen = (spec, len) => (spec[2] ? 140 + clamp(len / 80, 0, 1) * (spec[0] - 140) : spec[0]);
 function buildPad(ch) {
@@ -4400,6 +4777,8 @@ const SPEC = {
   b: 'id own x:1 y:1 t:2',
   u: 'id own x:1 y:1 a:2 d:1',
   d: 'id own x:1 y:1 t:2 vic',
+  l: 'id own x:1 y:1 sx:1 sy:1 t:2',
+  s: 'id own x:1 y:1 t:2',
   h: 'id own k x:1 y:1 a:2 d:1',
 };
 for (const k in SPEC) SPEC[k] = SPEC[k].split(' ').map((w) => w.split(':'));
@@ -4593,7 +4972,7 @@ function sendSnap() {
     t: 's', tm: r2(s.time), ph: s.phase, ot: r2(s.overT), rt: r1(s.roundT), tw: s.toWin, nid: s.nid,
     f: s.f.map((o) => enc(o, SPEC.f)), m: s.maho.map((o) => enc(o, SPEC.m)), e: s.ele.map((o) => enc(o, SPEC.e)),
     r: s.rab.map((o) => enc(o, SPEC.r)), h: s.sh.map((o) => enc(o, SPEC.h)), n: s.rn.map((o) => enc(o, SPEC.n)),
-    bl: s.bl.map((o) => enc(o, SPEC.b)), pu: s.pu.map((o) => enc(o, SPEC.u)), dm: s.dm.map((o) => enc(o, SPEC.d)),
+    bl: s.bl.map((o) => enc(o, SPEC.b)), pu: s.pu.map((o) => enc(o, SPEC.u)), dm: s.dm.map((o) => enc(o, SPEC.d)), fl: s.fl.map((o) => enc(o, SPEC.l)), ms: s.ms.map((o) => enc(o, SPEC.s)),
     ak: humans.filter((h) => h.link).map((h) => [h.id, h.link.is]), fx: fxq,
   });
   fxq = [];
@@ -4964,6 +5343,8 @@ function applySnap(m) {
   s.pu = mergeRows(s.pu, m.pu, SPEC.u, (id) => ({ id, hit: [] }));
   s.dm = mergeRows(s.dm, m.dm, SPEC.d, (id) => ({ id, vic: [] }));
   for (const d of s.dm) if (!Array.isArray(d.vic)) d.vic = [];
+  s.fl = mergeRows(s.fl || [], m.fl, SPEC.l, (id) => ({ id }));
+  s.ms = mergeRows(s.ms || [], m.ms, SPEC.s, (id) => ({ id, in: [] }));
   s.sh = mergeRows(s.sh, m.h, SPEC.h, (id) => ({ id }));
   for (const sh of s.sh) { sh.rx = sh.x; sh.ry = sh.y; }
   // our own fighter: reconcile the prediction with where the host had us after our acknowledged input
@@ -4990,6 +5371,8 @@ const pred = { on: false, x: 0, y: 0, vx: 0, vy: 0, ox: 0, oy: 0, hist: [], dash
 const predFree = (me) => me.alive && me.push <= 0 && !(me.frz > 0) && S.phase === 'play' && (!me.act || me.act === 'dash' || !ACTS[me.act].lock);
 function predStep(me, dt) {
   const inp = me.inp;
+  if (S.ms.some((o) => o.own === me.id)) { const o = S.ms.find((q) => q.own === me.id); pred.x = o.x; pred.y = o.y; pred.vx = pred.vy = 0; return; }
+  const ox = pred.x, oy = pred.y;
   if (pred.dashT > 0) {
     pred.vx = Math.cos(pred.dashA) * 1150; pred.vy = Math.sin(pred.dashA) * 1150;
     if ((pred.dashT -= dt) <= 0) { pred.vx *= 0.3; pred.vy *= 0.3; }
@@ -5005,6 +5388,11 @@ function predStep(me, dt) {
   const c = S.dm.length && voidOf(me.id) ? NO_HIT : collide(pred, FR);
   if (c.hit) { const into = -(pred.vx * c.nx + pred.vy * c.ny); if (into > 0) { pred.vx += c.nx * into; pred.vy += c.ny * into; } }
   if (S.dm.length) domWall(pred, me.id, FR);
+  for (const o of S.ms) {      // inside a risen shrine there is no way out
+    if (o.t < MS.rise || Math.hypot(ox - o.x, oy - o.y) > MS.r - FR + 1) continue;
+    const dx = pred.x - o.x, dy = pred.y - o.y, l = Math.hypot(dx, dy);
+    if (l > MS.r - FR) { pred.x = o.x + dx / l * (MS.r - FR); pred.y = o.y + dy / l * (MS.r - FR); }
+  }
 }
 // joiner frame: send input, coast and smooth everything toward the last snapshot, predict ourselves
 function joinTick(dt) {
@@ -5062,6 +5450,8 @@ function joinTick(dt) {
   for (const b of S.bl) b.t += dt;
   for (const p of S.pu) { p.x += Math.cos(p.a) * PURPLE.spd * dt; p.y += Math.sin(p.a) * PURPLE.spd * dt; p.d += PURPLE.spd * dt; }
   for (const d of S.dm) d.t -= dt;
+  for (const e of S.fl) e.t += dt;
+  for (const m of S.ms) m.t += dt;
   for (const b of S.sh) { const v = (SHOT[b.k] || SHOT[0]).spd; b.x += Math.cos(b.a) * v * dt; b.y += Math.sin(b.a) * v * dt; b.rx = b.x; b.ry = b.y; }
   for (const e of S.ele) e.t += dt;
   if (S.phase === 'over') S.overT -= dt; else if (S.roundT > 0) S.roundT -= dt;

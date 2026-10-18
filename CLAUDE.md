@@ -587,7 +587,7 @@ One IIFE, sections in this order: save, skins, tuning, canvas, audio, drawing ba
 
 ## Jujutsu Arena architecture
 
-Free-for-all on a city map: Yuji, Megumi, Nobara or Gojo against each other and the cursed spirits, first to
+Free-for-all on a city map: Yuji, Megumi, Nobara, Gojo or Sukuna against each other and the cursed spirits, first to
 `toWin` points, respawns after `RULES.resp` s. One IIFE, sections in this order: save, tuning, canvas,
 audio, city, the match (sim), bots and curses, effects, rendering, minimap, HUD, input (keyboard,
 mouse, touch), screens, multiplayer, main loop.
@@ -637,8 +637,8 @@ mouse, touch), screens, multiplayer, main loop.
 - **`S` is the whole match** and is plain data: entities refer to each other by id, never by reference
   (`own`, `tg`, `lastBy`, `hitL`), so a snapshot can carry all of it and any joiner can take over as
   host. `S.f` fighters (curses included), `S.maho` Mahoraga, `S.ele` Max Elephants, `S.rab` Rabbit
-  Escape swarms, `S.sh` shots (Dismantle slashes, bile, Nobara's nails and Gojo's Red), `S.rn` Raining Nails,
-  `S.bl` Blues, `S.pu` Hollow Purples, `S.dm` domains. Bots and curses have negative ids, Mahoraga
+  Escape swarms, `S.sh` shots (Dismantle slashes, bile, Nobara's nails, Gojo's Red and Sukuna's Dismantle), `S.rn` Raining Nails,
+  `S.bl` Blues, `S.pu` Hollow Purples, `S.dm` domains, `S.fl` Divine Flames, `S.ms` Malevolent Shrines. Bots and curses have negative ids, Mahoraga
   ids from 1e6, humans the host's or the server's.
 - **Input** is `f.inp`: move vector, `aim` (radians), `ad` (distance to the cursor, for moves that
   land where you point), `m1`/`blk` held, and a press *counter* per key, so a lost packet cannot eat a
@@ -688,6 +688,17 @@ mouse, touch), screens, multiplayer, main loop.
   still work). For a living Gojo, `drawMini()` draws Hollow Purple's reach and path and rings
   anyone in it. His banner is a band like the others (`CUTS.dom`,
   `cutGojo()`: the sign, a fist with two fingers up).
+- **Sukuna**: his Dismantle is `SHOT` kind 4 (bigger, further, harder than Yuji's kind 0). Cleave
+  (`ACTS.cleave`, `CLEAVE`) picks `cleaveTarget()` into `f.lk` and deals exactly `CLEAVE.share` of its full
+  health (divided by `RULES.dmg`, which `hurt()` multiplies back in), ignoring blocks. Divine Flame
+  (`ACTS.fuga`, `FUGA`, `S.fl`): an entity whose `t` counts up from `-(charge + flight)`; while he draws
+  the bow a ring of fire around him singes anyone beside him, then `updFuga()` lands it (`fx 'fl'`) and
+  burns and slows everyone inside for `FUGA.dur` s; it is cancelled if he dies or is stopped while
+  drawing. Malevolent Shrine (`S.ms`, `MS`, `updShrine()`): no barrier; after `MS.rise` s it pins him
+  on its roof (position reset every step, and the joiner's `predStep()` holds him there), cuts everyone
+  within `MS.r` every `MS.tick` s, and keeps whoever has been inside (`s.in`, host only) from leaving
+  until it ends. `drawShrines()` draws it rising and redraws him on top; `cutSukuna()` is his banner
+  (the Malevolent Shrine sign, his face marks).
 - **Nue** is a ride, not an action: `f.nue` (synced) counts down from `NUE.dur`, `nueSp()` scales walking
   (the joiner's `predStep()` too) from `NUE.sp0` to `NUE.sp1`, `rideNue()` shocks anyone touched (once per
   `NUE.every` s each, `f.nh` host only), and the Q cooldown waits for the ride to end.

@@ -206,7 +206,7 @@ The platform shrinks after ten seconds, so every round ends.
 ## Jujutsu Arena
 
 A top-down brawler on a big city map: streets, rooftops, parks, a shrine and a scramble crossing in the
-middle. Pick Yuji, Megumi, Nobara or Gojo and score points; the first to the points target wins and a new match
+middle. Pick Yuji, Megumi, Nobara, Gojo or Sukuna and score points; the first to the points target wins and a new match
 starts. You respawn a few seconds after going down and can switch fighter while you wait. There is no
 cursed energy: every move has its own cooldown.
 
@@ -266,6 +266,14 @@ cursed energy: every move has its own cooldown.
   to bump into or to stop his Blue and Red, and nobody outside to shove them. From outside it is a black
   sphere hanging over the street, and nobody, cursed spirits included, can get in until it ends. No attack crosses its edge either
   way: nothing from outside hurts the people inside, and nothing inside hurts anyone outside.
+- **Sukuna**, the King of Curses. His *Dismantle* is a far bigger, harder slash than Yuji's that cuts
+  through everyone in its path. *Cleave* (long cooldown) is one huge slash on the enemy nearest your aim
+  that always takes 40% of their full health, block or not. *Divine Flame* (long cooldown): he stands in
+  a ring of fire drawing a flame bow (a ring marks where it will land), then the arrow bursts into a
+  huge ring of fire that burns and slows everyone in it for 6 seconds. His ultimate, *Malevolent
+  Shrine*, has no barrier: the shrine rises out of the ground under him and lifts him onto its roof,
+  and for 10 seconds everyone near him (Gojo's domain's reach) is cut over and over, and anyone who
+  steps inside cannot leave until it ends.
 - **Practice** — you against 1 to 10 cursed spirits (Easy, Normal or Hard), first to 10, 20 or 40 points.
 - **Private party** — HOST PARTY gives a four-digit code; friends type it and press JOIN. Up to 20, with
   as many cursed spirits as the host picks. If a player's connection drops, a bot plays for them while their browser
