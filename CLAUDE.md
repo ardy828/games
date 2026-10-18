@@ -16,7 +16,9 @@ as a Claude Artifact, so it guards its `window.claude.hot` calls and runs unchan
 Touch support is one section after the keyboard input: `TOUCH` (set via the `tui` body class, since
 `.touch` was already a class), a floating stick read in `updatePlayer()`, and `#pad` buttons that
 write the same `keys`/`hit` tables as the keyboard. `syncPad()` runs each frame: outside a fight the
-pad hides and a tap anywhere presses Enter. Obito's spiral mask is drawn after the hair (`late` in
+pad hides and a tap anywhere presses Enter. The top bar (`#tbar`: Menu, Skip, sound, full screen, home) sits outside
+`#pad` and shows during play on every device (`syncBar()`); Menu confirms, then `go(TitleScene)`, and Continue
+resumes from the chapter's start, where `startChapter()` saved. Obito's spiral mask is drawn after the hair (`late` in
 `drawPerson()`), with its eye hole on the left, matching the landing-page icon. The bob and long side
 locks are drawn by `drawLocks()` before the face and turn with the head (the near lock thins and tucks
 in), so a turned head never hides an eye; `drawHair()` only draws them from behind.

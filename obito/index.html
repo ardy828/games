@@ -86,7 +86,9 @@ body.tui #pad.on{display:block}
 .act::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(0,0,0,.62) calc(var(--cd,0) * 360deg),transparent 0)}
 .act.on{background:rgba(241,236,255,.28)}
 .act.big{font-size:min(3.2vmin,15px)}
-#tbar{position:absolute;top:calc(env(safe-area-inset-top) + 8px);right:calc(env(safe-area-inset-right) + 8px);display:flex;gap:8px}
+#tbar{position:fixed;z-index:6;display:none;top:calc(env(safe-area-inset-top) + 8px);right:calc(env(safe-area-inset-right) + 8px);gap:8px}
+#tbar.on{display:flex}
+#tbar button[hidden]{display:none}
 #tbar button{pointer-events:auto;min-width:40px;height:40px;padding:0 12px;border-radius:99px;border:1px solid var(--edge);background:rgba(16,12,26,.75);font-size:14px}
 
 /* Locked down: no selecting, copying, long-press menus or image dragging (text fields excepted),
@@ -152,12 +154,14 @@ img,svg,canvas,a{-webkit-user-drag:none}
     <button class="act" data-k="shift" style="--x:44%;--y:26%;--s:19%;--c:#ff3344">Sharin&shy;gan</button>
     <button class="act" data-k="r" style="--x:70%;--y:14%;--s:19%;--c:#9df7c9">Heal</button>
   </div>
-  <div id="tbar">
-    <button id="skipBtn" data-k="escape">Skip &#9656;&#9656;</button>
-    <button data-k="m" id="muteBtn" aria-label="Sound on or off">&#128266;</button>
-    <button id="fsBtn" aria-label="Full screen">&#x26F6;</button>
-    <button id="homeBtn" aria-label="Back to Ardy Games">&#8962;</button>
-  </div>
+</div>
+<!-- the top bar shows during play on every device, not only with the touch pad -->
+<div id="tbar">
+  <button id="menuBtn" aria-label="Main menu">&#9776; Menu</button>
+  <button id="skipBtn" data-k="escape" hidden>Skip &#9656;&#9656;</button>
+  <button data-k="m" id="muteBtn" aria-label="Sound on or off">&#128266;</button>
+  <button id="fsBtn" aria-label="Full screen">&#x26F6;</button>
+  <button id="homeBtn" aria-label="Back to Ardy Games">&#8962;</button>
 </div>
 
 <script>
@@ -223,15 +227,17 @@ $('zone').addEventListener('pointerdown',e=>{if(stick.id!==null)return;e.prevent
 $('zone').addEventListener('pointermove',e=>{if(e.pointerId===stick.id)stickAt(e)});
 function stickUp(){stick.id=null;stick.x=stick.y=0;const base=$('base');base.classList.remove('held');base.style.left=base.style.top=base.style.bottom='';$('knob').style.transform=''}
 for(const ev of['pointerup','pointercancel','lostpointercapture'])$('zone').addEventListener(ev,e=>{if(e.pointerId===stick.id)stickUp()});
-document.querySelectorAll('#pad [data-k]').forEach(b=>{const k=b.dataset.k;
+document.querySelectorAll('#pad [data-k],#tbar [data-k]').forEach(b=>{const k=b.dataset.k;
   b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(err){}press(k);b.classList.add('on')});
   const up=()=>{keys[k]=false;b.classList.remove('on')};
   for(const ev of['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,up)});
-function releaseTouch(){if(stick.id!==null)stickUp();document.querySelectorAll('#pad [data-k]').forEach(b=>{keys[b.dataset.k]=false;b.classList.remove('on')})}
+function releaseTouch(){if(stick.id!==null)stickUp();document.querySelectorAll('#pad [data-k],#tbar [data-k]').forEach(b=>{keys[b.dataset.k]=false;b.classList.remove('on')})}
 addEventListener('blur',releaseTouch);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseTouch()});
 $('fsBtn').onclick=()=>{if(!document.documentElement.requestFullscreen){const t=document.createElement('div');t.textContent='For full screen on iPhone: Share, then Add to Home Screen, and open it from there';t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:999;background:rgba(0,0,0,.88);color:#fff;padding:10px 14px;border-radius:8px;font:600 14px system-ui,sans-serif;text-align:center;max-width:90vw;pointer-events:none';document.body.appendChild(t);setTimeout(()=>t.remove(),4500);return}if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})).catch(()=>{})};
 $('homeBtn').onclick=()=>{location.href='../'};
+// back to the title; the game saves at the start of every chapter, so Continue picks up from there
+$('menuBtn').onclick=()=>{if(confirm('Go back to the main menu? Continue will start you at the beginning of this chapter.')){releaseTouch();go(TitleScene)}};
 // Outside a fight the stick and buttons hide and a tap anywhere acts as Enter (next line, retry, skip a title card).
 let padTap=false,padSig='';
 document.addEventListener('pointerdown',e=>{if(TOUCH&&padTap&&!e.target.closest('button,a,input'))press('enter')});
@@ -1800,6 +1806,12 @@ function drawDebug(){const x=W-262,y=12,w=248,h=105+DBG.length*17;g.fillStyle='r
   const inGame=scene!==TitleScene&&scene!==CreatorScene;
   DBG.forEach(([k,n],i)=>{const yy=y+48+i*17,cur=inGame&&ORDER[i]===save.chapter;g.font=`11px ${FD}`;g.fillStyle='#ffc94a';g.fillText(k,x+16,yy);g.font=`700 12px ${FB}`;g.fillStyle=cur?'#ffc94a':'#f1ecff';g.fillText(n+(cur?'  ◂ you are here':''),x+36,yy)});
   const y2=y+48+DBG.length*17+8;[['=','Damage enemies (bosses lose 24%)'],['H','Refill health and chakra'],['G','God mode: '+(godMode?'ON':'off')]].forEach(([k,n],i)=>{g.font=`11px ${FD}`;g.fillStyle='#ffc94a';g.fillText(k,x+16,y2+i*17);g.font=`700 12px ${FB}`;g.fillStyle=k==='G'&&godMode?'#9df7c9':'#f1ecff';g.fillText(n,x+36,y2+i*17)})}
+let barSig='';
+function syncBar(){
+  const menu=!scene||scene===TitleScene||scene===CreatorScene,skip=!!(scene&&scene.skip),sig=[menu,skip,sfx.muted].join();
+  if(sig===barSig)return;
+  barSig=sig;$('tbar').classList.toggle('on',!menu);$('skipBtn').hidden=!skip;$('muteBtn').innerHTML=sfx.muted?'&#128263;':'&#128266;';
+}
 function syncPad(){
   if(!TOUCH)return;
   const menu=!scene||scene===TitleScene||scene===CreatorScene,st=scene&&scene.st,p=st&&st.player;
@@ -1808,11 +1820,11 @@ function syncPad(){
   const els=save.elements,sig=[menu,move,fight,!!(scene&&scene.skip),has('cloud'),has('sharingan'),has('rct'),els[0],els[1],sfx.muted].join();
   if(sig!==padSig){padSig=sig;$('pad').classList.toggle('on',!menu);
     if(!move)releaseTouch();
-    $('zone').hidden=!move;$('acts').hidden=!fight;$('skipBtn').hidden=!(scene&&scene.skip);
+    $('zone').hidden=!move;$('acts').hidden=!fight;
     const set=(k,show,txt,col)=>{const b=document.querySelector(`#acts [data-k="${k}"]`);b.hidden=!show;if(txt)b.textContent=txt;if(col)b.style.setProperty('--c',col)};
     set('j',true,has('cloud')?'Cloud Strike':'Strike');set('k',true,JUTSU[els[0]].name,JUTSU[els[0]].col);set('l',true,JUTSU[els[1]].name,JUTSU[els[1]].col);
     set('i',has('cloud'));set('shift',has('sharingan'));set('r',has('rct'));
-    $('muteBtn').innerHTML=sfx.muted?'&#128263;':'&#128266;'}
+    }
   if(fight)for(const k of['k','l','i']){const b=document.querySelector(`#acts [data-k="${k}"]`),v=p.cds[k]>0&&p.cdMax[k]?clamp(p.cds[k]/p.cdMax[k],0,1):0,r=String(Math.ceil(v*20)/20);if(b.dataset.cd!==r){b.dataset.cd=r;b.style.setProperty('--cd',r)}}
   if(fight){document.querySelector('#acts [data-k="shift"]').classList.toggle('on',!!st.slow);document.querySelector('#acts [data-k="r"]').classList.toggle('on',!!p.healing)}}
 function frame(now){
@@ -1824,7 +1836,7 @@ function frame(now){
   shake=Math.max(0,shake-dt*28);flashA=Math.max(0,flashA-dt*2.2);if(ban){ban.t+=dt;if(ban.t>ban.dur)ban=null}
   if(sfx.muted&&!uiOpen()&&!TOUCH){g.font=`700 11px ${FB}`;g.fillStyle='rgba(255,255,255,.55)';g.textAlign='right';g.fillText('Sound off (M)',W-14,H-14);g.textAlign='left'}
   if(DEBUG)drawDebug();
-  syncPad();
+  syncBar();syncPad();
   for(const k in hit)delete hit[k];
   requestAnimationFrame(frame)}
 function boot(data){if(data&&data.save&&ORDER.includes(data.save.chapter)){save=data.save;startChapter(save.chapter)}else go(TitleScene);requestAnimationFrame(frame)}
