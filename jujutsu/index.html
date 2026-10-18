@@ -122,6 +122,20 @@
   .fd i{font-style:normal;color:var(--muted);font-weight:600;margin:0 5px}
   .fd em{font-style:normal;color:var(--gold);font-weight:800;margin-left:7px}
   @keyframes fdin{from{transform:translateX(30px);opacity:0}}
+  /* chat (T): recent lines that fade, and an input while it is open */
+  #chat{position:absolute;left:10px;bottom:36px;width:min(300px,28vw);display:grid;gap:4px;pointer-events:none}
+  #chatLog{display:grid;gap:2px;max-height:150px;overflow:hidden}
+  #chat.open #chatLog{overflow-y:auto;pointer-events:auto}
+  .cl{font-size:13px;font-weight:600;background:rgba(10,10,18,.62);padding:2px 8px;transition:opacity 600ms;overflow-wrap:anywhere}
+  .cl b{color:#9fb6ff}
+  .cl.me b{color:var(--gold)}
+  .cl.old{opacity:0}
+  #chat.open .cl.old{opacity:.85}
+  #chatIn{display:none;pointer-events:auto;width:100%;background:rgba(10,10,18,.92);border:1px solid var(--line);color:#fff;font:600 14px var(--body);padding:7px 9px;outline:none}
+  #chat.open #chatIn{display:block}
+  #chatBtn{left:10px;top:56px;display:none;font-size:18px}
+  body.tui #chatBtn{display:grid}
+  body.tui #chat{bottom:auto;top:104px;width:min(300px,46vw)}
   #banner{position:absolute;left:0;right:0;top:24%;text-align:center;opacity:0;padding:0 10px}
   #banner.on{animation:ban var(--d,1.6s) ease forwards}
   #banT{display:block;font-family:var(--disp);font-weight:400;font-size:clamp(40px,9vw,88px);line-height:1;letter-spacing:.04em;color:#fff;text-shadow:0 0 18px var(--bc,#8b5cff),0 4px 0 #000}
@@ -219,6 +233,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
   <div id="goal"></div>
   <canvas id="mini"></canvas>
   <div id="feed"></div>
+  <div id="chat"><div id="chatLog"></div><input id="chatIn" maxlength="100" autocomplete="off" spellcheck="false" placeholder="Say something… (Enter to send, Esc to close)"></div>
   <div id="banner"><b id="banT"></b><span id="banS"></span></div>
   <div id="me">
     <div id="meName"><span id="meN"></span><span id="meK"></span></div>
@@ -239,6 +254,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
   <div id="results"><h3 id="resT"></h3><p id="resS"></p><table><tbody id="resBody"></tbody></table></div>
   <button id="pauseBtn" class="ico" aria-label="Pause">II</button>
   <button id="muteBtn" class="ico" aria-label="Mute">♪</button>
+  <button id="chatBtn" class="ico" aria-label="Chat">💬</button>
   <div id="netwarn"></div>
 </div>
 
@@ -262,7 +278,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
       <div class="join full"><input id="code" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="PARTY CODE" autocomplete="off"><button class="big b-blue" id="bJoin">JOIN</button></div>
     </div>
     <p class="note" id="menuNote"></p>
-    <p class="keys"><b>WASD</b> move · <b>Mouse</b> aim · <b>LMB</b> melee · <b>RMB</b> block · <b>Shift</b> dash<br><b>Q</b> <b>E</b> <b>C</b> techniques · <b>R</b> reverse cursed technique · <b>F</b> ultimate · <b>Tab</b> scores · <b>M</b> mute</p>
+    <p class="keys"><b>WASD</b> move · <b>Mouse</b> aim · <b>LMB</b> melee · <b>RMB</b> block · <b>Shift</b> dash<br><b>Q</b> <b>E</b> <b>C</b> techniques · <b>R</b> reverse cursed technique · <b>F</b> ultimate · <b>Tab</b> scores · <b>T</b> chat · <b>M</b> mute</p>
     <a class="big b-dark back" href="../">← ALL GAMES</a>
   </div>
 </div>
@@ -3112,6 +3128,8 @@ function drawTags() {
     g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(x - 23, y - 2, 46, 6);
     g.fillStyle = k < 0.3 ? '#ff5a6e' : mine ? '#6be39f' : cu ? '#a07cff' : '#ff9a5a'; g.fillRect(x - 22, y - 1, 44 * k, 4);
     if (!cu && f.guard < 100) { g.fillStyle = '#8fb6ff'; g.fillRect(x - 22, y + 4, 44 * f.guard / 100, 2); }
+    const bb = bubbles.get(f.id);
+    if (bb && bb.until > T) chatBubble(x, y - 24, bb.text, clamp((bb.until - T) / 0.5, 0, 1));
   }
   // playing Nobara: who Resonance would hit, ringed in orange
   const me = S.mode === 'demo' ? null : byId(meId);
@@ -3585,6 +3603,7 @@ function setUlt(v) {
 }
 let shownBoard = false, shownRes = false;
 function hud() {
+  if (chatOpen && screen !== null) closeChat();
   if (!S || S.mode === 'demo') return;
   const me = byId(meId);
   if (!me) return;
@@ -3679,6 +3698,7 @@ function doEvent(a) {
     fillTable($('resBody'), rows);
     if (!demoMode && wid === meId) { save.wins++; persist(); SFX.win(); }
   } else if (a[0] === 'N') { if (!demoMode) feed([[a[1], 1]]); }
+  else if (a[0] === 'T') { if (!demoMode) chatLine(a[1], clean(a[2], CHAT_MAX)); }
   else if (a[0] === 'B') {     // a banner waits for a cut-in to finish
     if (demoMode) return;
     const w = cutLeft();
@@ -3696,12 +3716,73 @@ function doEvent(a) {
 const keys = new Set();
 const mouse = { x: innerWidth / 2, y: innerHeight / 2, l: false, r: false };
 const press = { q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 };
+// Chat: T (or Enter) opens it. A line goes to the host (or stays here when we are the host), which
+// rate-limits each player and sends it to everyone as a 'T' event: it lands in #chat and in a bubble
+// over the sender for a few seconds (bubbles, local only). Online, the server also logs it for the
+// admin page: a joiner's line on its way to the host, the host's own sent to the room ('!').
+const CHAT_MAX = 100, bubbles = new Map(), chatGap = new Map();
+let chatOpen = false;
+function openChat() {
+  if (screen !== null || !S || S.mode === 'demo' || chatOpen) return;
+  chatOpen = true; releaseInput();
+  $('chat').classList.add('open');
+  const i = $('chatIn'); i.value = ''; i.focus();
+  $('chatLog').scrollTop = 1e6;
+}
+function closeChat() {
+  if (!chatOpen) return;
+  chatOpen = false;
+  $('chat').classList.remove('open'); $('chatIn').blur();
+}
+function sendChat(text) {
+  text = clean(text, CHAT_MAX);
+  if (!text || !S) return;
+  if (S.mode === 'join') toHost({ t: 'chat', text });
+  else hostChat(meId, text, true);
+}
+function hostChat(id, text, own) {
+  text = clean(text, CHAT_MAX);
+  if (!text || !byId(id)) return;
+  const now = performance.now();
+  if ((chatGap.get(id) || 0) > now) return;
+  chatGap.set(id, now + 800);
+  event(['T', id, text]);
+  if (own && net && net.kind === 'ws') wsSend('!', { t: 'chat', text });
+}
+function chatLine(id, text) {
+  if (!text) return;
+  const f = byId(id), box = $('chatLog'), d = document.createElement('div'), b = document.createElement('b');
+  d.className = 'cl' + (id === meId ? ' me' : '');
+  b.textContent = (f ? f.name : 'Someone') + ': ';
+  d.append(b, text); box.append(d);
+  while (box.children.length > 40) box.firstChild.remove();
+  setTimeout(() => d.classList.add('old'), 8000);
+  box.scrollTop = 1e6;
+  bubbles.set(id, { text: text.length > 40 ? text.slice(0, 39) + '…' : text, until: T + 5 });
+}
+// a speech bubble over a fighter's name tag
+function chatBubble(x, y, text, a) {
+  g.font = '600 12px Barlow, sans-serif';
+  const w = Math.min(260, g.measureText(text).width + 16), h = 20, x0 = x - w / 2, y0 = y - h;
+  g.save(); g.globalAlpha = a;
+  g.fillStyle = 'rgba(250,248,242,.96)'; g.strokeStyle = 'rgba(10,10,18,.85)'; g.lineWidth = 1.5;
+  g.beginPath(); g.roundRect(x0, y0, w, h, 7); g.moveTo(x - 5, y); g.lineTo(x, y + 6); g.lineTo(x + 5, y); g.fill(); g.stroke();
+  g.fillStyle = '#16141c'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, x, y0 + h / 2 + 1, w - 10);
+  g.restore(); g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+}
 const KEYMAP = { KeyQ: 'q', KeyE: 'e', KeyC: 'c', KeyR: 'r', KeyF: 'u', ShiftLeft: 'd', ShiftRight: 'd', Space: 'd' };
 let tabHeld = false;
 addEventListener('keydown', (e) => {
   const inField = e.target && e.target.closest && e.target.closest('input');
+  if (inField && e.target.id === 'chatIn') {
+    if (e.code === 'Enter' || e.code === 'NumpadEnter') { sendChat(e.target.value); closeChat(); }
+    else if (e.code === 'Escape') { e.preventDefault(); closeChat(); }
+    return;
+  }
   if (inField) { if (e.code === 'Enter' || e.code === 'NumpadEnter') { if (e.target.id === 'code') doJoin(); else e.target.blur(); } return; }
   audioInit();
+  if ((e.code === 'KeyT' || e.code === 'Enter') && !e.repeat && screen === null && S && S.mode !== 'demo') { e.preventDefault(); openChat(); return; }
   if (screen === null && (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow'))) e.preventDefault();
   if (!e.repeat) {
     const k = KEYMAP[e.code];
@@ -4015,6 +4096,8 @@ $('bResume').onclick = () => { SFX.click(); togglePause(); };
 $('bQuit').onclick = () => { SFX.click(); toMenu(); };
 $('pauseBtn').onclick = () => togglePause();
 $('muteBtn').onclick = () => setMute(!save.mute);
+$('chatBtn').onclick = () => openChat();
+$('chatIn').addEventListener('blur', () => closeChat());
 $('name').addEventListener('change', () => { save.name = myName(); persist(); });
 for (const b of $('deadBox').querySelectorAll('[data-ch]')) b.onclick = () => { SFX.click(); pickFighter(b.dataset.ch); };
 function pickFighter(ch) {
@@ -4225,6 +4308,8 @@ function onHostData(link, m) {
     }
     broadcastLobby();
     if (screen === 'lobby') renderLobby();
+  } else if (m.t === 'chat') {
+    if (S && S.mode === 'host') hostChat(h.id, m.text);
   } else if (m.t === 'bye') {
     dropHuman(h, true);
     if (link.conn) { try { link.conn.close(); } catch (e) { /* gone */ } }

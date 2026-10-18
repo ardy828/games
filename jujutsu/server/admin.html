@@ -60,6 +60,11 @@
   .rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
   .room{background:var(--panel2);border:1px solid var(--line);padding:10px 12px}
   .room.empty{opacity:.6}
+  .chatlog{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;max-height:220px;overflow-y:auto;font-size:13px;display:grid;gap:3px}
+  .chatlog h4{font-family:var(--disp);font-weight:400;letter-spacing:.06em;color:var(--muted);font-size:13px}
+  .chatlog div{overflow-wrap:anywhere}
+  .chatlog time{color:var(--muted);font-size:11px;margin-right:6px}
+  .chatlog b{margin-right:5px}
   .room h3{font-family:var(--disp);font-weight:400;font-size:18px;letter-spacing:.06em;display:flex;justify-content:space-between}
   .room h3 span{color:var(--muted)}
   .room .info{font-size:12.5px;color:var(--muted);margin:2px 0 8px}
@@ -341,6 +346,17 @@ function render(s) {
         t.append(tr);
       }
       card.append(t);
+    }
+    if (r.chat && r.chat.length) {      // the room's chat, newest at the bottom
+      const log = el('div', 'chatlog');
+      log.append(el('h4', '', 'CHAT'));
+      for (const c of r.chat) {
+        const line = el('div'), d = new Date(c.at);
+        line.append(el('time', '', String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')), el('b', '', c.name), document.createTextNode(c.text));
+        log.append(line);
+      }
+      card.append(log);
+      log.scrollTop = 1e6;
     }
     box.append(card);
   }

@@ -42,6 +42,8 @@ the public rooms:
 
 - **Who's on**: every room's players, who is hosting, the scoreboard and the round clock, updated every
   few seconds, with a button to kick someone.
+- **Chat**: each room's last chat lines (time, name, text), kept on the server under the name of the
+  player who sent them.
 - **Rules** for every public room: rounds on or off (off is one endless free-for-all), points to win,
   round time limit, break between rounds, respawn time, how many cursed spirits roam each room and
   how good they are, damage, health, speed, cooldown and ultimate-charge multipliers, which fighters

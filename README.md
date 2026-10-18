@@ -218,7 +218,8 @@ cursed energy: every move has its own cooldown.
 - **Controls (keyboard and mouse)** — WASD to move, the mouse to aim (every attack goes where it
   points), left click to punch (hold for a four-hit combo), right click to block, Shift (or Space) to
   dash, `Q` `E` `C` for the three techniques, `R` for reverse cursed technique, `F` for the ultimate,
-  Tab for the scoreboard, Esc to pause, `M` to mute.
+  Tab for the scoreboard, `T` (or Enter) to chat, Esc to pause, `M` to mute. A chat line shows in the
+  chat box and in a bubble over your head; in PLAY ONLINE rooms it is also kept in the admin page's log.
 - **Controls (touch)** — a floating stick on the left; on the right an attack button (hold it; drag it
   to aim, or it aims at the nearest enemy), block, dash, heal, the three techniques and the ultimate.
   Tap a technique to cast it at the nearest enemy, or drag it to aim and release. Landscape is best.

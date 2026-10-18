@@ -16,11 +16,12 @@
 import { DurableObject } from 'cloudflare:workers';
 import ADMIN_HTML from './admin.html';
 
-const VERSION = 7;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
+const VERSION = 8;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
 const ROOMS = ['pub-1', 'pub-2', 'pub-3', 'pub-4'];
 const MAX_PLAYERS = 20;
 const MAX_MSG = 32768;      // bytes; a full room's snapshot is about 8 kB
 const STALL_MS = 3000;      // a host silent this long hands the room on
+const CHAT_LOG = 100;      // chat lines each room keeps for the admin page
 const EVENTS = ['heal', 'ults', 'cds', 'maho', 'end', 'restart'];
 
 // The rules the admin sets for the public rooms. Keep RULES0 and cleanRules() in step with the copies
@@ -128,6 +129,25 @@ export class Room extends DurableObject {
     this.hostAt = Date.now();       // when the host was last heard from (a fresh start gives it a grace period)
     this.rulesNow = undefined;      // the admin's rules, kept in storage
     this.stat = null;               // the host's latest scoreboard, for the admin page
+    this.chat = undefined;          // the room's chat log (last CHAT_LOG lines), kept in storage
+    this.chatAt = new Map();        // when each player last said something, to keep the log from flooding
+  }
+  async chatLog() {
+    if (this.chat === undefined) this.chat = (await this.ctx.storage.get('chat')) || [];
+    return this.chat;
+  }
+  // a chat line, logged under the name on the sender's own socket (so nobody can speak for someone else)
+  async logChat(me, body) {
+    let text = '';
+    try { text = String(JSON.parse(body).text || ''); } catch (e) { return; }
+    text = text.replace(/\s+/g, ' ').trim().slice(0, 100);
+    const now = Date.now();
+    if (!text || now - (this.chatAt.get(me.id) || 0) < 800) return;
+    this.chatAt.set(me.id, now);
+    const log = await this.chatLog();
+    log.push({ at: now, id: me.id, name: me.name, text });
+    if (log.length > CHAT_LOG) log.splice(0, log.length - CHAT_LOG);
+    await this.ctx.storage.put('chat', log);
   }
   // open sockets with who is on them, oldest first
   players(except) {
@@ -170,6 +190,7 @@ export class Room extends DurableObject {
         rules: await this.rules(),
         players: players.map((p) => ({ id: p.me.id, name: p.me.name, host: p.me.id === host, since: p.me.t })),
         stat: this.stat && Date.now() - this.stat.at < 10000 ? this.stat : null,
+        chat: (await this.chatLog()).slice(-30),
       };
     }
     if (what === 'rules') {
@@ -233,13 +254,16 @@ export class Room extends DurableObject {
     const now = Date.now();
     if (me.id === host) this.hostAt = now;
     else if (now - this.hostAt > STALL_MS) host = await this.newHost(host);
+    // chat: a player's line on its way to the host, or the host's own line sent to the room
+    const isChat = msg.startsWith('{"t":"chat"', bar + 1);
+    if (isChat && (to === 'h' || (to === '!' && me.id === host))) await this.logChat(me, msg.slice(bar + 1));
     if (to === 'h') {
       const h = this.players().find((p) => p.me.id === host);
       if (h && h.ws !== ws) send(h.ws, out);
     } else if (me.id !== host) {
       // only the host speaks to everyone, to one player or to the room
     } else if (to === '!') {
-      if (msg.length < 4096) { try { this.stat = { ...JSON.parse(msg.slice(bar + 1)), at: now }; } catch (e) { /* ignored */ } }
+      if (!isChat && msg.length < 4096) { try { this.stat = { ...JSON.parse(msg.slice(bar + 1)), at: now }; } catch (e) { /* ignored */ } }
     } else if (to === '*') {
       for (const p of this.players(ws)) send(p.ws, out);
     } else {

@@ -684,6 +684,11 @@ mouse, touch), screens, multiplayer, main loop.
   they roam between street corners (`ai.roam`). They dodge telegraphs (elephant shadow, Piercing Blood
   line, Soul Strike crouch, a Brute Curse's slam, a hunting Mahoraga), block swings, use each move when
   it would land, and heal under 40%. `wander()` is the shared memory-then-roam fallback.
+- **Chat**: T (or Enter) opens `#chat`; `sendChat()` goes to the host (`toHost({t:'chat'})`), whose
+  `hostChat()` rate-limits each player and sends `event(['T', id, text])`, which `chatLine()` shows in the
+  box and as a bubble over the sender (`bubbles`, local, drawn in `drawTags()`). The server logs chat for
+  the admin page: a player's `{"t":"chat"` line to `'h'`, or the host's own to `'!'`, under the name on
+  the sending socket (`logChat()`, last `CHAT_LOG` lines in storage, in `status` as `chat`).
 - **Effects**: `fx()` is cosmetic and rides in the next snapshot (may be lost); `event()` must land
   (kill feed, banners, match results) and goes out reliably at once. Both run `doFx()`/`doEvent()`
   locally first. Sounds are scaled by distance from the camera (`loud()`); the menu's demo match is
