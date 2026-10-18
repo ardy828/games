@@ -3433,30 +3433,46 @@ function cutNobara(t) {
 // beside his face, a fist with two fingers raised
 function cutGojo(t) {
   g.save(); g.translate(0, -4); g.scale(0.86, 0.86);
-  const torso = (dx, dy) => {      // a slim build, a little wider at the shoulders than the waist
-    g.beginPath(); g.moveTo(-6 + dx, 4 + dy); g.lineTo(-20 + dx, 9 + dy);
-    g.quadraticCurveTo(-26 + dx, 11 + dy, -26 + dx, 20 + dy); g.lineTo(-22 + dx, 40 + dy);
-    g.lineTo(-19 + dx, 90 + dy); g.lineTo(19 + dx, 90 + dy); g.lineTo(22 + dx, 40 + dy);
-    g.lineTo(26 + dx, 20 + dy); g.quadraticCurveTo(26 + dx, 11 + dy, 20 + dx, 9 + dy); g.lineTo(6 + dx, 4 + dy);
+  const torso = (dx, dy) => {      // squared shoulders tapering to a narrow waist
+    g.beginPath(); g.moveTo(-7 + dx, 4 + dy); g.lineTo(-27 + dx, 10 + dy);
+    g.quadraticCurveTo(-34 + dx, 12 + dy, -33 + dx, 22 + dy); g.lineTo(-28 + dx, 34 + dy);
+    g.lineTo(-17 + dx, 56 + dy); g.lineTo(-16 + dx, 90 + dy); g.lineTo(16 + dx, 90 + dy); g.lineTo(17 + dx, 56 + dy); g.lineTo(28 + dx, 34 + dy);
+    g.lineTo(33 + dx, 22 + dy); g.quadraticCurveTo(34 + dx, 12 + dy, 27 + dx, 10 + dy); g.lineTo(7 + dx, 4 + dy);
     g.closePath(); g.fill();
   };
   g.fillStyle = 'rgba(0,0,0,.35)'; torso(2, 3);
-  limb([-25, 20, -28, 42, -27, 62], 8.5, SKIN);      // bare arms
+  limb([-31, 22, -34, 42, -32, 62], 9.5, SKIN);      // bare arms, lean and hard
+  g.fillStyle = SKIN; ell(-34, 37, 5.5, 8);
   g.fillStyle = '#111218'; torso(0, 0);
-  g.strokeStyle = 'rgba(255,255,255,.08)'; g.lineWidth = 1.5;      // the chest under the tee
-  g.beginPath(); g.moveTo(-17, 24); g.quadraticCurveTo(-9, 30, -1.5, 27); g.moveTo(17, 24); g.quadraticCurveTo(9, 30, 1.5, 27); g.stroke();
-  g.fillStyle = '#111218'; ell(-23, 17, 6, 7); ell(23, 17, 6, 7);      // short sleeves
-  limb([24, 20, 31, 6, 28, -6], 8.5, SKIN);
+  g.strokeStyle = 'rgba(255,255,255,.1)'; g.lineWidth = 1.6;      // the chest under the tee
+  g.beginPath(); g.moveTo(-22, 24); g.quadraticCurveTo(-11, 32, -1.5, 28); g.moveTo(22, 24); g.quadraticCurveTo(11, 32, 1.5, 28); g.stroke();
+  g.fillStyle = '#111218'; ell(-29, 18, 7.5, 8); ell(29, 18, 7.5, 8);      // short sleeves
+  limb([30, 22, 27, 40, 14, 5], 9.5, SKIN);      // the right arm folded up across his chest
+  g.fillStyle = SKIN; ell(29.5, 30, 5.5, 7.5);
   g.fillStyle = SKIN; g.fillRect(-6, -4, 12, 10);
   g.fillStyle = SKIN; circ(0, -16, 15);
-  hair(0, -22, 12, 30, Math.PI * 0.95, Math.PI * 2.05, 13, 0, '#e9eef6');
-  hair(0, -22, 8, 21, Math.PI * 1.05, Math.PI * 1.95, 9, 0.1, '#ffffff');
+  // white hair: a full mass swept up into thick spikes, with bangs falling over his forehead
+  hair(0, -19, 15, 33, Math.PI * 0.9, Math.PI * 2.1, 9, 0, '#cfd8e6');
+  hair(0, -20, 14, 29, Math.PI * 0.98, Math.PI * 2.02, 8, -0.06, '#eef2f8');
+  hair(0, -21, 11, 23, Math.PI * 1.12, Math.PI * 1.88, 6, 0.08, '#ffffff');
+  g.fillStyle = '#eef2f8'; ell(0, -23, 16, 10);
+  g.fillStyle = '#ffffff';
+  for (let i = 0; i < 5; i++) {
+    const x = -12 + i * 6, tip = -11 - 4 * hash1(i * 3.1 + 2);
+    g.beginPath(); g.moveTo(x - 4.5, -25); g.lineTo(x + 4.5, -25); g.lineTo(x + (i - 2) * 1.6, tip); g.closePath(); g.fill();
+  }
+  g.fillStyle = '#e4eaf3';
+  for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 11, -26); g.lineTo(sx * 17, -22); g.lineTo(sx * 16, -6); g.closePath(); g.fill(); }
   const gl = 0.35 + 0.15 * Math.sin(t * 12);
-  g.fillStyle = `rgba(170,150,255,${gl})`; circ(28, -14, 15);
-  limb([30.5, -12, 31, -24], 4.8, '#e9bf98');
-  limb([26, -12, 25.6, -25], 4.8, SKIN);
-  g.fillStyle = SKIN; ell(28.5, -7, 7, 6.5);
-  g.fillStyle = '#e9bf98'; ell(24, -4, 3.5, 2.5);
+  const sign = (dx, dy, c1, c2, c3) => {      // the sign, held up in front of his face: two fingers up, the middle crossed over the index
+    g.fillStyle = c1; ell(11.5 + dx, -1 + dy, 7, 6.5);
+    limb([9 + dx, -6 + dy, 14.5 + dx, -21 + dy], 4.6, c2);
+    limb([14 + dx, -6 + dy, 8 + dx, -22 + dy], 4.6, c1);
+    g.fillStyle = c3; ell(6.5 + dx, 2 + dy, 3.5, 2.5);
+  };
+  sign(-2, 2, 'rgba(90,50,30,.35)', 'rgba(90,50,30,.35)', 'rgba(90,50,30,.35)');      // its shadow on him
+  g.fillStyle = `rgba(170,150,255,${gl})`; circ(11, -19, 8);
+  sign(0, 0, '#f8dcc2', '#dcab82', '#e6b894');      // lit a little brighter than his face
   g.restore();
 }
 const CUTS = {
