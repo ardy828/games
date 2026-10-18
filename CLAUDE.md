@@ -709,14 +709,19 @@ mouse, touch), screens, multiplayer, main loop.
   (the Malevolent Shrine sign, his face marks).
 - **Domain clash** (`CLASH`, `S.cl`, synced): `tryClash()` runs after either domain starts and pairs it
   with the other's if that one began (`at`) within `CLASH.near` s and Gojo is within `MS.r` of Sukuna.
-  `startClash()` sets `cl` on both (the void held mid-rush, the shrine risen but not cutting; `voidOf`,
-  `inDomain`, `domWall`, `barrier` and `drawShrines()`'s cuts ignore them) and sends `'X'`, whose
-  `doEvent()` plays the duo cut-in for `CLASH.intro` s. `updClash()` freezes both and makes them
-  untouchable (`hurt()`), counts each one's `inp.u` presses for `CLASH.T` s (bots press at
-  `CLASH.rate[diff]`), and under the white (`clashWhite()`, drawn in `render()` for anyone near) applies
-  the result: Gojo's void closes with `d.ext` extra seconds, or the shrine runs for `s.dur`. Nothing shows
-  the count; `drawClash()`'s meeting point drifts at random. A clashing shrine is drawn after
-  `drawDomains()` (`drawShrines(true)`), so the beams and shrine sit over Gojo's ink.
+  `startClash()` sets `cl` on both (the shrine risen but not cutting; `voidOf`, `inDomain`, `hidden`,
+  `domWall`, `barrier` and `drawShrines()`'s cuts ignore them), picks Gojo's spot at the shrine's foot
+  (`c.gx/gy`, `CLASH.stand` below it or the nearest open spot round it) and sends `'X'`, whose
+  `doEvent()` plays the duo cut-in for `CLASH.intro` s. `updClash()` freezes both, makes them
+  untouchable (`hurt()`), slides Gojo (and his domain's `x, y`) to his spot facing the maw, counts each
+  one's `inp.u` presses for `CLASH.T` s (bots press at `CLASH.rate[diff]`), and under the white
+  (`clashWhite()`, drawn in `render()` for anyone near) applies the result: `closeDomain()` closes the
+  void mid-rush with `d.ext` extra seconds, or `d.fail` (synced) shrinks the rush away in
+  `CLASH.fail` s and the shrine runs for `s.dur`. While clashing, `updDomain()` lets the rush play to
+  `CLASH.age` s and holds it there, and `drawRush()` keeps its streaks moving on `T`. Nothing shows
+  the count; `drawClash()`'s meeting point drifts at random. Shrines are drawn after `drawDomains()`
+  while any domain clashes (`drawShrines(true)`), and `drawClash()` redraws Gojo, so both sit over his
+  ink; `updCam()` frames a participant's camera on the clash.
 - **Nue** is a ride, not an action: `f.nue` (synced) counts down from `NUE.dur`, `nueSp()` scales walking
   (the joiner's `predStep()` too) from `NUE.sp0` to `NUE.sp1`, `rideNue()` shocks anyone touched (once per
   `NUE.every` s each, `f.nh` host only), and the Q cooldown waits for the ride to end.
