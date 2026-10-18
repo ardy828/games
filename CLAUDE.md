@@ -507,6 +507,11 @@ animation, and nothing may read `grid` expecting a clearing cell to still be the
 falls back to picking a shape that provably fits. Removing that check makes the game deal unplayable
 hands. `fitsAnywhere()` also greys out a tray piece that has nowhere left to go.
 
+### Combos last five moves
+
+`combo` counts clears in a row, but a placement that clears nothing only breaks it on the
+`COMBO_KEEP`th (5) such move in a row (`comboMiss`); the dots beside the combo badge show what is left.
+
 ### Audio
 
 Same approach as Scrapline: fully synthesised Web Audio, `audioInit()` on the first pointer down.

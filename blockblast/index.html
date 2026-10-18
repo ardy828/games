@@ -213,6 +213,8 @@ var grid = new Int8Array(GRID*GRID);   /* -1 empty, else colour index */
 var popT = new Float32Array(GRID*GRID);/* per-cell settle animation */
 var tray = [null,null,null];
 var score = 0, best = 0, shown = 0, combo = 0;
+/* a combo survives COMBO_KEEP placements that clear nothing; comboMiss counts them */
+var COMBO_KEEP = 5, comboMiss = 0;
 var over = false, newBest = false;
 var drag = null, ret = null;
 var clears = [], bursts = [], sweeps = [], floats = [];
@@ -427,7 +429,7 @@ function place(slot, gx, gy){
   var total = ln.rows.length + ln.cols.length;
 
   if(total > 0){
-    combo++;
+    combo++; comboMiss = 0;
     var cells = {}, list = [];
     for(k=0;k<ln.rows.length;k++) for(x=0;x<GRID;x++) cells[idx(x,ln.rows[k])] = 1;
     for(k=0;k<ln.cols.length;k++) for(y=0;y<GRID;y++) cells[idx(ln.cols[k],y)] = 1;
@@ -464,7 +466,7 @@ function place(slot, gx, gy){
     shakeT = 0.3;
     sndClear(total, combo);
   } else {
-    combo = 0;
+    if(combo > 0 && ++comboMiss >= COMBO_KEEP){ combo = 0; comboMiss = 0; }
     sndDrop();
   }
 
@@ -492,7 +494,7 @@ function endGame(){
 function reset(){
   var i;
   for(i=0;i<grid.length;i++){ grid[i] = -1; popT[i] = 0; }
-  score = 0; shown = 0; combo = 0; over = false; newBest = false;
+  score = 0; shown = 0; combo = 0; comboMiss = 0; over = false; newBest = false;
   drag = null; ret = null;
   clears.length = 0; bursts.length = 0; sweeps.length = 0; floats.length = 0;
   shake = 0; shakeT = 0;
@@ -723,6 +725,11 @@ function draw(){
     rrect(bx-cw/2, cyp-ch/2, cw, ch, ch/2); g.fill();
     text("COMBO  x" + combo, bx, cyp + u*0.01, u*0.38, 700, "#fff", "center", 1);
     g.restore();
+    /* beside the badge, one dot per placement the combo has left before it breaks */
+    for(var di=0; di<COMBO_KEEP; di++){
+      g.fillStyle = di < COMBO_KEEP - comboMiss ? "rgba(255,255,255,.9)" : "rgba(255,255,255,.2)";
+      g.beginPath(); g.arc(bx + cw/2 + u*0.26 + di * u*0.22, cyp, u*0.065, 0, Math.PI*2); g.fill();
+    }
   }
 
   /* ---- board (everything below shakes together) */
