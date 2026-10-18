@@ -448,6 +448,13 @@ interaction, UI, multiplayer, main loop.
   source (nothing saves, no mobs) that entering a real world clears. `body.in-menu` styles all of it.
 - **Combat feel**: a hit while falling is a critical hit (×1.5, `critStars()` and `SFX.crit`); a sword
   hit draws a `slash()` sweep. Held tools swing about the grip on Minecraft's curves (`swingHand()`).
+- **Touch** (`TOUCH`, `body.touch`): phones have no pointer lock, so there `requestLock()`/`releaseLock()`
+  call `lockChanged()` directly and "locked" is just the playing state (`body.playing` shows `#tpad`). A
+  floating stick (`tStick`, read in `updatePlayer()`, full forward sprints), a look area (`tLook`: drag
+  turns, a tap is `pressRight()`, a still press of 0.35 s is `pressLeft()` held), and buttons made by
+  `tButton()` that set the same `keys`/`mouse` state the keyboard and mouse do. Every control follows a
+  touch `identifier`; hotbar slots take taps; `#invClose`/`#pkClose` close the panels. A phone's first
+  run starts at render distance 4.
 - **Screens**: `screen` is `menu`, `pause`, `play` or `dead`. A solo world only simulates in `play`
   (it pauses under the pause card and death screen); a shared world keeps running.
 - Flatcraft uses modern syntax (`const`, arrows, template literals); the ES5 rule below applies to

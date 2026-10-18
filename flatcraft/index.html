@@ -413,6 +413,47 @@
   .furn .prog i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
   .furn .fout { grid-column: 3; grid-row: 1 / 4; }
   .inv-title { font-family: var(--display); font-size: 12px; letter-spacing: 0.1em; color: var(--accent); }
+  /* touch: a stick, a look area and buttons, only while playing on a touch screen */
+  #tpad { position: fixed; inset: 0; z-index: 5; display: none; }
+  body.touch.playing #tpad { display: block; }
+  body.touch.dead #tpad { display: none; }
+  #tLook { position: absolute; inset: 0; touch-action: none; }
+  #tStickZone { position: absolute; left: 0; bottom: 0; width: 38%; height: 72%; touch-action: none; }
+  #tStickBase {
+    position: absolute; left: max(84px, calc(env(safe-area-inset-left) + 74px)); top: calc(100% - 110px);
+    width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.18); opacity: 0.55; pointer-events: none;
+  }
+  #tStickBase.on { opacity: 1; }
+  #tStickBase i { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: rgba(255,255,255,0.45); }
+  .tb {
+    position: absolute; width: 54px; height: 54px; border-radius: 50%; padding: 0;
+    border: 2px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.38); color: #fff;
+    font-family: var(--display); font-size: 10px; letter-spacing: 0.04em; touch-action: none;
+  }
+  .tb.on { background: rgba(232,198,122,0.45); border-color: var(--accent); }
+  .tb.big { width: 74px; height: 74px; font-size: 12px; }
+  #tJump  { right: max(18px, env(safe-area-inset-right)); bottom: 70px; }
+  #tSneak { right: calc(max(18px, env(safe-area-inset-right)) + 86px); bottom: 26px; }
+  #tBreak { right: calc(max(18px, env(safe-area-inset-right)) + 10px); bottom: 162px; }
+  #tPlace { right: calc(max(18px, env(safe-area-inset-right)) + 86px); bottom: 110px; }
+  #tPause, #tInv, #tDrop, #tCam, #tChat { top: 10px; width: 44px; height: 44px; border-radius: 10px; font-size: 9px; }
+  #tPause { right: max(10px, env(safe-area-inset-right)); font-size: 14px; }
+  #tInv  { right: calc(max(10px, env(safe-area-inset-right)) + 52px); }
+  #tDrop { right: calc(max(10px, env(safe-area-inset-right)) + 104px); }
+  #tCam  { right: calc(max(10px, env(safe-area-inset-right)) + 156px); }
+  #tChat { right: calc(max(10px, env(safe-area-inset-right)) + 208px); font-size: 16px; display: none; }
+  body.netted #tChat { display: block; }
+  body.touch #hotbar { pointer-events: auto; bottom: max(6px, env(safe-area-inset-bottom)); }
+  body.touch .slot { width: 38px; height: 38px; }
+  body.touch #crosshair { opacity: 0.8; }
+  .tclose { display: none; margin-left: 10px; width: 36px; height: 30px; padding: 0; font-size: 18px; line-height: 1;
+    background: rgba(0,0,0,0.35); color: var(--ink); border: 2px solid var(--panel-edge); cursor: pointer; }
+  body.touch .tclose { display: inline-block; }
+  @media (orientation: portrait) {     /* the hotbar spans the width: lift the controls above it */
+    #tJump, #tSneak, #tBreak, #tPlace { transform: translateY(-64px); }
+    #tStickBase { top: calc(100% - 172px); }
+  }
   .inv-head { display: flex; justify-content: space-between; align-items: center; min-height: 26px; }
   .book-btn {
     font-family: var(--display); font-size: 10px; letter-spacing: 0.1em; color: var(--accent);
@@ -583,13 +624,13 @@ img,svg,canvas,a{-webkit-user-drag:none}
 </div>
 
 <div id="picker" class="gpanel" hidden>
-  <div class="pk-head"><span>BLOCKS &amp; ITEMS</span><small id="pkHint">click one to put it in slot 1 · E closes</small></div>
+  <div class="pk-head"><span>BLOCKS &amp; ITEMS</span><small id="pkHint">click one to put it in slot 1 · E closes</small><button type="button" class="tclose" id="pkClose" aria-label="Close">✕</button></div>
   <div class="pk-grid" id="pkGrid"></div>
   <div id="pkName"></div>
 </div>
 
 <div id="inv" class="gpanel" hidden>
-  <div class="inv-head"><div class="inv-title" id="invTitle">CRAFTING</div><button type="button" class="book-btn" id="bookBtn">RECIPES</button></div>
+  <div class="inv-head"><div class="inv-title" id="invTitle">CRAFTING</div><button type="button" class="book-btn" id="bookBtn">RECIPES</button><button type="button" class="tclose" id="invClose" aria-label="Close">✕</button></div>
   <div class="book" id="book" hidden></div>
   <div class="inv-top">
     <div class="armor-col" id="armorSlots"></div>
@@ -622,6 +663,20 @@ img,svg,canvas,a{-webkit-user-drag:none}
   <div class="icons right" id="food"></div>
 </div>
 <div id="hotbar" class="hud"></div>
+<div id="tpad">
+  <div id="tLook"></div>
+  <div id="tStickZone"></div>
+  <div id="tStickBase"><i id="tKnob"></i></div>
+  <button type="button" class="tb" id="tPause" aria-label="Pause">II</button>
+  <button type="button" class="tb" id="tCam" aria-label="Camera">CAM</button>
+  <button type="button" class="tb" id="tChat" aria-label="Chat">💬</button>
+  <button type="button" class="tb" id="tInv" aria-label="Inventory">BAG</button>
+  <button type="button" class="tb" id="tDrop" aria-label="Drop item">DROP</button>
+  <button type="button" class="tb big" id="tJump" aria-label="Jump">JUMP</button>
+  <button type="button" class="tb" id="tSneak" aria-label="Sneak">SNEAK</button>
+  <button type="button" class="tb" id="tBreak" aria-label="Break">BREAK</button>
+  <button type="button" class="tb" id="tPlace" aria-label="Place">PLACE</button>
+</div>
 <div id="chat" class="hud" aria-live="polite"></div>
 <input type="text" id="chatInput" maxlength="120" autocomplete="off" placeholder="Say something · Enter sends · Esc cancels" aria-label="Chat message" hidden>
 
@@ -2409,8 +2464,13 @@ img,svg,canvas,a{-webkit-user-drag:none}
 
   function updatePlayer(dt) {
     const creative = !survival();
-    const fwd = (keys['KeyW'] ? 1 : 0) - (keys['KeyS'] ? 1 : 0);
-    const side = (keys['KeyD'] ? 1 : 0) - (keys['KeyA'] ? 1 : 0);
+    let fwd = (keys['KeyW'] ? 1 : 0) - (keys['KeyS'] ? 1 : 0);
+    let side = (keys['KeyD'] ? 1 : 0) - (keys['KeyA'] ? 1 : 0), amt = 1;
+    if (tStick.id !== -1) {
+      const v = stickVec();
+      fwd = -v[1]; side = v[0]; amt = Math.min(1, Math.hypot(v[0], v[1]));
+      if (fwd > 0.92) sprintTap = true;       // the stick pushed all the way forward sprints
+    }
     P.inWater = inWaterAt(P, 0.3);
     P.eyeInWater = inWaterAt(P, P.eye);
     P.sneak = !P.flying && !!(keys['ShiftLeft'] || keys['ShiftRight']);
@@ -2424,8 +2484,8 @@ img,svg,canvas,a{-webkit-user-drag:none}
     if (fwd || side) {
       const len = Math.hypot(fwd, side);
       const sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
-      dx = (-sy * fwd + cy * side) / len * speed;   // forward is −Z at yaw 0
-      dz = (-cy * fwd - sy * side) / len * speed;
+      dx = (-sy * fwd + cy * side) / len * speed * amt;   // forward is −Z at yaw 0
+      dz = (-cy * fwd - sy * side) / len * speed * amt;
     }
     const kd = Math.exp(-dt * 7);
     P.kx *= kd; P.kz *= kd;
@@ -2584,7 +2644,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     document.body.classList.add('dead');
     menuEl.hidden = true; pauseEl.hidden = true; $('death').hidden = false; overlay.hidden = false;
     screen = 'dead';
-    if (document.exitPointerLock) document.exitPointerLock();
+    releaseLock();
     saveWorld();
   }
   function respawn() {
@@ -3554,11 +3614,23 @@ img,svg,canvas,a{-webkit-user-drag:none}
   const menuEl = $('menu');
   const pauseEl = $('pause');
   let locked = false, pickerOpen = false;
-  function requestLock() { if (canvas.requestPointerLock && !(net && net.down)) canvas.requestPointerLock(); }   // not while reconnecting
+  // Touch screens have no pointer lock: there "locked" is just the playing state, entered and left by
+  // the same calls (see the Touch section), and lockChanged() runs at once instead of from the event.
+  let TOUCH = matchMedia('(hover: none) and (pointer: coarse)').matches;
+  function requestLock() {
+    if (net && net.down) return;   // not while reconnecting
+    if (TOUCH) { if (!locked) lockChanged(true); return; }
+    if (canvas.requestPointerLock) canvas.requestPointerLock();
+  }
+  function releaseLock() {
+    if (TOUCH) { if (locked) lockChanged(false); return; }
+    if (document.exitPointerLock) document.exitPointerLock();
+  }
 
   // ───────────────────────── Options ─────────────────────────
   const OPT_DEFAULTS = { renderDist: 7, sensitivity: 1, fov: 75, showHud: false, volume: 0.7, bob: true };
   const opts = Object.assign({}, OPT_DEFAULTS, readJSON(OPTS_KEY, {}));
+  if (TOUCH && !readJSON(OPTS_KEY, null)) opts.renderDist = 4;     // a phone's first run starts nearer, for the frame rate
   function applyOptions() {
     opts.renderDist = Math.max(3, Math.min(10, Math.round(opts.renderDist) || 7));
     opts.sensitivity = Math.max(0.3, Math.min(3, +opts.sensitivity || 1));
@@ -3742,7 +3814,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     closeNet();
     clearWorldState();
     document.body.classList.remove('dead');
-    if (document.exitPointerLock) document.exitPointerLock();
+    releaseLock();
   }
   window.addEventListener('beforeunload', (e) => {
     if (!source) return;
@@ -3752,16 +3824,20 @@ img,svg,canvas,a{-webkit-user-drag:none}
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden && source) saveWorld(); });
 
-  document.addEventListener('pointerlockchange', () => {
-    locked = document.pointerLockElement === canvas;
+  function lockChanged(on) {
+    locked = on;
+    document.body.classList.toggle('playing', on);
+    document.body.classList.toggle('netted', !!net);
     if (locked) { screen = 'play'; overlay.hidden = true; }
     else {
       for (const k in keys) keys[k] = false;
       mouse.left = mouse.right = false;
       jumpArmed = false;
+      releaseTouch();
       if (source && !pickerOpen && !chatOpen && !invOpen && !P.dead) showPause();
     }
-  });
+  }
+  document.addEventListener('pointerlockchange', () => { if (!TOUCH) lockChanged(document.pointerLockElement === canvas); });
   document.addEventListener('pointerlockerror', () => {
     pickerOpen = false; picker.hidden = true;
     if (source && !P.dead && !invOpen) showPause();
@@ -3776,19 +3852,23 @@ img,svg,canvas,a{-webkit-user-drag:none}
     const lim = Math.PI / 2 - 0.01;
     P.pitch = Math.max(-lim, Math.min(lim, P.pitch));
   });
+  function pressLeft() {
+    mouse.left = true;
+    if (attack()) { dig.cool = 0.3; dig.rep = 0.25; }
+    else if (!survival()) { dig.rep = 0.25; const h = raycast(); if (h) breakAt(h.x, h.y, h.z); }
+  }
+  function pressRight(away) {
+    mouse.right = true;
+    placeRep = 0.25;
+    const r = useItem(away);
+    if (r === 'eat') eating = 0;
+    else if (r === 'ui') mouse.right = false;      // no block placed on the held repeat either
+  }
   canvas.addEventListener('mousedown', (e) => {
-    if (!locked || P.dead) return;
-    if (e.button === 0) {
-      mouse.left = true;
-      if (attack()) { dig.cool = 0.3; dig.rep = 0.25; }
-      else if (!survival()) { dig.rep = 0.25; const h = raycast(); if (h) breakAt(h.x, h.y, h.z); }
-    } else if (e.button === 2) {
-      mouse.right = true;
-      placeRep = 0.25;
-      const r = useItem(e.shiftKey);
-      if (r === 'eat') eating = 0;
-      else if (r === 'ui') mouse.right = false;      // no block placed on the held repeat either
-    } else if (e.button === 1 && !survival()) {
+    if (!locked || P.dead || TOUCH) return;
+    if (e.button === 0) pressLeft();
+    else if (e.button === 2) pressRight(e.shiftKey);
+    else if (e.button === 1 && !survival()) {
       e.preventDefault();
       const h = raycast();
       if (h) { inv[selected] = { id: baseOf(h.id), n: 64, d: 0 }; renderHotbar(); selectSlot(selected); }
@@ -3869,6 +3949,131 @@ img,svg,canvas,a{-webkit-user-drag:none}
     selectSlot((selected + (e.deltaY > 0 ? 1 : -1) + 9) % 9);
   }, { passive: true });
 
+  // ───────────────────────── Touch ─────────────────────────
+  // #tpad shows while playing on a touch screen (body.touch.playing). A floating stick on the left
+  // walks (pushed all the way forward it sprints); dragging anywhere else looks around; a quick tap
+  // there uses or places, and a press held still breaks (like Minecraft on phones). The buttons do
+  // the same as keys and clicks: jump (held, double tap to fly in creative), sneak (held; descends
+  // while flying), break (held), place, inventory, drop, camera, chat and pause. The hotbar slots
+  // take taps. Every control follows one touch identifier, read from touch events, since iOS cancels
+  // pointer events once a second finger lands.
+  const tStick = { id: -1, bx: 0, by: 0, x: 0, y: 0 }, look = { id: -1, x: 0, y: 0, sx: 0, sy: 0, t: 0, moved: false, held: false };
+  const STICK_R = 56;
+  function stickVec() {
+    let dx = (tStick.x - tStick.bx) / STICK_R, dy = (tStick.y - tStick.by) / STICK_R;
+    const l = Math.hypot(dx, dy);
+    if (l < 0.15) return [0, 0];
+    if (l > 1) { dx /= l; dy /= l; }
+    return [dx, dy];
+  }
+  function setTouch(on) {
+    TOUCH = on;
+    document.body.classList.toggle('touch', on);
+  }
+  const touchOf = (e, id) => { for (const t of e.changedTouches) if (t.identifier === id) return t; return null; };
+  const NP = { passive: false };
+  function releaseTouch() {
+    tStick.id = -1; look.id = -1; clearTimeout(look.t);
+    stickHome();
+    for (const b of document.querySelectorAll('#tpad .tb')) b.classList.remove('on');
+    if (TOUCH) { keys['Space'] = keys['ShiftLeft'] = false; mouse.left = mouse.right = false; }
+  }
+  const tZone = $('tStickZone');
+  tZone.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (tStick.id !== -1) return;
+    const t = e.changedTouches[0];
+    tStick.id = t.identifier; tStick.bx = tStick.x = t.clientX; tStick.by = tStick.y = t.clientY;
+    const b = $('tStickBase'); b.style.left = tStick.bx + 'px'; b.style.top = tStick.by + 'px'; b.classList.add('on');
+    $('tKnob').style.transform = '';
+  }, NP);
+  tZone.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const t = touchOf(e, tStick.id);
+    if (!t) return;
+    tStick.x = t.clientX; tStick.y = t.clientY;
+    const dx = tStick.x - tStick.bx, dy = tStick.y - tStick.by, l = Math.hypot(dx, dy), m = Math.min(l, STICK_R);
+    $('tKnob').style.transform = l ? `translate(${dx / l * m}px,${dy / l * m}px)` : '';
+  }, NP);
+  const stickEnd = (e) => {
+    if (!touchOf(e, tStick.id)) return;
+    tStick.id = -1; stickHome();
+  };
+  function stickHome() { const b = $('tStickBase'); b.classList.remove('on'); b.style.left = b.style.top = ''; $('tKnob').style.transform = ''; }
+  tZone.addEventListener('touchend', stickEnd);
+  tZone.addEventListener('touchcancel', stickEnd);
+  // looking: drag turns the view; a tap uses; a press held still for 0.35 s breaks until let go
+  const tLook = $('tLook');
+  tLook.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (look.id !== -1 || !locked || P.dead) return;
+    const t = e.changedTouches[0];
+    Object.assign(look, { id: t.identifier, x: t.clientX, y: t.clientY, sx: t.clientX, sy: t.clientY, moved: false, held: false, at: performance.now() });
+    clearTimeout(look.t);
+    look.t = setTimeout(() => { if (look.id !== -1 && !look.moved && locked) { look.held = true; pressLeft(); } }, 350);
+  }, NP);
+  tLook.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const t = touchOf(e, look.id);
+    if (!t) return;
+    const dx = t.clientX - look.x, dy = t.clientY - look.y;
+    look.x = t.clientX; look.y = t.clientY;
+    if (Math.hypot(t.clientX - look.sx, t.clientY - look.sy) > 10) look.moved = true;
+    const s = 0.0055 * opts.sensitivity, lim = Math.PI / 2 - 0.01;
+    P.yaw -= dx * s;
+    P.pitch = Math.max(-lim, Math.min(lim, P.pitch - dy * s));
+  }, NP);
+  const lookEnd = (e) => {
+    if (!touchOf(e, look.id)) return;
+    clearTimeout(look.t);
+    if (look.held) mouse.left = false;
+    else if (!look.moved && e.type === 'touchend' && locked && !P.dead && performance.now() - look.at < 350) { pressRight(false); mouse.right = false; }
+    look.id = -1;
+  };
+  tLook.addEventListener('touchend', lookEnd);
+  tLook.addEventListener('touchcancel', lookEnd);
+  // buttons: down and up
+  function tButton(id, down, up) {
+    const b = $(id);
+    let tid = -1;
+    b.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (tid !== -1) return;
+      tid = e.changedTouches[0].identifier; b.classList.add('on');
+      audioInit();
+      down();
+    }, NP);
+    const end = (e) => { if (!touchOf(e, tid)) return; e.preventDefault(); tid = -1; b.classList.remove('on'); if (up) up(); };
+    b.addEventListener('touchend', end, NP);
+    b.addEventListener('touchcancel', end);
+  }
+  tButton('tJump', () => {
+    keys['Space'] = true; jumpArmed = true;
+    const now = performance.now();
+    if (now - lastSpaceTap < 300 && !survival()) { P.flying = !P.flying; P.vy = 0; lastSpaceTap = 0; }
+    else lastSpaceTap = now;
+  }, () => { keys['Space'] = false; setTimeout(() => { if (!keys['Space']) jumpArmed = false; }, 150); });   // a quick tap still jumps on the next frame
+  tButton('tSneak', () => { keys['ShiftLeft'] = true; }, () => { keys['ShiftLeft'] = false; });
+  tButton('tBreak', () => { if (locked && !P.dead) pressLeft(); }, () => { mouse.left = false; });
+  tButton('tPlace', () => { if (locked && !P.dead) pressRight(false); }, () => { mouse.right = false; });
+  tButton('tInv', () => { if (!locked) return; if (survival()) openInv('inv'); else openPicker(); });
+  tButton('tDrop', () => {
+    const s = held();
+    if (!locked || !s) return;
+    toss(s.id, 1, s.d);
+    if (survival()) { s.n -= 1; if (s.n <= 0) inv[selected] = null; renderHotbar(); }
+    swingHand();
+  });
+  tButton('tCam', () => { camMode = (camMode + 1) % 3; });
+  tButton('tChat', () => { if (net) openChat(); });
+  tButton('tPause', () => releaseLock());
+  // the inventory and picker get a close button (the hotbar's taps are set up with its slots)
+  $('invClose').addEventListener('click', () => closeInv());
+  $('pkClose').addEventListener('click', () => closePicker());
+  addEventListener('touchstart', () => { if (!TOUCH) setTouch(true); }, { passive: true, capture: true });
+  addEventListener('blur', releaseTouch);
+  setTouch(TOUCH);
+
   // ───────────────────────── HUD ─────────────────────────
   const hotbarEl = $('hotbar');
   const blockName = $('blockName');
@@ -3895,6 +4100,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     hotbarEl.appendChild(d);
     return d;
   });
+  slots.forEach((el, i) => el.addEventListener('touchstart', (e) => { if (!locked) return; e.preventDefault(); selectSlot(i); }, { passive: false }));
   function renderHotbar() { slots.forEach((el, i) => drawSlot(el, inv[i])); }
   let nameTimer = 0;
   function selectSlot(i) {
@@ -3904,7 +4110,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     const s = inv[i];
     blockName.textContent = s ? nameOf(s.id) : '';
     blockName.style.opacity = 1;
-    pkHint.textContent = `click one to put it in slot ${i + 1} · E closes`;
+    pkHint.textContent = TOUCH ? `tap one to put it in slot ${i + 1}` : `click one to put it in slot ${i + 1} · E closes`;
     clearTimeout(nameTimer);
     nameTimer = setTimeout(() => { blockName.style.opacity = 0; }, 1500);
   }
@@ -4027,7 +4233,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     renderPicker();
     picker.hidden = false;
     pkName.textContent = '';
-    if (document.exitPointerLock) document.exitPointerLock();
+    releaseLock();
   }
   function closePicker() {
     pickerOpen = false;
@@ -4254,7 +4460,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     updateCraft();
     invEl.hidden = false;
     renderInv();
-    if (document.exitPointerLock) document.exitPointerLock();
+    releaseLock();
   }
   function closeInv(silent) {
     if (!invOpen) return;
@@ -4334,7 +4540,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     chatEl.classList.add('open');
     chatInput.hidden = false; chatInput.value = '';
     chatInput.focus();
-    if (document.exitPointerLock) document.exitPointerLock();
+    releaseLock();
   }
   function closeChat() {
     chatOpen = false;
@@ -4734,7 +4940,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     if (!net || net.host || net.down) return;
     net.down = performance.now(); net.conn = null; net.fast = null; net.fastOk = false;
     addChat('Connection lost. Reconnecting…');
-    if (document.exitPointerLock) document.exitPointerLock();
+    releaseLock();
     redial();
     roomUi();
   }

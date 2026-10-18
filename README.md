@@ -96,6 +96,10 @@ always makes the same world.
   facing, biome, time, light, the block you look at, and compass arrows to spawn and your bed).
   With the inventory open, clicking outside it throws the held stack out (right click throws one).
   Esc pauses.
+- **Touch** — on a phone or tablet, the left thumb walks with a floating stick (push it all the way
+  forward to sprint) and dragging anywhere else looks around. Tap to place or use, press and hold to
+  break. Buttons: JUMP (double-tap to fly in creative), SNEAK, BREAK, PLACE, and along the top BAG
+  (inventory or picker), DROP, CAM, chat in a shared world, and pause. Tap a hotbar slot to pick it.
 - **Crafting** — a 2×2 grid in the inventory, 3×3 at a crafting table: planks, sticks, crafting
   table, furnace, torches, wood/stone/iron/gold/diamond pickaxes, axes, shovels and swords,
   iron/gold/diamond armour, chests (8 planks in a ring, 27 slots; two side by side facing the same way make a 54-slot
