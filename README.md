@@ -267,7 +267,7 @@ cursed energy: every move has its own cooldown.
   sphere hanging over the street, and nobody, cursed spirits included, can get in until it ends. No attack crosses its edge either
   way: nothing from outside hurts the people inside, and nothing inside hurts anyone outside.
 - **Sukuna**, the King of Curses. His *Dismantle* sends far bigger, harder slashes than Yuji's: one where
-  you aim and one at every enemy in reach and in sight, each cutting through everyone in its path. *Cleave* (long cooldown) is one huge slash on the enemy closest to your pointer, from a long way off,
+  you aim and one at every enemy in reach, each flying through buildings and cutting through everyone in its path. *Cleave* (long cooldown) is one huge slash on the enemy closest to your pointer, from a long way off,
   that always takes 40% of their full health, block or not. *Divine Flame* (long cooldown): C (or the
   button) blows the minimap up to fill the screen with a ring the blast's size under your pointer; click
   (or tap) anywhere on the city and he stands in a ring of fire drawing a great flame bow while a ring

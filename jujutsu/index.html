@@ -1228,7 +1228,7 @@ const MOVES = {
       startAct(f, 'cast', 0.22);
       const hit = [], dirs = [f.aim];
       for (const t of targets(f.id)) {
-        if (dist(f, t) > SHOT[4].range * 0.9 || !los(f, t) || (t.prot > 0)) continue;
+        if (dist(f, t) > SHOT[4].range * 0.9 || t.prot > 0) continue;      // walls do not stop it, so no line of sight needed
         const a = ang(f, t);
         if (!dirs.some((o) => Math.abs(angD(o, a)) < 0.05)) dirs.push(a);
       }
@@ -1522,7 +1522,7 @@ function updMaho(dt) {
 // and 3 Gojo's Red (bursts on whatever it meets, see redBlast), 4 Sukuna's Dismantle (a huge kind 0)
 const SHOT = [{ spd: 1500, range: 900, w: 56 }, { spd: 640, range: 640, w: 10 }, { spd: 1250, range: 720, w: 8 }, { spd: 1100, range: 620, w: 16 }, { spd: 1700, range: 1150, w: 100 }];
 function shotHit(b, t) {
-  if (b.k !== 3 && infinity(t)) { fx(['inf', r1(t.x), r1(t.y)]); return true; }      // it stops at Infinity
+  if (b.k !== 3 && infinity(t)) { fx(['inf', r1(t.x), r1(t.y)]); return b.k !== 4; }      // it stops at Infinity (Sukuna's goes on past, doing nothing)
   if (b.k === 3) { b.x = t.x - Math.cos(b.a) * t.r; b.y = t.y - Math.sin(b.a) * t.r; redBlast(b); return true; }
   if (b.k === 2) {
     if (!hurt(t, NAIL.dmg, { by: b.own, a: b.a, kb: 40, kind: 'nail' })) return false;
@@ -1544,7 +1544,8 @@ function shotHit(b, t) {
 function updShots(dt) {
   for (const b of S.sh) {
     const K = SHOT[b.k || 0], step = K.spd * dt, c = Math.cos(b.a), s = Math.sin(b.a);
-    const vd = S.dm.length ? voidOf(b.own) : null, free = vd ? voidLen(vd, b.x, b.y, b.a, step) : S.dm.length ? barrier(b.x, b.y, b.a, rayLen(b.x, b.y, b.a, step)) : rayLen(b.x, b.y, b.a, step);
+    const wall = b.k === 4 ? step : rayLen(b.x, b.y, b.a, step);      // Sukuna's Dismantle goes through buildings
+    const vd = S.dm.length ? voidOf(b.own) : null, free = vd ? voidLen(vd, b.x, b.y, b.a, step) : S.dm.length ? barrier(b.x, b.y, b.a, wall) : wall;
     for (const t of targets(b.own)) {
       const dx = t.x - b.x, dy = t.y - b.y, al = dx * c + dy * s, pp = Math.abs(-dx * s + dy * c);
       if (al > -t.r && al < free + t.r && pp < t.r + K.w && shotHit(b, t)) { b.dead = true; break; }

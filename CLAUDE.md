@@ -689,7 +689,7 @@ mouse, touch), screens, multiplayer, main loop.
   anyone in it. His banner is a band like the others (`CUTS.dom`,
   `cutGojo()`: the sign, a fist with two fingers up).
 - **Sukuna**: his Dismantle is `SHOT` kind 4 (bigger, further, harder than Yuji's kind 0), one shot where
-  he aims and one at every enemy in reach and sight, sharing one `hit` list so a volley cuts nobody twice. Cleave
+  he aims and one at every enemy in reach, flying through buildings and on past Infinity, sharing one `hit` list so a volley cuts nobody twice. Cleave
   (`ACTS.cleave`, `CLEAVE`) picks `cleaveTarget()` (closest to the pointer: aim and `inp.ad`) into `f.lk` and deals exactly `CLEAVE.share` of its full
   health (divided by `RULES.dmg`, which `hurt()` multiplies back in), ignoring blocks. Divine Flame
   is aimed on the map: C (or the touch button) calls `openFugaMap()`, which blows `#mini` up to fill the
