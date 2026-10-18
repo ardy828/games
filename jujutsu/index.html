@@ -422,7 +422,7 @@ const BOT_NAMES = ['Panda', 'Toge', 'Maki', 'Junpei', 'Todo', 'Mai', 'Momo', 'Ka
 const TIPS = [
   'Gojo\'s Infinite Void freezes everyone inside it for 5 seconds. From outside it is a black sphere: stay out from under it.',
   'Hollow Purple goes through everyone and every wall in its path. Watch for the purple line and get off it.',
-  'Nobara\'s nails stay in whoever they hit. Hairpin bursts all of them at once: the more nails, the bigger the blast.',
+  'Nobara\'s nails stay in whoever they hit. Hairpin bursts all of them at once: the more nails, the bigger the blast. The last one she hit takes a burst too, even from a plain strike.',
   'Resonance hurts everyone Nobara has hit in the last 10 seconds, wherever they are now.',
   'A cursed spirit is worth 1 point. Killing a sorcerer takes every point they carry, plus 1.',
   'Any death costs every point you carry. The ★ over a sorcerer shows how much they are worth.',
@@ -1126,7 +1126,7 @@ const MOVES = {
       startAct(f, 'res'); fx(['snd', 'hammer', r1(f.x), r1(f.y)]);
     },
     c(f) {
-      if (!targets(f.id).some((t) => t.nl && t.nl.includes(f.id) && dist(f, t) <= PIN.range)) { fx(['say', r1(f.x), r1(f.y), 'NO NAILS IN ANYONE', f.id]); return false; }
+      if (!nailsOut(f) && !lastHit(f)) { fx(['say', r1(f.x), r1(f.y), 'NO ONE TO BURST', f.id]); return false; }
       startAct(f, 'pin'); fx(['snd', 'snap', r1(f.x), r1(f.y)]);
     },
     u(f) {
@@ -1490,7 +1490,8 @@ function updRabbits(dt) {
   S.rab = S.rab.filter((r) => !r.dead);
 }
 // Nobara. Her nails stick in whoever they hit: t.nl lists the owner of each nail in a fighter or
-// Mahoraga (up to NAIL.max), and Hairpin bursts hers. Every hit she lands marks the target for
+// Mahoraga (up to NAIL.max), and Hairpin bursts hers, and the last one she hit (lastHit) whatever
+// it was with. Every hit she lands marks the target for
 // Resonance: her f.rm is a flat list of target id, time the mark runs out. Raining Nails drops nails
 // round her for RAIN.dur (f.rain), RAIN.aim of them at someone in the area; they live in S.rn.
 const NAIL = { n: 3, spread: 0.08, dmg: 40, max: 10 };     // nails per throw, their fan (radians), damage each, most one body holds
@@ -1513,13 +1514,30 @@ function marked(f) {
   }
   return out;
 }
+// the last one she hit, by anything (a strike, a nail, Resonance, Raining Nails), while the mark lasts
+function lastHit(f) {
+  const rm = f.rm || [], i = rm.length - 2;
+  if (i < 0 || rm[i + 1] < S.time) return null;
+  const t = foeById(rm[i]);
+  return t && (t.isM ? t.hp > 0 : t.alive) && dist(f, t) <= PIN.range ? t : null;
+}
+const nailsOut = (f) => targets(f.id).some((t) => t.nl && t.nl.includes(f.id) && dist(f, t) <= PIN.range);
+// Hairpin bursts every nail of hers in anyone in range, and the last one she hit takes a burst too
+// (as one nail's) if none of hers were in them
 function hairpin(f) {
+  const last = lastHit(f);
+  let lastDone = false;
   for (const t of targets(f.id)) {
     const n = t.nl ? t.nl.filter((o) => o === f.id).length : 0;
     if (!n || dist(f, t) > PIN.range) continue;
     t.nl = t.nl.filter((o) => o !== f.id);
+    if (t === last) lastDone = true;
     hurt(t, PIN.base + PIN.per * n, { by: f.id, a: ang(f, t), kb: Math.min(200, 40 + 25 * n), ub: true, kind: 'pin' });
     fx(['pin', r1(t.x), r1(t.y), n]);
+  }
+  if (last && !lastDone) {
+    hurt(last, PIN.base + PIN.per, { by: f.id, a: ang(f, last), kb: 65, ub: true, kind: 'pin' });
+    fx(['pin', r1(last.x), r1(last.y), 1]);
   }
 }
 function rainNail(f) {

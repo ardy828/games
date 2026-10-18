@@ -242,7 +242,8 @@ cursed energy: every move has its own cooldown.
 - **Nobara** fights with nails and a hammer. *Nail* hammers three nails forward, and every nail that
   hits stays stuck in its target. *Resonance* strikes everyone she has hit in the last 10 seconds,
   wherever they are (an orange ring shows who). *Hairpin* bursts every nail of hers stuck in anyone
-  nearby: the more nails, the bigger the blast. The ultimate, *Raining Nails*, drops nails out of the
+  nearby: the more nails, the bigger the blast. The last one she hit (with anything, even a plain
+  strike) takes a burst too, so it works with no nails out. The ultimate, *Raining Nails*, drops nails out of the
   sky all round her for 4 seconds; they stick and mark for Resonance like any other nail.
 - **Gojo** has the Limitless. *Blue* sits where you aim for a moment and drags everyone near it into its
   middle, hurting them all the while (dash to break free). *Red* bursts on whatever it hits, hurling

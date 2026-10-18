@@ -641,7 +641,8 @@ mouse, touch), screens, multiplayer, main loop.
   the target's `nl` (fighters and Mahoraga; `nailsIn()` draws them). Every hit she lands goes through
   `mark()` in `hurt()`, keeping her `f.rm` (a flat list: target id, time the mark ends; `marked()`
   reads it, `die()` strips the dead). `ACTS.res` (Resonance) hurts everyone `marked()`, `hairpin()`
-  bursts her nails (`PIN.base + PIN.per` per nail) and removes them. `nl`, `rm` and `rain` are synced.
+  bursts her nails (`PIN.base + PIN.per` per nail) and removes them, and bursts `lastHit()` (the last
+  pair in `f.rm`, her most recent hit by anything) as one nail if it had none. `nl`, `rm` and `rain` are synced.
 - **Gojo**: Blue (`BLUE`, `S.bl`, `updBlue()`) pulls by setting velocity and `push` on everyone in range
   each step and ticks damage; Red is `SHOT` kind 3 and bursts through `redBlast()`; Hollow Purple
   (`PURPLE`, `S.pu`, `updPurple()`) ignores walls and keeps a host-only `hit` list. Infinite Void
