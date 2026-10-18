@@ -305,10 +305,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
         <div class="dashrow"><span class="dlabel" id="dlabel">DASH</span><div class="dash" id="dashpips"><i></i><i></i><i></i><i></i></div></div>
       </div>
       <div class="hud-r">
-        <div class="stat"><small>WAVE</small><b id="hwave">1</b></div>
-        <div class="stat"><small>KILLS</small><b id="hkills">0</b></div>
         <div class="stat" id="hp2s" hidden><small>PARTNER</small><b id="hp2">100</b></div>
-        <div class="stat"><small>SOUND</small><b id="hsnd">ON</b></div>
       </div>
     </div>
 
@@ -2382,7 +2379,7 @@ function renderMenu(dt){
 var runSeed = 0;
 var SCREENS = { menu:"s-menu", net:"s-net", upgrade:"s-up", over:"s-over", paused:"s-pause", debug:"s-dbg" };
 var el = {};
-["hud","hpbar","hpfill","hpnum","hpmax","dashpips","dlabel","hwave","hkills",
+["hud","hpbar","hpfill","hpnum","hpmax","dashpips","dlabel",
  "banner","bn","bm","up-eyebrow","up-cards","over-wave","o-kills","o-time",
  "o-best","o-seed","menubest","trophy","hp2s","hp2","n-msg","n-code","netwarn"].forEach(function(id){ el[id] = document.getElementById(id); });
 
@@ -2394,7 +2391,7 @@ function show(which){
   if (net && net.host) netSend({ t:"st", w:which });
 }
 
-var lastHp = -1, lastWave = -1, lastKills = -1, lastDash = -1, lastDashF = -1, lastHp2 = null;
+var lastHp = -1, lastDash = -1, lastDashF = -1, lastHp2 = null;
 function syncHud(){
   if (PL.length > 1){
     var o = PL[1 - local], hp2 = o.down ? "DOWN" : Math.max(0, Math.round(o.p.hp));
@@ -2409,8 +2406,6 @@ function syncHud(){
     el.hpnum.textContent = hp;
     el.hpmax.textContent = Math.round(S.maxhp);
   }
-  if (wave !== lastWave){ lastWave = wave; el.hwave.textContent = wave; }
-  if (kills !== lastKills){ lastKills = kills; el.hkills.textContent = kills; }
   var pips = player.dashCd <= 0 ? 4 : Math.floor(Math.max(0, (S.dashcd - player.dashCd) / S.dashcd) * 4);
   if (pips !== lastDash){
     lastDash = pips;
@@ -2482,7 +2477,6 @@ function paintMute(){
   var t = muted ? "OFF" : "ON";
   var b = document.getElementById("b-mute"); if (b) b.textContent = "SOUND: " + t;
   var b2 = document.getElementById("b-mute2"); if (b2) b2.textContent = "SOUND: " + t;
-  var h = document.getElementById("hsnd"); if (h) h.textContent = t;
 }
 
 /* ---------------- upgrade offers ---------------- */
@@ -2608,7 +2602,7 @@ function startRun(resume, n){
     gotoWave(resume.wave || 1);
     player.hp = Math.min(S.maxhp, resume.hp || S.maxhp);
   }
-  lastHp = lastWave = lastKills = lastDash = -1;
+  lastHp = lastDash = -1;
   state = "play";
   show(null);
 }
@@ -3095,7 +3089,7 @@ function onNet(m){
     enemies = []; bullets = []; ebullets = []; parts = []; casings = []; floats = []; teles = []; decals = [];
     rings = []; arcs = []; mortars = [];
     shake = 0; redFlash = 0; mist = 0;
-    lastHp = lastWave = lastKills = lastDash = -1; lastHp2 = null;
+    lastHp = lastDash = -1; lastHp2 = null;
     el.hp2s.hidden = false;
     state = "play";
     show(null);
