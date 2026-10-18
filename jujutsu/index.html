@@ -347,7 +347,7 @@ const MAX_FIGHTERS = 20;      // sorcerers (people) in a room or party; cursed s
 const MAX_CURSES = 10, CURSE_PTS = 1;
 const CHARS = {
   yuji: {
-    n: 'Yuji Itadori', s: 'YUJI', hp: 1100, spd: 330, m1: [50, 50, 55, 90], reach: 54, col: '#ff8fb1',
+    n: 'Yuji Itadori', s: 'YUJI', hp: 1200, spd: 330, m1: [60, 60, 65, 105], reach: 54, col: '#ff8fb1',
     blurb: 'Fast, hits hard up close.',
     moves: {
       q: { n: 'Black Flash', k: '黒閃', cd: 9 },
@@ -357,7 +357,7 @@ const CHARS = {
     },
   },
   megumi: {
-    n: 'Megumi Fushiguro', s: 'MEGUMI', hp: 1000, spd: 285, m1: [40, 40, 45, 75], reach: 50, col: '#8fb4ff',
+    n: 'Megumi Fushiguro', s: 'MEGUMI', hp: 1000, spd: 285, m1: [45, 45, 50, 85], reach: 50, col: '#8fb4ff',
     blurb: 'Ten Shadows: fights through shikigami.',
     moves: {
       q: { n: 'Nue', k: '鵺', cd: 8 },
@@ -377,12 +377,12 @@ const CHARS = {
     },
   },
   gojo: {      // ur: his ultimate fills at this share of the usual rate
-    n: 'Satoru Gojo', s: 'GOJO', hp: 1050, spd: 320, m1: [50, 50, 55, 90], reach: 54, col: '#9fd0ff', ur: 0.35,
+    n: 'Satoru Gojo', s: 'GOJO', hp: 1100, spd: 320, m1: [50, 50, 55, 90], reach: 54, col: '#9fd0ff', ur: 0.35,
     blurb: 'Limitless: Blue pulls, Red blasts, Purple erases.',
     moves: {
-      q: { n: 'Blue', k: '蒼', cd: 9 },
-      e: { n: 'Red', k: '赫', cd: 11 },
-      c: { n: 'Hollow Purple', k: '茈', cd: 18 },
+      q: { n: 'Blue', k: '蒼', cd: 11 },
+      e: { n: 'Red', k: '赫', cd: 13 },
+      c: { n: 'Hollow Purple', k: '茈', cd: 21 },
       u: { n: 'Infinite Void', k: '無量空処' },
       blk: { n: 'Infinity', k: '無限' },      // his block (see infinity())
     },
@@ -945,7 +945,7 @@ const ACTS = {
       const hx = f.x + Math.cos(a) * 18, hy = f.y + Math.sin(a) * 18;
       for (const t of targets(f.id)) {
         if (Math.hypot(t.x - hx, t.y - hy) > t.r + FR + 10) continue;
-        if (!hurt(t, 200, { by: f.id, a, kb: 300, gb: true, kind: 'bf' })) continue;
+        if (!hurt(t, 230, { by: f.id, a, kb: 300, gb: true, kind: 'bf' })) continue;
         f.hitDone = true; f.vx = f.vy = 0;
         fx(['bf', r1(t.x), r1(t.y), r2(a), f.id]);
         break;
@@ -962,7 +962,7 @@ const ACTS = {
       const len = rayLen(sx, sy, a, 900);
       for (const t of targets(f.id)) {
         const dx = t.x - sx, dy = t.y - sy, along = dx * c + dy * s, perp = Math.abs(-dx * s + dy * c);
-        if (along > -t.r && along < len + t.r && perp < t.r + 9) hurt(t, 140, { by: f.id, a, kb: 130, kind: 'pb' });
+        if (along > -t.r && along < len + t.r && perp < t.r + 9) hurt(t, 160, { by: f.id, a, kb: 130, kind: 'pb' });
       }
       fx(['pb', r1(sx), r1(sy), r2(a), r1(len)]);
     }
@@ -979,7 +979,7 @@ const ACTS = {
       f.vx = Math.cos(a) * 1800; f.vy = Math.sin(a) * 1800;
       for (const t of targets(f.id)) {
         if (dist(t, f) > t.r + FR + 12) continue;
-        if (!hurt(t, 380, { by: f.id, a, kb: 420, ub: true, gb: true, kind: 'ss' })) continue;
+        if (!hurt(t, 435, { by: f.id, a, kb: 420, ub: true, gb: true, kind: 'ss' })) continue;
         f.hitDone = true; f.vx = f.vy = 0;
         fx(['ss', r1(t.x), r1(t.y), r2(a), f.id]);
         break;
@@ -998,7 +998,7 @@ const ACTS = {
       for (const t of targets(f.id)) {
         if (f.hitL.includes(t.id) || dist(t, f) > t.r + FR + 22) continue;
         f.hitL.push(t.id);
-        if (hurt(t, 110, { by: f.id, a, kb: 160, kind: 'nue' })) fx(['zap', r1(t.x), r1(t.y)]);
+        if (hurt(t, 125, { by: f.id, a, kb: 160, kind: 'nue' })) fx(['zap', r1(t.x), r1(t.y)]);
       }
       return;
     }
@@ -1317,7 +1317,7 @@ function newMatch() {
 // adapts to it (60% less from then on); every hit he lands spins it too, and each spin (up to five)
 // makes his punches hit 20% harder. He has no time limit: he stays until he is killed or a new
 // match clears the board.
-const MAHO = { hp: 3600, r: 34, spd: 255, dmg: 110 };
+const MAHO = { hp: 3600, r: 34, spd: 255, dmg: 125 };
 function spawnMaho(x, y, aim, own) {
   const m = { isM: true, id: 1e6 + S.nid++, own, x, y, vx: 0, vy: 0,
     aim, hp: MAHO.hp, r: MAHO.r, spins: 0, adapt: [], mode: 'rise', mt: 0, cd: 0, lcd: 0, pc: 0,
@@ -1444,7 +1444,7 @@ function shotHit(b, t) {
     fx(['bile', r1(t.x), r1(t.y)]);
     return true;
   }
-  if (!hurt(t, 100, { by: b.own, a: b.a, kb: 90, fixed: true, kind: 'dis' })) return false;
+  if (!hurt(t, 115, { by: b.own, a: b.a, kb: 90, fixed: true, kind: 'dis' })) return false;
   fx(['dsh', r1(t.x), r1(t.y), r2(b.a)]);
   return true;
 }
@@ -1470,7 +1470,7 @@ function updEle(dt) {
     if (was < 0 && e.t >= 0) {
       for (const t of targets(e.own)) {
         const d = Math.hypot(t.x - e.x, t.y - e.y);
-        if (d < 120 + t.r) hurt(t, 170, { by: e.own, a: Math.atan2(t.y - e.y, t.x - e.x), kb: 260, kind: 'ele' });
+        if (d < 120 + t.r) hurt(t, 195, { by: e.own, a: Math.atan2(t.y - e.y, t.x - e.x), kb: 260, kind: 'ele' });
       }
       fx(['ele', e.x, e.y]);
     }
@@ -1481,7 +1481,7 @@ function updEle(dt) {
 // Rabbit Escape: the swarm pours out of Megumi's shadow, rushes to where he aimed (up to RAB.max
 // away) and bursts there, then mills about for a moment, nibbling and slowing whoever is caught in it.
 // One entity stands for the whole swarm; each rabbit's path is worked out from it when drawing.
-const RAB = { n: 16, min: 120, max: 430, spd: 820, r: 105, dmg: 130, linger: 1.3 };
+const RAB = { n: 16, min: 120, max: 430, spd: 820, r: 105, dmg: 150, linger: 1.3 };
 function updRabbits(dt) {
   for (const r of S.rab) {
     r.t += dt;
