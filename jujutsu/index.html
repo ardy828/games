@@ -878,7 +878,7 @@ function mkFighter(id, name, ch, ctl) {
     x: MID, y: MID, vx: 0, vy: 0, aim: 0, hp: CHARS[ch].hp, alive: false, resp: 0.3, prot: 0,
     guard: 100, gdT: 0, blk: false, push: 0, iframe: 0, slow: 0, heal: 0, slamT: 0,
     act: '', actT: 0, actA: 0, actD: 0, lk: null, hitDone: false, hitL: [], combo: 3, comboT: 9, swCd: 0,
-    cd: { q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 }, ult: 0, pts: 0, nl: [], rm: [], rain: 0, frz: 0, kills: 0, deaths: 0, lastBy: null, lastT: -99,
+    cd: { q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 }, ult: 0, pts: 0, nl: [], rm: [], rain: 0, frz: 0, nue: 0, nh: {}, kills: 0, deaths: 0, lastBy: null, lastT: -99,
     inp: { mx: 0, my: 0, aim: 0, ad: 300, m1: false, blk: false, q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 },
     seen: { q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 }, fresh: true, buf: null, bufT: 0, ai: null,
     // cosmetic, never simulated
@@ -917,7 +917,7 @@ function respawn(f) {
   f.ch = f.nch; f.r = CHARS[f.ch].r || FR;
   if (cursed(f)) f.name = CHARS[f.ch].n;
   Object.assign(f, { x: p.x + rnd(-12, 12), y: p.y + rnd(-12, 12), vx: 0, vy: 0, hp: maxHp(f), alive: true, prot: PROTECT,
-    guard: 100, gdT: 0, push: 0, act: '', heal: 0, slow: 0, blk: false, iframe: 0, lastBy: null, buf: null, combo: 3, comboT: 9, nl: [], rm: [], rain: 0, frz: 0 });
+    guard: 100, gdT: 0, push: 0, act: '', heal: 0, slow: 0, blk: false, iframe: 0, lastBy: null, buf: null, combo: 3, comboT: 9, nl: [], rm: [], rain: 0, frz: 0, nue: 0, nh: {} });
   for (const k of KEYS) f.cd[k] = 0;
   f.px = f.rx = f.x; f.py = f.ry = f.y;
   fx(['sp', r1(f.x), r1(f.y)]);
@@ -991,21 +991,6 @@ const ACTS = {
     if (f.actT >= f.actD + 0.52) f.act = '';
   } },
   // Megumi
-  nue: { lock: true, step(f) {
-    if (f.actT < 0.1) { f.vx = f.vy = 0; return; }
-    if (f.actT < 0.62) {
-      const a = f.actA;
-      f.vx = Math.cos(a) * 1200; f.vy = Math.sin(a) * 1200;
-      for (const t of targets(f.id)) {
-        if (f.hitL.includes(t.id) || dist(t, f) > t.r + FR + 22) continue;
-        f.hitL.push(t.id);
-        if (hurt(t, 150, { by: f.id, a, kb: 160, kind: 'nue' })) fx(['zap', r1(t.x), r1(t.y)]);
-      }
-      return;
-    }
-    f.vx *= 0.5; f.vy *= 0.5;
-    if (f.actT >= 0.72) f.act = '';
-  } },
   summon: { slow: 0, armor: true, step(f) {
     if (!f.hitDone && f.actT >= 0.55) { f.hitDone = true; summonMaho(f); }
     if (f.actT >= 0.8) f.act = '';
@@ -1096,6 +1081,20 @@ const ACTS = {
 };
 const SLAM = { wind: 0.6, r: 135, dmg: 120 };
 const LOCKED = (f) => f.act && ACTS[f.act].lock;
+// Nue: Megumi rides her for NUE.dur s, faster the longer he rides (sp0 to sp1 times his walk), and she
+// shocks anyone she touches, each at most once every NUE.every s (f.nh, host only: id -> time of the
+// last shock). Her cooldown only starts when the ride ends.
+const NUE = { dur: 10, sp0: 1.5, sp1: 2.4, dmg: 120, every: 1, reach: 26 };
+const nueSp = (f) => (f.nue > 0 ? lerp(NUE.sp1, NUE.sp0, f.nue / NUE.dur) : 1);
+function rideNue(f, dt) {
+  if ((f.nue -= dt) <= 0) { f.nue = 0; return; }
+  const a = Math.hypot(f.vx, f.vy) > 60 ? Math.atan2(f.vy, f.vx) : f.aim;
+  for (const t of targets(f.id)) {
+    if (dist(t, f) > t.r + FR + NUE.reach || S.time - ((f.nh ||= {})[t.id] ?? -99) < NUE.every) continue;
+    f.nh[t.id] = S.time;
+    if (hurt(t, NUE.dmg, { by: f.id, a, kb: 200, kind: 'nue' })) fx(['zap', r1(t.x), r1(t.y)]);
+  }
+}
 const MOVES = {
   yuji: {
     q(f) { startAct(f, 'bf'); fx(['snd', 'swing', r1(f.x), r1(f.y)]); },
@@ -1115,7 +1114,7 @@ const MOVES = {
     },
   },
   megumi: {
-    q(f) { startAct(f, 'nue'); fx(['snd', 'nue', r1(f.x), r1(f.y)]); },
+    q(f) { if (f.nue > 0) return false; f.nue = NUE.dur; f.nh = {}; fx(['snd', 'nue', r1(f.x), r1(f.y)]); },
     e(f) {
       startAct(f, 'cast', 0.25);
       const d = rayLen(f.x, f.y, f.aim, clamp(f.inp.ad || 300, RAB.min, RAB.max));
@@ -1696,7 +1695,8 @@ function updDomain(dt) {
 function updFighter(f, dt) {
   control(f, dt);
   if (!f.alive) { if (S.phase === 'play' && (f.resp -= dt) <= 0) respawn(f); return; }
-  for (const k of KEYS) if (f.cd[k] > 0) f.cd[k] = Math.max(0, f.cd[k] - dt);
+  for (const k of KEYS) if (f.cd[k] > 0 && !(k === 'q' && f.nue > 0)) f.cd[k] = Math.max(0, f.cd[k] - dt);
+  if (f.nue > 0 && f.frz <= 0) rideNue(f, dt);
   if (f.push > 0) f.push = Math.max(0, f.push - dt);
   if (f.iframe > 0) f.iframe -= dt;
   if (f.prot > 0) f.prot -= dt;
@@ -1721,7 +1721,7 @@ function updFighter(f, dt) {
     const l = Math.hypot(mx, my);
     if (l > 1) { mx /= l; my /= l; }
     if (S.phase !== 'play' || !Number.isFinite(l)) mx = my = 0;
-    const sp = CHARS[f.ch].spd * RULES.spd * (f.blk ? 0.5 : 1) * (f.slow > 0 ? 0.6 : 1) * (A && A.slow != null ? A.slow : 1), k = 1 - Math.exp(-14 * dt);
+    const sp = CHARS[f.ch].spd * RULES.spd * nueSp(f) * (f.blk ? 0.5 : 1) * (f.slow > 0 ? 0.6 : 1) * (A && A.slow != null ? A.slow : 1), k = 1 - Math.exp(-14 * dt);
     f.vx += (mx * sp - f.vx) * k; f.vy += (my * sp - f.vy) * k;
   }
   f.x += f.vx * dt; f.y += f.vy * dt;
@@ -1871,7 +1871,7 @@ function think(f, ai) {
   const lead = (s) => ({ x: t.x + t.vx * s * D.lead, y: t.y + t.vy * s * D.lead });
   const aimAt = (p) => Math.atan2(p.y - f.y, p.x - f.x) + rnd(-D.aimErr, D.aimErr);
   inp.aim = aimAt(lead(0.08)); inp.ad = d;
-  if (d < 130 && (t.act === 'swing' || (t.act === 'nue' && t.actT < 0.15)) && Math.abs(angD(t.aim, ang(t, f))) < 0.9 && Math.random() < D.block) ai.blkT = 0.5;
+  if (d < 130 && (t.act === 'swing' || t.nue > 0) && Math.abs(angD(t.aim, ang(t, f))) < 0.9 && Math.random() < D.block) ai.blkT = 0.5;
   const ready = (k) => (k === 'u' ? f.ult >= 100 && RULES.ults : f.cd[k] <= 0) && !f.act && Math.random() < D.use;
   const own = S.maho.find((m) => m.own === f.id);
   if (see) {
@@ -1896,7 +1896,7 @@ function think(f, ai) {
       if (d < 420 && !own && f.hp > maxHp(f) * 0.35 && ready('u') && Math.random() < 0.5) { inp.aim = aimAt(t); inp.u++; }
       else if (d > 150 && d < 470 && ready('c')) { const p = lead(0.65); inp.aim = aimAt(p); inp.ad = Math.hypot(p.x - f.x, p.y - f.y); inp.c++; }
       else if (d < RAB.max + 40 && ready('e')) { const p = lead(0.15 + d / RAB.spd); inp.aim = aimAt(p); inp.ad = Math.hypot(p.x - f.x, p.y - f.y); inp.e++; }
-      else if (d > 140 && d < 600 && ready('q')) { inp.aim = aimAt(lead(0.2)); inp.q++; }
+      else if (d > 140 && d < 900 && !f.nue && ready('q')) inp.q++;
     }
   }
   inp.m1 = d < FR * 2 + C.reach + 10 && Math.random() < D.m1;
@@ -2362,7 +2362,7 @@ function arms(f, sleeve) {
   else if (act === 'pb') { L = [15, -5]; R = [15, 5]; }
   else if (act === 'ss') { if (t < f.actD) { L = [-3, -15]; R = [-3, 15]; } else { R = [30, 2]; L = [4, -14]; } }
   else if (act === 'dash') { L = [-4, -15]; R = [-4, 15]; }
-  else if (act === 'nue') { L = [-2, -12]; R = [-2, 12]; }
+  else if (!act && f.nue > 0) { L = [-2, -12]; R = [-2, 12]; }
   else if (act === 'summon' || (act === 'cast' && f.ch === 'megumi')) { L = [15, -3]; R = [16, 3]; }
   else if (act === 'nail') { const p = clamp(t / 0.14, 0, 1); L = [12, -10]; R = [6 + p * 16, 14 - p * 6]; }
   else if (act === 'res') { L = [17, -4]; R = t < 0.35 ? [4, 15] : [17, 2]; }
@@ -2545,7 +2545,7 @@ function drawBrute(f, t) {
 // where his eyes would be and the eight-handled wheel over his head.
 function feather(x, y, a, len, w, col) { g.fillStyle = col; g.beginPath(); g.ellipse(x + Math.cos(a) * len / 2, y + Math.sin(a) * len / 2, len / 2, w, a, 0, TAU); g.fill(); }
 function drawNue(f) {
-  const x = f.rx, y = f.ry, a = f.actA, t = f.actT, dive = t < 0.1 ? 1 - t / 0.1 : 0, flap = Math.sin(T * 24);
+  const x = f.rx, y = f.ry, a = Math.hypot(f.vx, f.vy) > 60 ? Math.atan2(f.vy, f.vx) : f.aim, t = NUE.dur - f.nue, dive = t < 0.1 ? 1 - t / 0.1 : 0, flap = Math.sin(T * 24);
   g.save(); g.translate(x + 22, y + 30); g.rotate(a); g.fillStyle = 'rgba(0,0,0,.14)'; ell(0, 0, 22, 64); g.restore();
   g.save(); g.translate(x - 4, y - 14 - dive * 50); g.rotate(a);
   const sc = 1.05 + dive * 0.5; g.scale(sc, sc); g.globalAlpha = 1 - dive * 0.5;
@@ -3185,7 +3185,7 @@ function render() {
   drawDecals(true);
   drawTrees();
   for (const e of S.ele) if (e.t < 0 && e.t > -0.32) { const p = -e.t / 0.32; drawElephant(e.x, e.y - p * 180, e.a || 0, 1 + p * 0.9, 1 - p * 0.6); }
-  for (const f of S.f) if (f.alive && f.act === 'nue' && vis(f.rx, f.ry, 120)) drawNue(f);
+  for (const f of S.f) if (f.alive && f.nue > 0 && vis(f.rx, f.ry, 120)) drawNue(f);
   drawRain();
   drawDomains();
   drawBlues(); drawPurples();
@@ -3893,7 +3893,7 @@ const PAD_LAYOUT = { m1: [0, 0, 86], blk: [0, 122, 58], q: [30, 122, 58], e: [60
 // per fighter: [length of the aim line, ring at its end, length set by how far you drag]
 const AIM_LEN = {
   yuji: { q: [190, 0], e: [900, 0], c: [700, 0], u: [450, 0] },
-  megumi: { q: [624, 0], e: [RAB.max, RAB.r, 1], c: [450, ELE_HIT, 1], u: [90, 0] },
+  megumi: { q: [90, 0], e: [RAB.max, RAB.r, 1], c: [450, ELE_HIT, 1], u: [90, 0] },
   nobara: { q: [720, 0], e: [1, 0], c: [1, 0], u: [1, RAIN.r] },
   gojo: { q: [BLUE.range, BLUE.r, 1], e: [620, RED.r], c: [PURPLE.range, 0], u: [1, DOM.r] },
 };
@@ -4150,7 +4150,7 @@ let peer = null, nextId = 1, snapT = 0, inT = 0, lastSent = '', helloT = 0;
 // dec(), so the two sides cannot drift. Types: 1 / 2 = rounded to 1 or 2 decimals, s = string,
 // b = boolean, B = bot or not, c = the cooldown table, none = a plain value.
 const SPEC = {
-  f: 'id name:s ch:s nch:s bot:B x:1 y:1 vx:1 vy:1 aim:2 hp:1 alive:b resp:2 prot:2 guard:1 gdT:2 blk:b push:2 iframe:2 slow:2 heal:2 slamT:2 act:s actT:2 actA:2 actD:2 lk hitDone:b hitL combo comboT:2 swCd:2 cd:c ult:1 pts kills deaths lastBy lastT:2 nl rm rain:2 frz:2',
+  f: 'id name:s ch:s nch:s bot:B x:1 y:1 vx:1 vy:1 aim:2 hp:1 alive:b resp:2 prot:2 guard:1 gdT:2 blk:b push:2 iframe:2 slow:2 heal:2 slamT:2 act:s actT:2 actA:2 actD:2 lk hitDone:b hitL combo comboT:2 swCd:2 cd:c ult:1 pts kills deaths lastBy lastT:2 nl rm rain:2 frz:2 nue:2',
   m: 'id own x:1 y:1 vx:1 vy:1 aim:2 hp:1 spins adapt mode:s mt:2 cd:2 lcd:2 tg rt:2 push:2 frz:2 hitDone:b pc nl',
   e: 'id own x:1 y:1 t:2 a:2',
   r: 'id own x0:1 y0:1 x:1 y:1 a:2 t:2 T:2 burst:b nt:2',
@@ -4756,7 +4756,7 @@ function predStep(me, dt) {
     const l = Math.hypot(mx, my);
     if (l > 1) { mx /= l; my /= l; }
     const A = me.act ? ACTS[me.act] : null, blk = inp.blk && !me.act && me.guard > 0;
-    const sp = CHARS[me.ch].spd * RULES.spd * (blk ? 0.5 : 1) * (me.slow > 0 ? 0.6 : 1) * (A && A.slow != null ? A.slow : 1), k = 1 - Math.exp(-14 * dt);
+    const sp = CHARS[me.ch].spd * RULES.spd * nueSp(me) * (blk ? 0.5 : 1) * (me.slow > 0 ? 0.6 : 1) * (A && A.slow != null ? A.slow : 1), k = 1 - Math.exp(-14 * dt);
     pred.vx += (mx * sp - pred.vx) * k; pred.vy += (my * sp - pred.vy) * k;
   }
   pred.x += pred.vx * dt; pred.y += pred.vy * dt;

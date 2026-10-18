@@ -234,7 +234,7 @@ cursed energy: every move has its own cooldown.
   *Dismantle* throws a wide slash that cuts through everyone in its path and always does the same damage, and the ultimate, *Soul Strike*, locks
   on to the enemy nearest your aim (red brackets close in on them), then dashes in, steering after
   them, for a huge blow.
-- **Megumi** fights through shikigami. *Nue* carries him forward and shocks anyone in the way, *Rabbit
+- **Megumi** fights through shikigami. *Nue* carries him for 10 seconds, faster and faster, shocking anyone she touches, *Rabbit
   Escape* sends a swarm of rabbits to where you aim, where it bursts and then nibbles and slows, *Max
   Elephant* drops on the spot you aim at after a shadow warning, and the ultimate summons *Mahoraga*,
   who kicks Megumi away and then attacks whoever he can see, Megumi included, until someone kills him

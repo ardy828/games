@@ -623,7 +623,7 @@ mouse, touch), screens, multiplayer, main loop.
   land where you point), `m1`/`blk` held, and a press *counter* per key, so a lost packet cannot eat a
   press. `control()` turns counter changes into presses, buffered for 0.3 s while busy.
 - **Actions**: `ACTS` is what a fighter is busy doing (`swing`, `dash`, `cast`, `bf`, `pb`, `ss`,
-  `nue`, `summon`, `nail`, `res`, `pin`, `rain`, `red`, `purple`, `domain`, and the curses' `pounce`, `slam`, `spit`), each a `step(f)` over `f.actT`. `lock` means the action drives the velocity,
+  `summon`, `nail`, `res`, `pin`, `rain`, `red`, `purple`, `domain`, and the curses' `pounce`, `slam`, `spit`), each a `step(f)` over `f.actT`. `lock` means the action drives the velocity,
   `slow` scales walking while it runs, `armor` means hits damage but do not interrupt. `MOVES[ch][k]`
   starts one and returns `false` to refuse (Mahoraga already out).
 - **`hurt(t, dmg, o)`** is the only way damage happens: `o.by` (attacker's fighter id; Mahoraga's hits
@@ -667,6 +667,9 @@ mouse, touch), screens, multiplayer, main loop.
   still work). For a living Gojo, `drawMini()` draws Hollow Purple's reach and path and rings
   anyone in it. His banner is a band like the others (`CUTS.dom`,
   `cutGojo()`: the sign, a fist with two fingers up).
+- **Nue** is a ride, not an action: `f.nue` (synced) counts down from `NUE.dur`, `nueSp()` scales walking
+  (the joiner's `predStep()` too) from `NUE.sp0` to `NUE.sp1`, `rideNue()` shocks anyone touched (once per
+  `NUE.every` s each, `f.nh` host only), and the Q cooldown waits for the ride to end.
 - **Rabbit Escape** is one entity per cast, not one per rabbit: the swarm runs from `x0,y0` to `x,y`
   over `T` s, bursts (`RAB.dmg` in `RAB.r`), then nibbles and slows for `RAB.linger` s. Each rabbit's
   path is worked out from the entity in `drawSwarm()`.
