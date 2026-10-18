@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Obito's Multiverse</title>
 <meta name="description" content="A multiverse ninja adventure: make your own ninja from the Leaf and stop Obito stealing power from other worlds.">
@@ -228,8 +230,7 @@ document.querySelectorAll('#pad [data-k]').forEach(b=>{const k=b.dataset.k;
 function releaseTouch(){if(stick.id!==null)stickUp();document.querySelectorAll('#pad [data-k]').forEach(b=>{keys[b.dataset.k]=false;b.classList.remove('on')})}
 addEventListener('blur',releaseTouch);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseTouch()});
-$('fsBtn').hidden=!document.documentElement.requestFullscreen;
-$('fsBtn').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})).catch(()=>{})};
+$('fsBtn').onclick=()=>{if(!document.documentElement.requestFullscreen){const t=document.createElement('div');t.textContent='For full screen on iPhone: Share, then Add to Home Screen, and open it from there';t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:999;background:rgba(0,0,0,.88);color:#fff;padding:10px 14px;border-radius:8px;font:600 14px system-ui,sans-serif;text-align:center;max-width:90vw;pointer-events:none';document.body.appendChild(t);setTimeout(()=>t.remove(),4500);return}if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})).catch(()=>{})};
 $('homeBtn').onclick=()=>{location.href='../'};
 // Outside a fight the stick and buttons hide and a tap anywhere acts as Enter (next line, retry, skip a title card).
 let padTap=false,padSig='';

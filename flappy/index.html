@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Flappy Finch</title>
 <meta name="description" content="A goldfinch, a dusk sky and a run of copper pipes. Tap to flap.">
@@ -61,6 +63,10 @@
   .icon svg{width:62%;height:62%;shape-rendering:crispEdges;fill:var(--paper)}
   #bPause{left:calc(var(--u)*6)}
   #bSound{right:calc(var(--u)*6)}
+  #bFull{right:calc(var(--u)*26)}
+  #bFull .x{display:none}
+  #bFull.on .w{display:none}
+  #bFull.on .x{display:inline}
   #bSound .x{display:none}
   #bSound.off .w{display:none}
   #bSound.off .x{display:inline}
@@ -240,6 +246,12 @@ img,svg,canvas,a{-webkit-user-drag:none}
 
     <button id="bPause" class="icon" aria-label="Pause (P)" title="Pause (P)" hidden>
       <svg viewBox="0 0 8 8"><rect x="1" y="1" width="2" height="6"/><rect x="5" y="1" width="2" height="6"/></svg>
+    </button>
+    <button id="bFull" class="icon" aria-label="Full screen" title="Full screen">
+      <svg viewBox="0 0 8 8">
+        <path class="w" d="M0 0h3v1H1v2H0zM5 0h3v3H7V1H5zM8 5v3H5V7h2V5zM0 5h1v2h2v1H0z"/>
+        <path class="x" d="M2 0h1v3H0V2h2zM5 0h1v2h2v1H5zM5 5h3v1H6v2H5zM0 5h3v3H2V6H0z"/>
+      </svg>
     </button>
     <button id="bSound" class="icon" aria-label="Toggle sound (M)" title="Sound (M)">
       <svg viewBox="0 0 10 8">
@@ -913,6 +925,27 @@ onClick("bQuit", toTitle);
 onClick("bResume", togglePause);
 onClick("bPause", togglePause);
 onClick("bSound", function(){ setMuted(!muted); });
+/* full screen: the Fullscreen API where there is one (desktop, Android, iPad); an iPhone has none for
+   a page, so there the button says how to get it from the home screen instead */
+function fsIsOn(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function fsToggle(){
+  var d = document.documentElement, req = d.requestFullscreen || d.webkitRequestFullscreen;
+  if (fsIsOn()){ (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+  if (!req){ fsTip(); return; }
+  try { var p = req.call(d); if (p && p.catch) p.catch(function(){}); } catch (e){ /* refused */ }
+}
+function fsTip(){
+  var t = document.createElement("div");
+  t.textContent = "For full screen on iPhone: Share, then Add to Home Screen, and open it from there";
+  t.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:999;background:rgba(0,0,0,.88);color:#fff;" +
+    "padding:10px 14px;border-radius:8px;font:600 14px system-ui,sans-serif;text-align:center;max-width:90vw;pointer-events:none";
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 4500);
+}
+onClick("bFull", fsToggle);
+function fsIcon(){ document.getElementById("bFull").classList.toggle("on", fsIsOn()); }
+document.addEventListener("fullscreenchange", fsIcon);
+document.addEventListener("webkitfullscreenchange", fsIcon);
 if (window.matchMedia && window.matchMedia("(hover:none) and (pointer:coarse)").matches) el.tapKey.textContent = "TAP";
 else el.tapKey.textContent = "SPACE";
 
