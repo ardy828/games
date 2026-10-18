@@ -1224,10 +1224,18 @@ const MOVES = {
     },
   },
   sukuna: {
-    q(f) {      // his Dismantle: a far bigger slash than Yuji's, SHOT kind 4
+    q(f) {      // his Dismantle: far bigger slashes than Yuji's (SHOT kind 4), one where he aims and one at every enemy in reach and in sight; one volley cuts nobody twice
       startAct(f, 'cast', 0.22);
-      const c = Math.cos(f.aim), s = Math.sin(f.aim);
-      S.sh.push({ id: S.nid++, own: f.id, k: 4, x: f.x + c * 30, y: f.y + s * 30, a: f.aim, d: 0 });
+      const hit = [], dirs = [f.aim];
+      for (const t of targets(f.id)) {
+        if (dist(f, t) > SHOT[4].range * 0.9 || !los(f, t) || (t.prot > 0)) continue;
+        const a = ang(f, t);
+        if (!dirs.some((o) => Math.abs(angD(o, a)) < 0.05)) dirs.push(a);
+      }
+      for (const a of dirs.slice(0, 12)) {
+        const c = Math.cos(a), s = Math.sin(a);
+        S.sh.push({ id: S.nid++, own: f.id, k: 4, x: f.x + c * 30, y: f.y + s * 30, a, d: 0, hit });
+      }
       fx(['snd', 'slash', r1(f.x), r1(f.y)]);
     },
     e(f) {
@@ -1785,12 +1793,12 @@ function updDomain(dt) {
 const CLEAVE = { range: 650, wind: 0.22, share: 0.4 };
 const FUGA = { charge: 1.15, flight: 0.45, range: MAP * 1.5, bot: 900, r: 380, dur: 6, hit: 200, tick: 0.4, burn: 30, ring: 78, ringDmg: 10 };
 const MS = { r: 620, rise: 1, dur: 10, tick: 0.1, dmg: 9, lift: 18 };
-function cleaveTarget(f) {
+function cleaveTarget(f) {      // whoever is closest to the pointer (aim and distance), within reach and in sight
+  const ad = clamp(f.inp.ad || 300, 0, CLEAVE.range + 200), px = f.x + Math.cos(f.aim) * ad, py = f.y + Math.sin(f.aim) * ad;
   let best = null, bs = 1e9;
   for (const t of targets(f.id)) {
-    const d = dist(f, t) - t.r, off = Math.abs(angD(f.aim, ang(f, t)));
-    if (d > CLEAVE.range || !los(f, t) || (off > 1 && d > 40)) continue;
-    const sc = d * (1 + off * 1.5);
+    if (dist(f, t) - t.r > CLEAVE.range || !los(f, t)) continue;
+    const sc = Math.hypot(t.x - px, t.y - py);
     if (sc < bs) { bs = sc; best = t; }
   }
   return best;
@@ -2753,7 +2761,7 @@ function flame(x, y, s, seed) {      // layered: deep red outside, orange, yello
 function fireColumn(x, y, r, H, al, seed) {
   if (H < 2 || al <= 0) return;
   g.save(); g.globalAlpha = al;
-  const ry = r * 0.55, top = y - H, n = 18;
+  const ry = r, top = y - H, n = 18;      // its base is the whole circle
   const body = () => {
     g.beginPath(); g.moveTo(x - r, y);
     g.lineTo(x - r * 0.96, top + 20);
@@ -2764,7 +2772,7 @@ function fireColumn(x, y, r, H, al, seed) {
     g.lineTo(x + r * 0.96, top + 20); g.lineTo(x + r, y);
     g.ellipse(x, y, r, ry, 0, 0, Math.PI); g.closePath();
   };
-  g.fillStyle = 'rgba(255,90,20,.25)'; ell(x, y, r * 1.25, ry * 1.4);      // the glow on the ground
+  g.fillStyle = 'rgba(255,90,20,.25)'; ell(x, y, r * 1.2, ry * 1.2);      // the glow on the ground
   const gr = g.createLinearGradient(0, y + ry, 0, top - 60);
   gr.addColorStop(0, '#fff3c4'); gr.addColorStop(0.18, '#ffc24a'); gr.addColorStop(0.5, '#ff6a18'); gr.addColorStop(0.85, '#c41f12'); gr.addColorStop(1, 'rgba(120,10,10,.6)');
   body(); g.fillStyle = gr; g.fill();
@@ -2865,10 +2873,10 @@ function drawFugaAir() {
     }
     g.restore();
   }
-  for (const e of S.fl) {      // as it lands, a cylinder of fire rises the width of the blast, over the rooftops, then burns out
-    if (e.t < 0 || e.t >= 1.8 || !vis(e.x, e.y, FUGA.r + 700) || outside(e.x, e.y)) continue;
-    const H = 760 * (1 - (1 - Math.min(1, e.t / 0.3)) ** 3) * (e.t < 1.2 ? 1 : 1 - (e.t - 1.2) / 0.6 * 0.5);
-    fireColumn(e.x, e.y, FUGA.r, H, clamp((1.8 - e.t) / 0.6, 0, 1), e.id);
+  for (const e of S.fl) {      // as it lands, a cylinder of fire roars up the width of the blast, over the rooftops, and stands there as long as it burns
+    if (e.t < 0 || !vis(e.x, e.y, FUGA.r + 700) || outside(e.x, e.y)) continue;
+    const H = 760 * (1 - (1 - Math.min(1, e.t / 0.3)) ** 3) * (1 + 0.04 * Math.sin(T * 7 + e.id));
+    fireColumn(e.x, e.y, FUGA.r * 1.08, H, clamp((FUGA.dur - e.t) / 0.6, 0, 1) * (e.t < 1 ? 1 : 0.86), e.id);      // as wide as the ring of flames
   }
   for (const e of S.fl) {
     if (e.t < -FUGA.flight || e.t >= 0) continue;

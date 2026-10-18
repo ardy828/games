@@ -688,8 +688,9 @@ mouse, touch), screens, multiplayer, main loop.
   still work). For a living Gojo, `drawMini()` draws Hollow Purple's reach and path and rings
   anyone in it. His banner is a band like the others (`CUTS.dom`,
   `cutGojo()`: the sign, a fist with two fingers up).
-- **Sukuna**: his Dismantle is `SHOT` kind 4 (bigger, further, harder than Yuji's kind 0). Cleave
-  (`ACTS.cleave`, `CLEAVE`) picks `cleaveTarget()` into `f.lk` and deals exactly `CLEAVE.share` of its full
+- **Sukuna**: his Dismantle is `SHOT` kind 4 (bigger, further, harder than Yuji's kind 0), one shot where
+  he aims and one at every enemy in reach and sight, sharing one `hit` list so a volley cuts nobody twice. Cleave
+  (`ACTS.cleave`, `CLEAVE`) picks `cleaveTarget()` (closest to the pointer: aim and `inp.ad`) into `f.lk` and deals exactly `CLEAVE.share` of its full
   health (divided by `RULES.dmg`, which `hurt()` multiplies back in), ignoring blocks. Divine Flame
   is aimed on the map: C (or the touch button) calls `openFugaMap()`, which blows `#mini` up to fill the
   screen (`body.fmap`); `drawMini()` draws the blast's ring at the pointer and a click or lifted finger
@@ -702,7 +703,7 @@ mouse, touch), screens, multiplayer, main loop.
   within `MS.r` every `MS.tick` s, and keeps whoever has been inside (`s.in`, host only) from leaving
   until it ends; while it stands `hurt()` refuses every hit on him. `drawShrines()` tints the domain red,
   draws the shrine from the front (`shrineFront()`, rising out of the ground) and redraws him on its ridge;
-  `fireColumn()` is Divine Flame's rising cylinder and `flame()` the layered flame everything uses; `cutSukuna()` is his banner
+  `fireColumn()` is Divine Flame's cylinder (it stands for the whole `FUGA.dur`) and `flame()` the layered flame everything uses; `cutSukuna()` is his banner
   (the Malevolent Shrine sign, his face marks).
 - **Nue** is a ride, not an action: `f.nue` (synced) counts down from `NUE.dur`, `nueSp()` scales walking
   (the joiner's `predStep()` too) from `NUE.sp0` to `NUE.sp1`, `rideNue()` shocks anyone touched (once per

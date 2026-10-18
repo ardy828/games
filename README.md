@@ -266,12 +266,12 @@ cursed energy: every move has its own cooldown.
   to bump into or to stop his Blue and Red, and nobody outside to shove them. From outside it is a black
   sphere hanging over the street, and nobody, cursed spirits included, can get in until it ends. No attack crosses its edge either
   way: nothing from outside hurts the people inside, and nothing inside hurts anyone outside.
-- **Sukuna**, the King of Curses. His *Dismantle* is a far bigger, harder slash than Yuji's that cuts
-  through everyone in its path. *Cleave* (long cooldown) is one huge slash on the enemy nearest your aim, from a long way off,
+- **Sukuna**, the King of Curses. His *Dismantle* sends far bigger, harder slashes than Yuji's: one where
+  you aim and one at every enemy in reach and in sight, each cutting through everyone in its path. *Cleave* (long cooldown) is one huge slash on the enemy closest to your pointer, from a long way off,
   that always takes 40% of their full health, block or not. *Divine Flame* (long cooldown): C (or the
   button) blows the minimap up to fill the screen with a ring the blast's size under your pointer; click
   (or tap) anywhere on the city and he stands in a ring of fire drawing a great flame bow while a ring
-  marks the spot, then the arrow lands, a cylinder of fire roars up, and a huge ring of fire burns and slows
+  marks the spot, then the arrow lands, a cylinder of fire as wide as the blast roars up and stands, and the ring of fire burns and slows
   everyone in it for 6 seconds. Esc or a right click cancels. His ultimate, *Malevolent
   Shrine*, has no barrier: the shrine rises out of the ground under him and lifts him onto its roof,
   where nothing can hurt him, the whole domain turns red,
