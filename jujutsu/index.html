@@ -1138,7 +1138,7 @@ const MOVES = {
   gojo: {
     q(f) {
       startAct(f, 'cast', 0.25);
-      const d = rayLen(f.x, f.y, f.aim, clamp(f.inp.ad || 300, 120, BLUE.range));
+      const vd = voidOf(f.id), far = clamp(f.inp.ad || 300, 120, BLUE.range), d = vd ? voidLen(vd, f.x, f.y, f.aim, far) : rayLen(f.x, f.y, f.aim, far);
       S.bl.push({ id: S.nid++, own: f.id, x: r1(f.x + Math.cos(f.aim) * d), y: r1(f.y + Math.sin(f.aim) * d), t: 0 });
       fx(['snd', 'blue', r1(f.x), r1(f.y)]);
     },
@@ -1432,7 +1432,7 @@ function shotHit(b, t) {
 function updShots(dt) {
   for (const b of S.sh) {
     const K = SHOT[b.k || 0], step = K.spd * dt, c = Math.cos(b.a), s = Math.sin(b.a);
-    const free = rayLen(b.x, b.y, b.a, step);
+    const vd = S.dm.length ? voidOf(b.own) : null, free = vd ? voidLen(vd, b.x, b.y, b.a, step) : rayLen(b.x, b.y, b.a, step);
     for (const t of targets(b.own)) {
       const dx = t.x - b.x, dy = t.y - b.y, al = dx * c + dy * s, pp = Math.abs(-dx * s + dy * c);
       if (al > -t.r && al < free + t.r && pp < t.r + K.w && shotHit(b, t)) { b.dead = true; break; }
@@ -1598,8 +1598,17 @@ function updPurple(dt) {
   }
   S.pu = S.pu.filter((p) => !p.dead);
 }
-// a closed domain has no way out: its edge is a wall for Gojo and everyone caught in it (e is a
-// fighter or the joiner's prediction, id whose it is)
+// A closed domain is a space of its own. For Gojo and everyone caught in it (voidOf) nothing of the city
+// is there: no buildings, cars or trees to bump into or to stop his Blue and Red, and nobody outside
+// to shove them. Its edge is the one wall, and there is no way out through it.
+const voidOf = (id) => S.dm.find((d) => d.t <= DOM.dur && (d.own === id || d.vic.includes(id)));
+const NO_HIT = { hit: false };
+// how far something travelling from (x, y) along a gets inside domain d before its edge
+function voidLen(d, x, y, a, max) {
+  const px = x - d.x, py = y - d.y, pu = px * Math.cos(a) + py * Math.sin(a);
+  return clamp(-pu + Math.sqrt(Math.max(0, pu * pu - (px * px + py * py - DOM.r * DOM.r))), 0, max);
+}
+// e is a fighter or the joiner's prediction, id whose it is
 function domWall(e, id, r) {
   for (const d of S.dm) {
     if (d.t > DOM.dur || (d.own !== id && !d.vic.includes(id))) continue;
@@ -1660,7 +1669,7 @@ function updFighter(f, dt) {
     f.vx += (mx * sp - f.vx) * k; f.vy += (my * sp - f.vy) * k;
   }
   f.x += f.vx * dt; f.y += f.vy * dt;
-  const c = collide(f, f.r);
+  const c = S.dm.length && voidOf(f.id) ? NO_HIT : collide(f, f.r);
   if (c.hit) {
     const into = -(f.vx * c.nx + f.vy * c.ny);
     if (into > 0) {
@@ -1682,9 +1691,10 @@ function separate() {
   const B = [];
   for (const f of S.f) if (f.alive && !LOCKED(f)) B.push(f);
   for (const m of S.maho) if (m.mode !== 'lunge') B.push(m);
+  const sp = B.map((e) => { const d = S.dm.length ? voidOf(e.id) : null; return d ? d.id + 1 : 0; });      // inside a domain or not
   for (let i = 0; i < B.length; i++) for (let j = i + 1; j < B.length; j++) {
     const a = B[i], b = B[j], dx = b.x - a.x, dy = b.y - a.y, m = a.r + b.r, d2 = dx * dx + dy * dy;
-    if (d2 >= m * m || d2 < 1e-6) continue;
+    if (d2 >= m * m || d2 < 1e-6 || sp[i] !== sp[j]) continue;
     const d = Math.sqrt(d2), p = (m - d) / 2, wa = a.isM ? 0.3 : a.r > 24 ? 0.5 : 1, wb = b.isM ? 0.3 : b.r > 24 ? 0.5 : 1;
     a.x -= dx / d * p * wa; a.y -= dy / d * p * wa; b.x += dx / d * p * wb; b.y += dy / d * p * wb;
   }
@@ -4535,7 +4545,7 @@ function predStep(me, dt) {
     pred.vx += (mx * sp - pred.vx) * k; pred.vy += (my * sp - pred.vy) * k;
   }
   pred.x += pred.vx * dt; pred.y += pred.vy * dt;
-  const c = collide(pred, FR);
+  const c = S.dm.length && voidOf(me.id) ? NO_HIT : collide(pred, FR);
   if (c.hit) { const into = -(pred.vx * c.nx + pred.vy * c.ny); if (into > 0) { pred.vx += c.nx * into; pred.vy += c.ny * into; } }
   if (S.dm.length) domWall(pred, me.id, FR);
 }
