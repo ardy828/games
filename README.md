@@ -277,6 +277,13 @@ cursed energy: every move has its own cooldown.
   where nothing can hurt him, the whole domain turns red,
   and for 10 seconds everyone near him (well past Gojo's domain's reach) is cut ten times a second, and anyone who
   steps inside cannot leave until it ends.
+- **Domain clash.** If Gojo and Sukuna expand their domains within a second of each other, with Gojo
+  inside the shrine's reach, the domains clash. Both banners cut in from opposite sides of the screen,
+  then Gojo's void holds in its star rush while the shrine rises, and their powers grind against each
+  other at the shrine's mouth. For 10 seconds both of them mash their ultimate (F, or tap its button):
+  there is no counter, and nobody can touch either of them. The screen goes white, and whoever pressed
+  more wins. If Gojo wins, the shrine crumbles and the void closes for 10 seconds instead of 5; if
+  Sukuna wins, the black sphere shatters and the shrine cuts for 12 seconds.
 - **Practice** — you against 1 to 10 cursed spirits (Easy, Normal or Hard), first to 10, 20 or 40 points.
 - **Private party** — HOST PARTY gives a four-digit code; friends type it and press JOIN. Up to 20, with
   as many cursed spirits as the host picks. If a player's connection drops, a bot plays for them while their browser

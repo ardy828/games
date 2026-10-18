@@ -900,7 +900,7 @@ let meId = 0;          // the fighter played on this device
 function newState(mode, o = {}) {
   parts.length = 0; decals.length = 0;
   return { mode, time: 0, phase: 'play', overT: 0, toWin: o.toWin ?? 10, diff: o.diff ?? 1, win: '', nid: 1, roundT: RULES.time * 60,
-    f: [], maho: [], ele: [], rab: [], sh: [], rn: [], bl: [], pu: [], dm: [], fl: [], ms: [] };
+    f: [], maho: [], ele: [], rab: [], sh: [], rn: [], bl: [], pu: [], dm: [], fl: [], ms: [], cl: [] };
 }
 function mkFighter(id, name, ch, ctl) {
   return {
@@ -1216,11 +1216,12 @@ const MOVES = {
     e(f) { startAct(f, 'red'); fx(['snd', 'redCharge', r1(f.x), r1(f.y)]); },
     c(f) { startAct(f, 'purple'); fx(['snd', 'purpleCharge', r1(f.x), r1(f.y)]); },
     u(f) {      // Infinite Void: a burst for DOM.form s, then it closes on whoever is still inside (updDomain)
-      S.dm.push({ id: S.nid++, own: f.id, x: r1(f.x), y: r1(f.y), t: DOM.form + DOM.shut, vic: [] });
+      S.dm.push({ id: S.nid++, own: f.id, x: r1(f.x), y: r1(f.y), t: DOM.form + DOM.shut, vic: [], at: S.time });
       startAct(f, 'domain');
       f.iframe = Math.max(f.iframe, CUT_T);
       fx(['snd', 'domain', r1(f.x), r1(f.y)]);
       event(['C', 'dom', f.id, null, f.name]);
+      tryClash(f);
     },
   },
   sukuna: {
@@ -1250,11 +1251,12 @@ const MOVES = {
       startAct(f, 'fuga'); fx(['snd', 'purpleCharge', r1(f.x), r1(f.y)]);
     },
     u(f) {      // Malevolent Shrine: rises under him and holds him up while it cuts everyone near (updShrine)
-      S.ms.push({ id: S.nid++, own: f.id, x: r1(f.x), y: r1(f.y), t: 0, in: [] });
+      S.ms.push({ id: S.nid++, own: f.id, x: r1(f.x), y: r1(f.y), t: 0, in: [], at: S.time });
       startAct(f, 'shrine');
       f.iframe = Math.max(f.iframe, CUT_T);
       fx(['snd', 'summon', r1(f.x), r1(f.y)]);
       event(['C', 'ms', f.id, null, f.name]);
+      tryClash(f);
     },
   },
   fly: { q(f) { startAct(f, 'pounce'); fx(['snd', 'buzz', r1(f.x), r1(f.y)]); } },
@@ -1345,6 +1347,7 @@ function hurt(t, dmg, o) {
   if (t.isM) { const ok = hurtMaho(t, dmg, o); if (ok && by && by.ch === 'nobara') mark(by, t); return ok; }
   if (!t.alive || t.prot > 0 || t.iframe > 0 || S.phase !== 'play') return false;
   if (S.ms.length && S.ms.some((m) => m.own === t.id)) return false;      // nothing touches Sukuna up on his shrine
+  if (S.cl.length && S.cl.some((c) => !c.done && (c.go === t.id || c.su === t.id))) return false;      // nor either of them in a domain clash
   if (infinity(t)) { fx(['inf', r1(t.x), r1(t.y)]); return false; }
   let blocked = false;
   if (t.blk && o.a != null && Math.abs(angD(t.aim, o.a + Math.PI)) < 1.31) {
@@ -1396,7 +1399,7 @@ const standings = () => ranked().map((f) => [f.id, f.name, f.ch, f.pts, f.kills,
 const goalText = () => (!RULES.rounds ? 'Endless free-for-all' : S.toWin > 0 ? 'First to ' + S.toWin + ' points' : 'Most points');
 function newMatch() {
   S.phase = 'play'; S.win = ''; S.roundT = RULES.time * 60;
-  S.maho = []; S.ele = []; S.rab = []; S.sh = []; S.rn = []; S.bl = []; S.pu = []; S.dm = []; S.fl = []; S.ms = [];
+  S.maho = []; S.ele = []; S.rab = []; S.sh = []; S.rn = []; S.bl = []; S.pu = []; S.dm = []; S.fl = []; S.ms = []; S.cl = [];
   let i = 0;
   for (const f of S.f) { f.pts = 0; f.kills = 0; f.deaths = 0; f.ult = 0; f.alive = false; f.resp = 0.2 + 0.08 * i++; }
   event(['N', 'New match. ' + goalText() + (RULES.rounds && RULES.time > 0 ? ' in ' + RULES.time + ' min' : '') + '.']);
@@ -1735,13 +1738,13 @@ function updPurple(dt) {
 // A closed domain is a space of its own. For Gojo and everyone caught in it (voidOf) nothing of the city
 // is there: no buildings, cars or trees to bump into or to stop his Blue and Red, and nobody outside
 // to shove them. Its edge is the one wall, and there is no way out through it.
-const voidOf = (id) => S.dm.find((d) => d.t <= DOM.shut && (d.own === id || d.vic.includes(id)));
+const voidOf = (id) => S.dm.find((d) => d.t <= DOM.shut && !d.cl && (d.own === id || d.vic.includes(id)));
 const NO_HIT = { hit: false };
 const spaceOf = (id) => { const d = S.dm.length ? voidOf(id) : null; return d ? d.id + 1 : 0; };      // inside a domain (its id + 1) or not (0)
 // how far a shot from outside gets before it meets a closed domain's edge
 function barrier(x, y, a, max) {
   for (const d of S.dm) {
-    if (d.t > DOM.shut) continue;
+    if (d.t > DOM.shut || d.cl) continue;
     const px = x - d.x, py = y - d.y, pu = px * Math.cos(a) + py * Math.sin(a), c = px * px + py * py - DOM.r * DOM.r, q = pu * pu - c;
     if (c <= 0 || q < 0 || pu >= 0) continue;
     max = Math.min(max, Math.max(0, -pu - Math.sqrt(q)));
@@ -1757,7 +1760,7 @@ function voidLen(d, x, y, a, max) {
 // it did not catch) gets in. e is a fighter, a Mahoraga or the joiner's prediction, id whose it is.
 function domWall(e, id, r) {
   for (const d of S.dm) {
-    if (d.t > DOM.shut) continue;
+    if (d.t > DOM.shut || d.cl) continue;
     const ins = d.own === id || d.vic.includes(id), dx = e.x - d.x, dy = e.y - d.y, l = Math.hypot(dx, dy);
     if (ins ? l <= DOM.r - r : l >= DOM.r + r) continue;
     const nx = l ? dx / l : 1, ny = l ? dy / l : 0, R = ins ? DOM.r - r : DOM.r + r, sg = ins ? 1 : -1, through = (e.vx * nx + e.vy * ny) * sg;
@@ -1767,17 +1770,18 @@ function domWall(e, id, r) {
 }
 function updDomain(dt) {
   for (const d of S.dm) {
+    if (d.cl) { d.t = DOM.shut - DOM.rush * 0.5; continue; }      // clashing: held in the star rush, nobody caught
     const was = d.t;
     d.t -= dt;
     const o = byId(d.own);
     if (was > DOM.shut && d.t <= DOM.shut && o && o.alive) {      // the white is over: it closes on everyone inside
       const vic = targets(d.own).filter((t) => Math.hypot(t.x - d.x, t.y - d.y) < DOM.r + t.r);
       d.vic = vic.map((t) => t.id);
-      for (const t of vic) { t.frz = DOM.shut; if (!t.isM) { t.act = ''; t.blk = false; t.vx = t.vy = 0; } }
+      for (const t of vic) { t.frz = DOM.shut + (d.ext || 0); if (!t.isM) { t.act = ''; t.blk = false; t.vx = t.vy = 0; } }
       Object.assign(o, { frz: DOM.rush, act: '', blk: false, vx: 0, vy: 0 });      // and Gojo stands still through the star rush
       fx(['snd', 'void', d.x, d.y]);
     }
-    if (d.t > 0 && o && o.alive) continue;
+    if (d.t > -(d.ext || 0) && o && o.alive) continue;      // ext: the extra void a won clash gives
     d.dead = true;
     for (const id of d.vic) { const t = foeById(id); if (t) t.frz = 0; }
     fx(['dend', d.x, d.y]);
@@ -1829,7 +1833,8 @@ function updShrine(dt) {
     const was = s.t;
     s.t += dt;
     const o = byId(s.own);
-    if (!o || !o.alive || s.t >= MS.rise + MS.dur) { s.dead = true; fx(['msend', s.x, s.y]); continue; }
+    if (s.cl) { if (o) { o.x = s.x; o.y = s.y; o.vx = o.vy = 0; } s.t = Math.min(s.t, MS.rise); continue; }      // clashing: risen, but nothing yet
+    if (!o || !o.alive || s.t >= MS.rise + (s.dur || MS.dur)) { s.dead = true; fx(['msend', s.x, s.y]); continue; }
     o.x = s.x; o.y = s.y; o.vx = o.vy = 0; o.push = 0;      // he stands on its roof
     if (s.t < MS.rise) continue;
     if (!Array.isArray(s.in)) s.in = [];
@@ -1848,6 +1853,74 @@ function updShrine(dt) {
   }
   S.ms = S.ms.filter((s) => !s.dead);
 }
+// Domain clash: Gojo's Infinite Void and Sukuna's Malevolent Shrine started within CLASH.near s of each
+// other, the two of them within the shrine's reach (MS.r). Both banners cut in from either side
+// (CLASH.intro s), then for CLASH.T s both of them mash their ultimate (presses counted here, on the host
+// only, from the input's u counter, and never shown anywhere), frozen and untouchable, the Void held in
+// its star rush and the shrine risen but dormant while their powers grind against each other. Then the
+// screen goes white (CLASH.white s) and under it the winner takes over: Gojo's void closes and lasts
+// DOM.dur + CLASH.ext s while the shrine crumbles, or the black sphere shatters and the shrine runs for
+// CLASH.shrine s. A tie is a coin toss.
+const CLASH = { near: 1, intro: 1.7, T: 10, white: 0.7, hold: 0.5, out: 0.8, ext: 5, shrine: 12, rate: [6, 8, 10] };
+const clashEnd = () => CLASH.intro + CLASH.T;
+function startClash(go, su, d, s) {
+  if (!d || !s || S.cl.some((c) => c.gd === d.id || c.sm === s.id)) return;
+  for (const id of d.vic) { const t = foeById(id); if (t) t.frz = 0; }      // if it had already closed, it lets go
+  d.vic = []; d.cl = true; d.t = DOM.shut - DOM.rush * 0.5; s.cl = true;
+  S.cl.push({ id: S.nid++, go: go.id, su: su.id, gd: d.id, sm: s.id, x: r1((d.x + s.x) / 2), y: r1((d.y + s.y) / 2), t: 0, win: 0, ng: 0, ns: 0, lg: go.inp.u | 0, ls: su.inp.u | 0 });
+  fx(['snd', 'purple', r1(go.x), r1(go.y)]);
+  event(['X', 0, go.id, su.id, go.name, su.name]);
+}
+function tryClash(f) {      // right after Gojo or Sukuna starts his domain
+  const fresh = (o) => S.time - (o.at ?? -99) <= CLASH.near;
+  if (f.ch === 'gojo') {
+    const d = S.dm.find((o) => o.own === f.id && !o.cl);
+    for (const s of S.ms) { const su = byId(s.own); if (su && su.alive && !s.cl && fresh(s) && dist(f, su) <= MS.r) { startClash(f, su, d, s); return; } }
+  } else if (f.ch === 'sukuna') {
+    const s = S.ms.find((o) => o.own === f.id && !o.cl);
+    for (const d of S.dm) { const go = byId(d.own); if (go && go.alive && !d.cl && fresh(d) && dist(f, go) <= MS.r) { startClash(go, f, d, s); return; } }
+  }
+}
+function updClash(dt) {
+  for (const c of S.cl) {
+    c.t += dt;
+    const go = byId(c.go), su = byId(c.su), d = S.dm.find((o) => o.id === c.gd), s = S.ms.find((o) => o.id === c.sm);
+    if (!c.win) {
+      for (const [f, n, l] of [[go, 'ng', 'lg'], [su, 'ns', 'ls']]) {
+        if (!f) continue;
+        f.frz = Math.max(f.frz, 0.2); f.vx = f.vy = 0; f.act = '';
+        const u = f.inp.u | 0;
+        if (c.t > CLASH.intro) {      // the mashing
+          if (f.ctl === 'bot') { if (Math.random() < (CLASH.rate[S.diff] ?? 8) * dt) c[n]++; }
+          else if (u > c[l]) c[n] += Math.min(u - c[l], 6);
+        }
+        c[l] = u;
+      }
+      const lostG = !go || !go.alive || !d, lostS = !su || !su.alive || !s;
+      if (c.t >= clashEnd() || lostG || lostS) {
+        c.win = lostG ? 2 : lostS ? 1 : c.ng > c.ns ? 1 : c.ns > c.ng ? 2 : (Math.random() < 0.5 ? 1 : 2);
+        c.t = Math.max(c.t, clashEnd());
+      }
+    } else if (!c.done && c.t >= clashEnd() + CLASH.white) {      // under the white the winner takes over
+      c.done = true;
+      if (go) go.frz = 0;
+      if (su) su.frz = 0;
+      if (c.win === 1) {
+        if (s) { S.ms = S.ms.filter((o) => o !== s); fx(['msfall', s.x, s.y]); }
+        if (d) { d.cl = false; d.ext = CLASH.ext; d.t = DOM.shut + 0.001; }      // it closes next step, for longer
+      } else {
+        if (d) { S.dm = S.dm.filter((o) => o !== d); fx(['dbreak', d.x, d.y]); }
+        if (s) { s.cl = false; s.t = MS.rise; s.dur = CLASH.shrine; }
+      }
+      const w = c.win === 1 ? go : su;
+      event(['X', c.win, w ? w.name : '']);
+    }
+    if (c.t >= clashEnd() + CLASH.white + CLASH.hold + CLASH.out) c.dead = true;
+  }
+  S.cl = S.cl.filter((c) => !c.dead);
+}
+// how white the screen is for a clash (its end)
+const clashWhite = (c) => { const t = c.t - clashEnd(); return t < 0 ? 0 : t < CLASH.white ? t / CLASH.white : t < CLASH.white + CLASH.hold ? 1 : clamp(1 - (t - CLASH.white - CLASH.hold) / CLASH.out, 0, 1); };
 function updFighter(f, dt) {
   control(f, dt);
   if (!f.alive) { if (S.phase === 'play' && (f.resp -= dt) <= 0) respawn(f); return; }
@@ -1924,7 +1997,7 @@ function step(dt) {
   for (const f of s.f) if (f.ctl === 'bot') botThink(f, dt);
   for (const f of s.f) updFighter(f, dt);
   separate();
-  updShots(dt); updEle(dt); updRabbits(dt); updMaho(dt); updRain(dt); updBlue(dt); updPurple(dt); updDomain(dt); updFuga(dt); updShrine(dt);
+  updShots(dt); updEle(dt); updRabbits(dt); updMaho(dt); updRain(dt); updBlue(dt); updPurple(dt); updClash(dt); updDomain(dt); updFuga(dt); updShrine(dt);
 }
 
 // ───────────────────────── Bots ─────────────────────────
@@ -2197,6 +2270,16 @@ function doFx(a) {
       break;
     case 'msc': part({ k: 'sl', x, y, a: a[3], life: 0.2, r: 30, col: '#ffffff' }); sparks(x, y, 5, '#ff4a66', 260, 0.2, 2); SFX.cut(v * 0.6); break;
     case 'msend': puffs(x, y, 18, '#2a1020', 200, 30, 80, 1.1, 0.55); shake(x, y, 8); break;
+    case 'msfall':      // Gojo won the clash: the shrine crumbles
+      SFX.smash(v); shake(x, y, 20);
+      puffs(x, y + SHRINE_BASE - 60, 40, '#3a2030', 320, 30, 110, 1.6, 0.7); sparks(x, y + 40, 40, '#e9dcc8', 600, 0.8, 4); sparks(x, y + 40, 20, '#e8b04a', 500, 0.6, 3);
+      break;
+    case 'dbreak':      // Sukuna won the clash: the black sphere shatters
+      SFX.red(v); SFX.slash(v); shake(x, y, 24);
+      ring(x, y, 30, DOM.r + 80, 0.6, '#b8a0ff', 8); sparks(x, y, 60, '#0a0918', 900, 0.8, 6); sparks(x, y, 30, '#d0c0ff', 700, 0.6, 3);
+      puffs(x, y, 24, '#07050d', 360, 40, 120, 1.2, 0.7);
+      for (let i = 0; i < 6; i++) part({ k: 'cv', x, y, a: i * Math.PI / 3 + rnd(-0.2, 0.2), len: DOM.r * 0.9, life: 0.5 });
+      break;
     case 'ss': {
       SFX.soul(v); shake(x, y, 22);
       ring(x, y, 10, 170, 0.5, '#bfeaff', 10); ring(x, y, 10, 110, 0.4, '#ffffff', 4); ring(x, y, 30, 230, 0.7, '#4fb8ff', 3);
@@ -2895,11 +2978,12 @@ function drawFugaAir() {
 // ground line, dust and cracks at its foot) and he stands on its ridge. While it is up the whole domain
 // is tinted red and slashes flicker everywhere in it, but there is no wall to see.
 const SHRINE_BASE = 170, SHRINE_H = 232;      // its foot below him, and from foot to ridge, in world units
-function drawShrines() {
+function drawShrines(clash) {      // a shrine in a domain clash is drawn later, over Gojo's ink (clash = true)
   for (const s of S.ms) {
+    if (!s.cl !== !clash) continue;
     if (!vis(s.x, s.y, MS.r + 260) || outside(s.x, s.y)) continue;
-    const up = s.t < MS.rise ? 1 - (1 - s.t / MS.rise) ** 3 : 1, down = clamp((MS.rise + MS.dur - s.t) / 0.6, 0, 1), k = up * down;
-    if (s.t >= MS.rise) {      // the red over everything in reach, deepest at its rim, and the cuts
+    const up = s.t < MS.rise ? 1 - (1 - s.t / MS.rise) ** 3 : 1, down = clamp((MS.rise + (s.dur || MS.dur) - s.t) / 0.6, 0, 1), k = up * down;
+    if (s.t >= MS.rise && !s.cl) {      // the red over everything in reach, deepest at its rim, and the cuts
       const al = down;
       const gr = g.createRadialGradient(s.x, s.y, MS.r * 0.2, s.x, s.y, MS.r);
       gr.addColorStop(0, `rgba(170,0,20,${0.16 * al})`); gr.addColorStop(0.85, `rgba(190,0,25,${0.26 * al})`); gr.addColorStop(1, `rgba(120,0,15,${0.34 * al})`);
@@ -2980,6 +3064,43 @@ function shrineFront(k) {
   g.strokeStyle = gold; g.lineWidth = 5; g.beginPath(); g.moveTo(-70, -228); g.lineTo(70, -228); g.stroke();      // the ridge he stands on
   g.fillStyle = gold; circ(-74, -228, 6); circ(74, -228, 6);
   g.restore();
+}
+// A domain clash between them: a violet-white stream from Gojo's ink and a crimson one from the shrine's
+// maw grinding against each other, a blinding flare where they meet, crackling bolts. Where they meet
+// drifts at random, never with the score, so nobody can tell who is winning.
+function drawClash() {
+  for (const c of S.cl) {
+    if (c.t >= clashEnd() + CLASH.white) continue;
+    const d = S.dm.find((o) => o.id === c.gd), s = S.ms.find((o) => o.id === c.sm);
+    if (!d || !s) continue;
+    const k = clamp((c.t - CLASH.intro * 0.6) / 0.5, 0, 1);
+    if (k <= 0) continue;
+    const ax = d.x, ay = d.y, bx = s.x, by = s.y + SHRINE_BASE - 76;
+    const m = 0.5 + 0.13 * Math.sin(T * 1.3 + c.id) + 0.07 * Math.sin(T * 3.7 + c.id * 2), mx = lerp(ax, bx, m), my = lerp(ay, by, m);
+    if (!vis(mx, my, 1200)) continue;
+    g.save(); g.lineCap = 'round'; g.globalAlpha = k;
+    const beam = (x0, y0, c1, c2) => {
+      const w = 34 + 10 * Math.sin(T * 17);
+      g.strokeStyle = c1; g.lineWidth = w * 2.2; g.beginPath(); g.moveTo(x0, y0); g.lineTo(mx, my); g.stroke();
+      g.strokeStyle = c2; g.lineWidth = w; g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = w * 0.3; g.stroke();
+    };
+    beam(ax, ay, 'rgba(120,90,255,.35)', '#a98bff');
+    beam(bx, by, 'rgba(230,20,60,.35)', '#ff3a5a');
+    for (let i = 0; i < 7; i++) {      // bolts
+      let x = mx, y = my; const a0 = Math.random() * TAU;
+      g.strokeStyle = i % 2 ? 'rgba(200,180,255,.9)' : 'rgba(255,120,150,.9)'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(x, y);
+      for (let j = 0; j < 6; j++) { const a = a0 + rnd(-0.6, 0.6); x += Math.cos(a) * 34; y += Math.sin(a) * 34; g.lineTo(x, y); }
+      g.stroke();
+    }
+    const R = 120 + 30 * Math.sin(T * 11), gr = g.createRadialGradient(mx, my, 0, mx, my, R * 1.8);
+    gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.25, 'rgba(255,220,240,.95)'); gr.addColorStop(0.55, 'rgba(255,90,170,.5)'); gr.addColorStop(1, 'rgba(160,60,255,0)');
+    g.fillStyle = gr; circ(mx, my, R * 1.8);
+    g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 3;
+    for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + T * 0.6, L = R * (1.6 + 0.6 * Math.sin(T * 9 + i)); g.beginPath(); g.moveTo(mx + Math.cos(a) * 20, my + Math.sin(a) * 20); g.lineTo(mx + Math.cos(a) * L, my + Math.sin(a) * L); g.stroke(); }
+    g.restore();
+    if (Math.random() < 0.3) shake(mx, my, 5);
+  }
 }
 // The Ten Shadows shikigami, drawn from above after the anime: Nue, an orange owl-like bird with a white
 // skull mask and two sets of talons; the white rabbits of Rabbit Escape; Max Elephant, pink with yellow
@@ -3234,11 +3355,11 @@ function drawPurples() {
 // splatters spreading over it, the black hole above them, and the people in it; everyone else sees a
 // black sphere floating DOM.lift over the street with its shadow under it, hiding whatever is under it.
 const domOpen = (d) => d.t <= DOM.shut;
-const inDomain = (d) => meId != null && domOpen(d) && (d.own === meId || (d.vic || []).includes(meId));
+const inDomain = (d) => meId != null && domOpen(d) && !d.cl && (d.own === meId || (d.vic || []).includes(meId));
 const domAge = (d) => DOM.shut - d.t;      // time since it closed
 const rushing = (d) => domOpen(d) && domAge(d) < DOM.rush;
 const inkR = (d) => 0.1 + 0.9 * (1 - (1 - clamp(domAge(d) / (DOM.rush * 0.85), 0, 1)) ** 2);      // the ink's reach, 0..1
-function domGrow(d) { return !domOpen(d) ? 0 : rushing(d) ? inkR(d) : clamp(d.t / 0.35, 0, 1); }
+function domGrow(d) { return !domOpen(d) ? 0 : rushing(d) ? inkR(d) : clamp((d.t + (d.ext || 0)) / 0.35, 0, 1); }
 function hidden(x, y) {
   for (const d of S.dm) if (!inDomain(d) && Math.hypot(x - d.x, y - d.y) < DOM.r * domGrow(d)) return true;
   return false;
@@ -3642,6 +3763,8 @@ function render() {
   drawFugaAir();
   drawRain();
   drawDomains();
+  drawShrines(true);
+  drawClash();
   drawBlues(); drawPurples();
   drawShots();
   drawParts();
@@ -3653,6 +3776,10 @@ function render() {
     if (aimPreview.ring) { g.beginPath(); g.arc(me.rx + Math.cos(aimPreview.a) * aimPreview.len, me.ry + Math.sin(aimPreview.a) * aimPreview.len, aimPreview.ring, 0, TAU); g.stroke(); }
   }
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  for (const c of S.cl) {      // a domain clash ends in white for everyone near it
+    const me2 = S.mode === 'demo' ? null : byId(meId), w = clashWhite(c);
+    if (w > 0 && me2 && (c.go === meId || c.su === meId || Math.hypot(me2.x - c.x, me2.y - c.y) < MS.r + 900)) { g.globalAlpha = w; g.fillStyle = '#fbf8f3'; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+  }
   if (cam.flash > 0) { g.globalAlpha = cam.flash; g.fillStyle = cam.flashC; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
   if (me && !me.alive) { g.fillStyle = 'rgba(12,6,24,.38)'; g.fillRect(0, 0, W, H); }
   if (me && me.alive && screen === null && !TOUCH) {     // crosshair
@@ -3799,20 +3926,23 @@ function startCutin(k, role, name) {
 }
 const cutLeft = () => (cut ? Math.max(0, CUT_T - (T - cut.t0)) : 0);
 function drawCutin() {
-  const p = cut && S && S.mode !== 'demo' ? (T - cut.t0) / CUT_T : -1;
+  const p = cut && S && S.mode !== 'demo' ? (T - cut.t0) / (cut.len || CUT_T) : -1;
   if (p >= 1 || p < 0) cut = null;
   if (cutOn !== !!cut) { cutOn = !!cut; cutCv.classList.toggle('on', cutOn); if (!cutOn) cutG.clearRect(0, 0, cutCv.width, cutCv.height); }
   if (!cut) return;
   const old = g;
   g = cutG;
   g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cutCv.width, cutCv.height); g.setTransform(DPR, 0, 0, DPR, 0, 0);
-  try { paintCutin(p); } finally { g = old; }
+  try { if (cut.duo) for (const o of cut.duo) paintCutin(p, o); else paintCutin(p, cut); } finally { g = old; }
 }
-function paintCutin(p) {
-  const C = CUTS[cut.k] || CUTS.ss, yuji = cut.k === 'ss', e = (x) => 1 - (1 - x) ** 3;
+// a domain clash shows both banners at once: one band slides in from the left on the upper half, the
+// other from the right on the lower half (o.cyK, o.dir, o.hk)
+function startDuo(a, b) { cut = { t0: T, len: CLASH.intro, duo: [{ ...a, cyK: 0.25, dir: 1, hk: 0.8 }, { ...b, cyK: 0.68, dir: -1, hk: 0.8 }] }; SFX.cutin(); }
+function paintCutin(p, o) {
+  const C = CUTS[o.k] || CUTS.ss, yuji = o.k === 'ss', e = (x) => 1 - (1 - x) ** 3, dir = o.dir || 1;
   const pin = e(clamp(p / 0.14, 0, 1)), pout = clamp((p - 0.8) / 0.2, 0, 1) ** 2;
-  const h = clamp(Math.min(H * 0.27, W * 0.42), 96, 230), cy = H * (TOUCH ? 0.34 : 0.31), sk = h * 0.14, span = W + sk * 4;
-  const dx = (1 - pin) * -span + pout * span, k = h / 100, tt = T - cut.t0;
+  const h = clamp(Math.min(H * 0.27, W * 0.42), 96, 230) * (o.hk || 1), cy = H * (o.cyK || (TOUCH ? 0.34 : 0.31)), sk = h * 0.14, span = W + sk * 4;
+  const dx = dir * ((1 - pin) * -span + pout * span), k = h / 100, tt = T - cut.t0;
   const pal = C.pal, acc = C.acc;
   const band = (y0, y1, x0) => {
     g.beginPath(); g.moveTo(x0 - sk * 2, y0 + sk); g.lineTo(x0 + W + sk * 2, y0 - sk); g.lineTo(x0 + W + sk * 2, y1 - sk); g.lineTo(x0 - sk * 2, y1 + sk); g.closePath();
@@ -3843,7 +3973,7 @@ function paintCutin(p) {
     g.lineWidth = 1 + hash1(j + 11) * 2.5;
     g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + len); g.stroke();
   }
-  if (cut.k === 'nr') {      // nails raining out of the sky, all the way across
+  if (o.k === 'nr') {      // nails raining out of the sky, all the way across
     for (let j = 0; j < 46; j++) {
       const x = dx + hash1(j * 2.9) * W + 40, sp = 0.8 + hash1(j + 5) * 0.6, y = cy - h * 0.9 + ((hash1(j + 1) * h * 2 + tt * h * 2.4 * sp) % (h * 2));
       const s = 0.7 + hash1(j + 13) * 0.6, dxn = -0.32 * 30 * s;
@@ -3873,10 +4003,10 @@ function paintCutin(p) {
   // the move's name on the left, and who it is about
   const tx = dx + Math.max(18, W * 0.05), fs = Math.round(clamp(Math.min(h * 0.3, W * 0.075), 24, 64));
   g.textAlign = 'left'; g.textBaseline = 'alphabetic';
-  const tag = cut.role === 'target' ? 'LOCKED ON · YOU' : cut.role === 'near' ? 'WATCH OUT · ' + cut.name : cut.name;
+  const tag = o.role === 'target' ? 'LOCKED ON · YOU' : o.role === 'near' ? 'WATCH OUT · ' + o.name : o.name;
   g.font = `800 ${Math.round(fs * 0.34)}px Barlow, sans-serif`;
   const tw = g.measureText(tag).width + 14;
-  g.fillStyle = cut.role === 'you' ? INK : '#e01e3c'; g.fillRect(tx, cy - fs * 0.95, tw, fs * 0.46);
+  g.fillStyle = o.role === 'you' ? INK : '#e01e3c'; g.fillRect(tx, cy - fs * 0.95, tw, fs * 0.46);
   g.fillStyle = '#fff'; g.fillText(tag, tx + 7, cy - fs * 0.6);
   g.font = `${fs}px Anton, Impact, sans-serif`;
   g.lineWidth = Math.max(4, fs * 0.12); g.strokeStyle = INK;
@@ -4460,6 +4590,15 @@ function doEvent(a) {
     if (demoMode) return;
     const w = cutLeft();
     if (w > 0) setTimeout(() => banner(a[1], a[2], '#8b5cff', 2.4), w * 1000); else banner(a[1], a[2], '#8b5cff', 2.4);
+  } else if (a[0] === 'X') {    // a domain clash: 0 starts (Gojo id, Sukuna id, their names), 1 or 2 who won (and their name)
+    const me = byId(meId);
+    if (demoMode || !me) return;
+    if (a[1] === 0) {
+      const [, , gid, sid, gn, sn] = a, c = S.cl.find((o) => o.go === gid), mine = gid === meId || sid === meId;
+      if (!mine && (!c || Math.hypot(me.x - c.x, me.y - c.y) > MS.r + 700)) return;
+      startDuo({ k: 'dom', name: String(gn || '').toUpperCase(), role: gid === meId ? 'you' : '' }, { k: 'ms', name: String(sn || '').toUpperCase(), role: sid === meId ? 'you' : '' });
+      setTimeout(() => banner('DOMAIN CLASH', mine ? (TOUCH ? 'TAP YOUR ULTIMATE AS FAST AS YOU CAN' : 'MASH F AS FAST AS YOU CAN') : 'GOJO AGAINST SUKUNA', '#ff5a8a', mine ? CLASH.T - 0.4 : 3), CLASH.intro * 1000);
+    } else setTimeout(() => banner(a[1] === 1 ? 'INFINITE VOID' : 'MALEVOLENT SHRINE', (a[2] || '').toUpperCase() + ' WINS THE CLASH', a[1] === 1 ? '#8b5cff' : '#e0204a', 2.6), (CLASH.hold + 0.2) * 1000);
   } else if (a[0] === 'C') {    // an ultimate starts: kind, caster id, target id, caster name
     const [, k, cid, tid, cn] = a, me = byId(meId), c = byId(cid);
     if (demoMode || !me) return;
@@ -4975,9 +5114,10 @@ const SPEC = {
   n: 'id own x:1 y:1 t:2',
   b: 'id own x:1 y:1 t:2',
   u: 'id own x:1 y:1 a:2 d:1',
-  d: 'id own x:1 y:1 t:2 vic',
+  d: 'id own x:1 y:1 t:2 vic ext:1 cl:b',
   l: 'id own x:1 y:1 sx:1 sy:1 t:2',
-  s: 'id own x:1 y:1 t:2',
+  s: 'id own x:1 y:1 t:2 cl:b dur:1',
+  c: 'id go su gd sm x:1 y:1 t:2 win',
   h: 'id own k x:1 y:1 a:2 d:1',
 };
 for (const k in SPEC) SPEC[k] = SPEC[k].split(' ').map((w) => w.split(':'));
@@ -5171,7 +5311,7 @@ function sendSnap() {
     t: 's', tm: r2(s.time), ph: s.phase, ot: r2(s.overT), rt: r1(s.roundT), tw: s.toWin, nid: s.nid,
     f: s.f.map((o) => enc(o, SPEC.f)), m: s.maho.map((o) => enc(o, SPEC.m)), e: s.ele.map((o) => enc(o, SPEC.e)),
     r: s.rab.map((o) => enc(o, SPEC.r)), h: s.sh.map((o) => enc(o, SPEC.h)), n: s.rn.map((o) => enc(o, SPEC.n)),
-    bl: s.bl.map((o) => enc(o, SPEC.b)), pu: s.pu.map((o) => enc(o, SPEC.u)), dm: s.dm.map((o) => enc(o, SPEC.d)), fl: s.fl.map((o) => enc(o, SPEC.l)), ms: s.ms.map((o) => enc(o, SPEC.s)),
+    bl: s.bl.map((o) => enc(o, SPEC.b)), pu: s.pu.map((o) => enc(o, SPEC.u)), dm: s.dm.map((o) => enc(o, SPEC.d)), fl: s.fl.map((o) => enc(o, SPEC.l)), ms: s.ms.map((o) => enc(o, SPEC.s)), cl: s.cl.map((o) => enc(o, SPEC.c)),
     ak: humans.filter((h) => h.link).map((h) => [h.id, h.link.is]), fx: fxq,
   });
   fxq = [];
@@ -5544,6 +5684,7 @@ function applySnap(m) {
   for (const d of s.dm) if (!Array.isArray(d.vic)) d.vic = [];
   s.fl = mergeRows(s.fl || [], m.fl, SPEC.l, (id) => ({ id }));
   s.ms = mergeRows(s.ms || [], m.ms, SPEC.s, (id) => ({ id, in: [] }));
+  s.cl = mergeRows(s.cl || [], m.cl, SPEC.c, (id) => ({ id }));
   s.sh = mergeRows(s.sh, m.h, SPEC.h, (id) => ({ id }));
   for (const sh of s.sh) { sh.rx = sh.x; sh.ry = sh.y; }
   // our own fighter: reconcile the prediction with where the host had us after our acknowledged input
@@ -5648,9 +5789,10 @@ function joinTick(dt) {
   for (const r of S.rn) r.t += dt;
   for (const b of S.bl) b.t += dt;
   for (const p of S.pu) { p.x += Math.cos(p.a) * PURPLE.spd * dt; p.y += Math.sin(p.a) * PURPLE.spd * dt; p.d += PURPLE.spd * dt; }
-  for (const d of S.dm) d.t -= dt;
+  for (const d of S.dm) if (!d.cl) d.t -= dt;
   for (const e of S.fl) e.t += dt;
-  for (const m of S.ms) m.t += dt;
+  for (const m of S.ms) if (!m.cl) m.t += dt;
+  for (const c of S.cl) c.t += dt;
   for (const b of S.sh) { const v = (SHOT[b.k] || SHOT[0]).spd; b.x += Math.cos(b.a) * v * dt; b.y += Math.sin(b.a) * v * dt; b.rx = b.x; b.ry = b.y; }
   for (const e of S.ele) e.t += dt;
   if (S.phase === 'over') S.overT -= dt; else if (S.roundT > 0) S.roundT -= dt;

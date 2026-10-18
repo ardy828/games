@@ -620,8 +620,10 @@ mouse, touch), screens, multiplayer, main loop.
   Soul Strike's `lockOn()` picks a target into `f.lk` (synced); `ACTS.ss` crouches for `f.actD` (longer
   when locked) and steers its dash at `SS.turn`, and `reticle()` marks the target.
 - **Cut-ins** (the section after the minimap) are drawn on their own canvas, `#cutin`, over the HUD:
-  `drawCutin()` clears and hides it when none plays; `paintCutin()` draws the slanted neon bands, rain
-  and speed lines, the title, and the figure (`cutYuji`, `cutMegumi`) in panel units. The figures use
+  `drawCutin()` clears and hides it when none plays; `paintCutin(p, o)` draws one band (`o`: kind, role,
+  name, and for a duo its height `cyK`, side `dir` and scale `hk`): the slanted neon bands, rain
+  and speed lines, the title, and the figure (`cutYuji`, `cutMegumi`) in panel units. `startDuo()` plays
+  two at once (`cut.duo`, `cut.len`), cutting in from opposite sides, for a domain clash. The figures use
   the game's own flat style (`hair()`, `limb()`, ellipses and circles, no outlines and no faces).
   `CUTS` holds each kind's colours, titles and figure (`cutYuji`, `cutMegumi`, `cutNobara`) and an optional
   `say` (Gojo's DOMAIN EXPANSION), a manga speech bubble `sayBubble()` draws by the figure's head; Nobara's
@@ -638,7 +640,7 @@ mouse, touch), screens, multiplayer, main loop.
   (`own`, `tg`, `lastBy`, `hitL`), so a snapshot can carry all of it and any joiner can take over as
   host. `S.f` fighters (curses included), `S.maho` Mahoraga, `S.ele` Max Elephants, `S.rab` Rabbit
   Escape swarms, `S.sh` shots (Dismantle slashes, bile, Nobara's nails, Gojo's Red and Sukuna's Dismantle), `S.rn` Raining Nails,
-  `S.bl` Blues, `S.pu` Hollow Purples, `S.dm` domains, `S.fl` Divine Flames, `S.ms` Malevolent Shrines. Bots and curses have negative ids, Mahoraga
+  `S.bl` Blues, `S.pu` Hollow Purples, `S.dm` domains, `S.fl` Divine Flames, `S.ms` Malevolent Shrines, `S.cl` domain clashes. Bots and curses have negative ids, Mahoraga
   ids from 1e6, humans the host's or the server's.
 - **Input** is `f.inp`: move vector, `aim` (radians), `ad` (distance to the cursor, for moves that
   land where you point), `m1`/`blk` held, and a press *counter* per key, so a lost packet cannot eat a
@@ -705,6 +707,16 @@ mouse, touch), screens, multiplayer, main loop.
   draws the shrine from the front (`shrineFront()`, rising out of the ground) and redraws him on its ridge;
   `fireColumn()` is Divine Flame's cylinder (it stands for the whole `FUGA.dur`) and `flame()` the layered flame everything uses; `cutSukuna()` is his banner
   (the Malevolent Shrine sign, his face marks).
+- **Domain clash** (`CLASH`, `S.cl`, synced): `tryClash()` runs after either domain starts and pairs it
+  with the other's if that one began (`at`) within `CLASH.near` s and Gojo is within `MS.r` of Sukuna.
+  `startClash()` sets `cl` on both (the void held mid-rush, the shrine risen but not cutting; `voidOf`,
+  `inDomain`, `domWall`, `barrier` and `drawShrines()`'s cuts ignore them) and sends `'X'`, whose
+  `doEvent()` plays the duo cut-in for `CLASH.intro` s. `updClash()` freezes both and makes them
+  untouchable (`hurt()`), counts each one's `inp.u` presses for `CLASH.T` s (bots press at
+  `CLASH.rate[diff]`), and under the white (`clashWhite()`, drawn in `render()` for anyone near) applies
+  the result: Gojo's void closes with `d.ext` extra seconds, or the shrine runs for `s.dur`. Nothing shows
+  the count; `drawClash()`'s meeting point drifts at random. A clashing shrine is drawn after
+  `drawDomains()` (`drawShrines(true)`), so the beams and shrine sit over Gojo's ink.
 - **Nue** is a ride, not an action: `f.nue` (synced) counts down from `NUE.dur`, `nueSp()` scales walking
   (the joiner's `predStep()` too) from `NUE.sp0` to `NUE.sp1`, `rideNue()` shocks anyone touched (once per
   `NUE.every` s each, `f.nh` host only), and the Q cooldown waits for the ride to end.
