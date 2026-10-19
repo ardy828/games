@@ -1097,6 +1097,7 @@ function spawnPoint(f) {
   for (const m of S.maho) foes.push(m);
   let best = city.spawns[0], bs = -1e9;
   for (const p of city.spawns) {
+    if (S.dm.some((d) => Math.hypot(p.x - d.x, p.y - d.y) < DOM.r + 80) || S.ms.some((m) => Math.hypot(p.x - m.x, p.y - m.y) < MS.r + 80)) continue;      // never inside a domain
     let dmin = 1e9;
     for (const o of foes) dmin = Math.min(dmin, Math.hypot(o.x - p.x, o.y - p.y));
     if (!foes.length) dmin = 900;
@@ -1533,6 +1534,8 @@ function hurt(t, dmg, o) {
 function die(t) {
   Object.assign(t, { alive: false, hp: 0, resp: RULES.resp, act: '', heal: 0, blk: false, push: 0, vx: 0, vy: 0, nl: [], rain: 0, frz: 0 });
   for (const o of S.f) if (o.rm && o.rm.length) o.rm = o.rm.filter((v, i, a) => a[i - (i % 2)] !== t.id);      // no Resonance on the dead
+  for (const d of S.dm) if (d.vic.includes(t.id)) d.vic = d.vic.filter((id) => id !== t.id);      // nor is anyone dead still held in a domain,
+  for (const m of S.ms) if (Array.isArray(m.in) && m.in.includes(t.id)) m.in = m.in.filter((id) => id !== t.id);      // so they never respawn inside it
   const by = t.lastBy != null && S.time - t.lastT < CREDIT_T ? byId(t.lastBy) : null;
   const k = by && by !== t && !cursed(by) ? by : null, vc = cursed(t), lost = vc ? 0 : t.pts;
   let gain = 0;

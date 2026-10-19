@@ -680,7 +680,9 @@ mouse, touch), screens, multiplayer, main loop.
   black ink out of him (`inkPath()`: spiky strokes, dabs and flecks, white shreds inside) with star
   streaks, just for show; the people inside see it over a white screen, out to its edges, and `domGrow()` follows the ink, so the void
   and the sphere only show after it (the camera pulls back for the people inside). While it is closed it is a space of its own for Gojo and his victims (`voidOf(id)`): its edge is a wall both ways (`domWall()`, also in `mmove()`): nobody inside gets out and nobody outside, curses and Mahoraga included, gets in; `hurt()` refuses any hit whose attacker (`o.src`, else `o.by`) is in another `spaceOf()` than its target, shots from outside stop at it (`barrier()`) and Blue only pulls its own side; they skip `collide()` with the city (in `updFighter()` and the joiner's `predStep()`), `separate()` never pushes them against anyone outside, and Blue's placement and shots in it run to its edge (`voidLen()`) instead of `rayLen()`. A frozen fighter neither moves nor acts (`control()`, `updFighter()`), a frozen
-  Mahoraga stands still; it ends, and `frz` clears, `DOM.dur` s after the rush or when Gojo dies. `inDomain(d)`
+  Mahoraga stands still; it ends, and `frz` clears, `DOM.dur` s after the rush or when Gojo dies. `die()` takes
+  the dead out of every `vic` (and every shrine's `s.in`), or `domWall()` would pull them back in when
+  they respawn, and `spawnPoint()` skips spots inside a domain or a shrine's reach. `inDomain(d)`
   says whether this device sees it from inside (`drawVoid()`: blue-black space over the whole view, the black hole
   in its swirling disc above them (`drawHole()`), and white splatters that spread from the middle and
   go on across the screen, one clump per world cell, past the domain's edge; then the people in it are
