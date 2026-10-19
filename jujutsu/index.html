@@ -365,13 +365,13 @@ const MAX_FIGHTERS = 20;      // sorcerers (people) in a room or party; cursed s
 const MAX_CURSES = 10, CURSE_PTS = 1;
 const CHARS = {
   yuji: {
-    n: 'Yuji Itadori', s: 'YUJI', hp: 1200, spd: 330, m1: [60, 60, 65, 105], reach: 54, col: '#ff8fb1',
+    n: 'Yuji Itadori', s: 'YUJI', hp: 1250, spd: 330, m1: [72, 72, 78, 125], reach: 54, col: '#ff8fb1',
     blurb: 'Fast, hits hard up close.',
     moves: {
-      q: { n: 'Black Flash', k: '黒閃', cd: 9 },
-      e: { n: 'Piercing Blood', k: '穿血', cd: 11 },
-      c: { n: 'Dismantle', k: '解', cd: 6 },
-      u: { n: 'Soul Strike', k: '魂' },
+      q: { n: 'Black Flash', k: '黒閃', cd: 7 },
+      e: { n: 'Piercing Blood', k: '穿血', cd: 9 },
+      c: { n: 'Dismantle', k: '解', cd: 5 },
+      u: { n: 'Soul Dismantle', k: '魂' },
     },
   },
   megumi: {
@@ -388,7 +388,7 @@ const CHARS = {
     n: 'Nobara Kugisaki', s: 'NOBARA', hp: 1000, spd: 305, m1: [45, 45, 50, 85], reach: 56, col: '#ff9a4a',
     blurb: 'Straw Doll: nails, a hammer and a doll.',
     moves: {
-      q: { n: 'Nail', k: '釘', cd: 4 },
+      q: { n: 'Nail', k: '釘', cd: 0.5 },
       e: { n: 'Resonance', k: '共鳴', cd: 10 },
       c: { n: 'Hairpin', k: '簪', cd: 7 },
       u: { n: 'Raining Nails', k: '釘雨' },
@@ -976,7 +976,7 @@ const ACTS = {
       const hx = f.x + Math.cos(a) * 18, hy = f.y + Math.sin(a) * 18;
       for (const t of targets(f.id)) {
         if (Math.hypot(t.x - hx, t.y - hy) > t.r + FR + 10) continue;
-        if (!hurt(t, 230, { by: f.id, a, kb: 300, gb: true, kind: 'bf' })) continue;
+        if (!hurt(t, 280, { by: f.id, a, kb: 300, gb: true, kind: 'bf' })) continue;
         f.hitDone = true; f.vx = f.vy = 0;
         fx(['bf', r1(t.x), r1(t.y), r2(a), f.id]);
         break;
@@ -993,32 +993,31 @@ const ACTS = {
       const len = rayLen(sx, sy, a, 900);
       for (const t of targets(f.id)) {
         const dx = t.x - sx, dy = t.y - sy, along = dx * c + dy * s, perp = Math.abs(-dx * s + dy * c);
-        if (along > -t.r && along < len + t.r && perp < t.r + 9) hurt(t, 160, { by: f.id, a, kb: 130, kind: 'pb' });
+        if (along > -t.r && along < len + t.r && perp < t.r + 9) hurt(t, 195, { by: f.id, a, kb: 130, kind: 'pb' });
       }
       fx(['pb', r1(sx), r1(sy), r2(a), r1(len)]);
     }
     if (f.actT >= 0.62) f.act = '';
   } },
-  // Soul Strike: a crouch (f.actD long), then a dash into a huge blow. Locked on (f.lk), the crouch
-  // faces the target and the dash steers into them, for a little longer.
-  ss: { lock: true, armor: true, step(f, dt) {
+  // Soul Dismantle: a crouch (f.actD long) turned on whoever it locked on to (f.lk), then one huge cut
+  // SS.len long and SS.w either side along the aim, through walls: everyone in it loses exactly SS.share
+  // of their full health, block or not.
+  ss: { lock: true, armor: true, step(f) {
+    f.vx = f.vy = 0;
     const tg = f.lk != null ? foeById(f.lk) : null, on = !!tg && (tg.isM ? tg.hp > 0 : tg.alive);
-    if (f.actT < f.actD) { f.vx = f.vy = 0; f.actA = f.aim = on ? ang(f, tg) : f.inp.aim; return; }    // the crouch still aims
-    if (f.actT < f.actD + (on ? 0.36 : 0.25) && !f.hitDone) {
-      if (on) { f.actA += clamp(angD(f.actA, ang(f, tg)), -SS.turn * dt, SS.turn * dt); f.aim = f.actA; }
-      const a = f.actA;
-      f.vx = Math.cos(a) * 1800; f.vy = Math.sin(a) * 1800;
+    if (f.actT < f.actD) { f.actA = f.aim = on ? ang(f, tg) : f.inp.aim; return; }    // the crouch still aims
+    if (!f.hitDone) {
+      f.hitDone = true;
+      const a = f.actA, c = Math.cos(a), s = Math.sin(a);
       for (const t of targets(f.id)) {
-        if (dist(t, f) > t.r + FR + 12) continue;
-        if (!hurt(t, 435, { by: f.id, a, kb: 420, ub: true, gb: true, kind: 'ss' })) continue;
-        f.hitDone = true; f.vx = f.vy = 0;
-        fx(['ss', r1(t.x), r1(t.y), r2(a), f.id]);
-        break;
+        const r = t.r || FR, dx = t.x - f.x, dy = t.y - f.y, al = dx * c + dy * s, pp = Math.abs(-dx * s + dy * c);
+        if (al < -r || al > SS.len + r || pp > SS.w + r) continue;
+        const full = t.isM ? MAHO.hp : maxHp(t);      // hurt() multiplies by RULES.dmg, so divide it back out
+        if (hurt(t, full * SS.share / RULES.dmg, { by: f.id, a, kb: 300, ub: true, fixed: true, kind: 'ss' })) fx(['ssh', r1(t.x), r1(t.y), r2(a)]);
       }
-      return;
+      fx(['ss', r1(f.x + c * SS.len / 2), r1(f.y + s * SS.len / 2), r2(a), f.id]);
     }
-    f.vx *= 0.6; f.vy *= 0.6;
-    if (f.actT >= f.actD + 0.52) f.act = '';
+    if (f.actT >= f.actD + 0.45) f.act = '';
   } },
   // Megumi
   summon: { slow: 0, armor: true, step(f) {
@@ -1225,18 +1224,10 @@ const MOVES = {
     },
   },
   sukuna: {
-    q(f) {      // his Dismantle: far bigger slashes than Yuji's (SHOT kind 4), one where he aims and one at every enemy in reach and in sight; one volley cuts nobody twice
+    q(f) {      // his Dismantle: one slash far bigger than Yuji's (SHOT kind 4) where he aims, through everyone and everything until it leaves the city
       startAct(f, 'cast', 0.22);
-      const hit = [], dirs = [f.aim];
-      for (const t of targets(f.id)) {
-        if (dist(f, t) > SHOT[4].range * 0.9 || t.prot > 0) continue;      // walls do not stop it, so no line of sight needed
-        const a = ang(f, t);
-        if (!dirs.some((o) => Math.abs(angD(o, a)) < 0.05)) dirs.push(a);
-      }
-      for (const a of dirs.slice(0, 12)) {
-        const c = Math.cos(a), s = Math.sin(a);
-        S.sh.push({ id: S.nid++, own: f.id, k: 4, x: f.x + c * 30, y: f.y + s * 30, a, d: 0, hit });
-      }
+      const c = Math.cos(f.aim), s = Math.sin(f.aim);
+      S.sh.push({ id: S.nid++, own: f.id, k: 4, x: f.x + c * 30, y: f.y + s * 30, a: f.aim, d: 0, hit: [] });
       fx(['snd', 'slash', r1(f.x), r1(f.y)]);
     },
     e(f) {
@@ -1263,9 +1254,9 @@ const MOVES = {
   spitter: { q(f) { startAct(f, 'spit'); } },
   brute: { q(f) { startAct(f, 'slam'); fx(['snd', 'roar', r1(f.x), r1(f.y)]); } },
 };
-// Soul Strike locks on to whoever is nearest the aim, within SS.range and in sight: someone in front
+// Soul Dismantle locks on to whoever is nearest the aim, within SS.range and in sight: someone in front
 // beats someone behind, and a sorcerer beats a curse or Mahoraga
-const SS = { range: 560, turn: 10, crouch: 0.28, lockCrouch: 0.5 };
+const SS = { range: 620, len: 720, w: 64, share: 0.5, crouch: 0.3, lockCrouch: 0.45 };
 function lockOn(f) {
   let best = null, bs = 1e9;
   for (const t of targets(f.id)) {
@@ -1523,7 +1514,7 @@ function updMaho(dt) {
 // in its path; `hit` is the host's list of who it has cut), 1 a Spitter's bile (slows)
 // and 2 one of Nobara's nails (sticks in whoever it hits)
 // and 3 Gojo's Red (bursts on whatever it meets, see redBlast), 4 Sukuna's Dismantle (a huge kind 0)
-const SHOT = [{ spd: 1500, range: 900, w: 56 }, { spd: 640, range: 640, w: 10 }, { spd: 1250, range: 720, w: 8 }, { spd: 1100, range: 620, w: 16 }, { spd: 1700, range: 1150, w: 100 }];
+const SHOT = [{ spd: 1500, range: 900, w: 56 }, { spd: 640, range: 640, w: 10 }, { spd: 1250, range: 720, w: 8 }, { spd: 1100, range: 620, w: 16 }, { spd: 1700, range: MAP * 1.5, w: 100 }];
 function shotHit(b, t) {
   if (b.k !== 3 && infinity(t)) { fx(['inf', r1(t.x), r1(t.y)]); return b.k !== 4; }      // it stops at Infinity (Sukuna's goes on past, doing nothing)
   if (b.k === 3) { b.x = t.x - Math.cos(b.a) * t.r; b.y = t.y - Math.sin(b.a) * t.r; redBlast(b); return true; }
@@ -1541,7 +1532,7 @@ function shotHit(b, t) {
   if ((b.hit ||= []).includes(t.id)) return false;
   b.hit.push(t.id);
   const big = b.k === 4;      // Sukuna's: wider, further and harder
-  if (hurt(t, big ? 260 : 160, { by: b.own, a: b.a, kb: big ? 170 : 110, fixed: true, kind: big ? 'sdis' : 'dis' })) fx(['dsh', r1(t.x), r1(t.y), r2(b.a), big ? 1 : 0]);
+  if (hurt(t, big ? 260 : 195, { by: b.own, a: b.a, kb: big ? 170 : 110, fixed: true, kind: big ? 'sdis' : 'dis' })) fx(['dsh', r1(t.x), r1(t.y), r2(b.a), big ? 1 : 0]);
   return false;      // it keeps going
 }
 function updShots(dt) {
@@ -1687,7 +1678,7 @@ function updRain(dt) {
 const BLUE = { r: 230, T: 1.6, dt: 0.1, dmg: 9, pull: 330, pop: 70, popDmg: 60, range: 420 };
 const RED = { r: 125, dmg: 240, kb: 380, wind: 0.35 };
 const PURPLE = { wind: 0.75, spd: 950, r: 58, range: 1400, dmg: 420 };
-const DOM = { r: 430, dur: 5, lift: 70, form: 0.55, rush: 2.4 };
+const DOM = { r: 430, dur: 8, lift: 70, form: 0.55, rush: 2.4 };
 DOM.shut = DOM.rush + DOM.dur;      // how long it stays closed: the star rush, then DOM.dur s of void
 function updBlue(dt) {
   for (const b of S.bl) {
@@ -1802,7 +1793,7 @@ function closeDomain(d, o) {      // everyone inside is frozen until it ends, Go
 // only) cannot leave until it ends, MS.dur s later or when he dies. While it stands nothing can hurt him.
 const CLEAVE = { range: 650, wind: 0.22, share: 0.4 };
 const FUGA = { charge: 1.15, flight: 0.45, range: MAP * 1.5, bot: 900, r: 380, dur: 6, hit: 200, tick: 0.4, burn: 30, ring: 78, ringDmg: 10 };
-const MS = { r: 620, rise: 1, dur: 10, tick: 0.1, dmg: 9, lift: 18 };
+const MS = { r: 620, rise: 1, dur: 8, tick: 0.1, dmg: 9, lift: 18 };
 function cleaveTarget(f) {      // whoever is closest to the pointer (aim and distance), within reach and in sight
   const ad = clamp(f.inp.ad || 300, 0, CLEAVE.range + 200), px = f.x + Math.cos(f.aim) * ad, py = f.y + Math.sin(f.aim) * ad;
   let best = null, bs = 1e9;
@@ -1867,7 +1858,7 @@ function updShrine(dt) {
 // powers grind against each other. Then the screen goes white (CLASH.white s) and under it the winner
 // takes over: the shrine crumbles and the rush runs on into the void, which lasts DOM.dur + CLASH.ext s,
 // or the rush shrinks away (CLASH.fail s) and the shrine runs for CLASH.shrine s. A tie is a coin toss.
-const CLASH = { near: 1, intro: 1.7, T: 10, white: 0.7, hold: 0.5, out: 0.8, ext: 5, shrine: 12, rate: [6, 8, 10], stand: 235, age: 1.4, fail: 2 };
+const CLASH = { near: 1, intro: 1.7, T: 10, white: 0.7, hold: 0.5, out: 0.8, ext: 2, shrine: 10, rate: [6, 8, 10], stand: 235, age: 1.4, fail: 2 };
 const clashEnd = () => CLASH.intro + CLASH.T;
 function startClash(go, su, d, s) {
   if (!d || !s || S.cl.some((c) => c.gd === d.id || c.sm === s.id)) return;
@@ -2024,7 +2015,7 @@ function step(dt) {
 // first. When they slip out of view it heads for where it last saw them for BOT_MEMORY seconds, then
 // gives up; a hit from someone out of sight turns it on them the same way. With no one in view it
 // roams from street to street. It dodges telegraphs (the elephant's shadow, a Piercing Blood line, a
-// Soul Strike crouch, a Mahoraga hunting it), blocks swings, and uses each move when it would land.
+// Soul Dismantle crouch, a Mahoraga hunting it), blocks swings, and uses each move when it would land.
 // Between thoughts it steers: straight at a target it can see, down the flow field around buildings
 // otherwise. Sorcerer bots play the menu's demo match and stand in for players who lost their
 // connection; everywhere else the city is filled with cursed spirits (below).
@@ -2103,7 +2094,7 @@ function think(f, ai) {
     const pu = o.act === 'purple' && o.actT < PURPLE.wind;
     const charging = pu || (o.act === 'pb' && o.actT < 0.42) || (o.act === 'ss' && o.actT < o.actD) || (o.act === 'bf' && o.actT < 0.1);
     if (!charging) continue;
-    const d = dist(o, f), a = ang(o, f), reach = pu ? PURPLE.range : o.act === 'pb' ? 900 : o.act === 'ss' ? 480 : 200;
+    const d = dist(o, f), a = ang(o, f), reach = pu ? PURPLE.range : o.act === 'pb' ? 900 : o.act === 'ss' ? SS.len : 200;
     if (d < reach && Math.abs(angD(o.aim, a)) < Math.atan2(pu ? PURPLE.r + FR : FR + 16, d) + 0.06 && (pu || los(o, f))) threat = o.aim + Math.PI / 2 * (angD(o.aim, a) > 0 ? 1 : -1);
   }
   for (const m of S.maho) if (m.tg === f.id && dist(m, f) < 280 && (m.own === f.id || f.hp < maxHp(f) * 0.45)) threat = ang(m, f);
@@ -2125,7 +2116,7 @@ function think(f, ai) {
   if (see) {
     if (f.ch === 'yuji') {
       if (d < 175 && ready('q')) { inp.aim = aimAt(lead(0.15)); inp.q++; }
-      else if (d > 150 && d < 430 && ready('u') && (t.hp < maxHp(t) * 0.55 || Math.random() < 0.12)) { inp.aim = aimAt(lead(0.35)); inp.u++; }
+      else if (d > 150 && d < SS.range && ready('u') && (t.hp < maxHp(t) * 0.6 || Math.random() < 0.12)) { inp.aim = aimAt(lead(0.35)); inp.u++; }
       else if (d > 200 && d < 820 && ready('e')) { inp.aim = aimAt(lead(0.42)); inp.e++; }
       else if (d > 90 && d < 850 && ready('c')) { inp.aim = aimAt(lead(d / 1500)); inp.c++; }
     } else if (f.ch === 'gojo') {
@@ -2297,15 +2288,19 @@ function doFx(a) {
       sparks(x, y, 40, '#0a0918', 500, 0.9, 5); sparks(x, y, 24, '#d0c0ff', 420, 0.7, 3);
       for (let i = 0; i < 4; i++) part({ k: 'cv', x, y, a: i * Math.PI / 2 + rnd(-0.3, 0.3), len: DOM.r * 0.7, life: 0.45 });
       break;
-    case 'ss': {
-      SFX.soul(v); shake(x, y, 22);
-      ring(x, y, 10, 170, 0.5, '#bfeaff', 10); ring(x, y, 10, 110, 0.4, '#ffffff', 4); ring(x, y, 30, 230, 0.7, '#4fb8ff', 3);
-      sparks(x, y, 26, '#d9f4ff', 600, 0.45, 3); puffs(x, y, 10, '#9fdcff', 160, 10, 40, 0.6, 0.4);
-      part({ k: 'gh', x, y, a: a[3], life: 0.55 });
-      txt(x, y - 70, 'SOUL STRIKE', '#bfeaff', 26, 1.2, -26);
-      if (v > 0.55) { cam.flash = 0.5; cam.flashC = '#d6f2ff'; }
+    case 'ss': {      // Soul Dismantle: one huge pale cut, (x, y) its middle
+      SFX.soul(v); SFX.slash(v); shake(x, y, 22);
+      part({ k: 'cv', x, y, a: a[3], len: SS.len / 2, life: 0.6, col: 'rgba(120,200,255,.5)', w: 2.6 });
+      for (let i = -2; i <= 2; i++) sparks(x + Math.cos(a[3]) * i * SS.len / 5, y + Math.sin(a[3]) * i * SS.len / 5, 8, '#d9f4ff', 420, 0.4, 2.6);
+      decal({ k: 'cut', x, y, a: a[3], life: 24 });
+      txt(x, y - 70, 'SOUL DISMANTLE', '#bfeaff', 26, 1.2, -26);
+      if (v > 0.55) { cam.flash = 0.45; cam.flashC = '#d6f2ff'; }
       break;
     }
+    case 'ssh':      // someone the cut went through
+      SFX.hit(v, true); ring(x, y, 10, 110, 0.4, '#bfeaff', 6); sparks(x, y, 22, '#ffffff', 560, 0.4, 3);
+      part({ k: 'cv', x, y, a: a[3] + 0.9, len: 70, life: 0.4, col: 'rgba(120,200,255,.5)' });
+      break;
     case 'zap': SFX.zap(v); for (let i = 0; i < 3; i++) part({ k: 'bl', x, y, a: Math.random() * TAU, len: rnd(24, 46), life: 0.2, seed: Math.random() * 1e4, col: '#bfe0ff', w: 2 }); break;
     case 'ele': {
       SFX.elephant(v); shake(x, y, 18);
@@ -3289,12 +3284,10 @@ function drawTelegraphs() {
       const sx = f.rx + Math.cos(f.ra) * 24, sy = f.ry + Math.sin(f.ra) * 24, len = rayLen(sx, sy, f.ra, 900);
       g.strokeStyle = `rgba(255,40,70,${0.25 + 0.35 * f.actT / 0.42})`; g.lineWidth = 2 + 3 * f.actT / 0.42; g.setLineDash([14, 8]);
       g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.cos(f.ra) * len, sy + Math.sin(f.ra) * len); g.stroke(); g.setLineDash([]);
-    } else if (f.act === 'ss' && f.actT < f.actD) {
-      const tg = f.lk != null ? foeById(f.lk) : null;
-      g.strokeStyle = 'rgba(191,234,255,.4)'; g.lineWidth = 34;
-      g.beginPath(); g.moveTo(f.rx, f.ry);
-      if (tg) g.lineTo(tg.rx, tg.ry); else g.lineTo(f.rx + Math.cos(f.ra) * 450, f.ry + Math.sin(f.ra) * 450);
-      g.stroke();
+    } else if (f.act === 'ss' && f.actT < f.actD) {      // Soul Dismantle's cut, all the way along
+      const p = f.actT / Math.max(0.1, f.actD);
+      g.strokeStyle = `rgba(191,234,255,${0.18 + 0.3 * p})`; g.lineWidth = SS.w * 2; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(f.rx, f.ry); g.lineTo(f.rx + Math.cos(f.ra) * SS.len, f.ry + Math.sin(f.ra) * SS.len); g.stroke(); g.lineCap = 'butt';
     }
     if (f.act === 'ss' && f.lk != null) {      // the lock-on: brackets closing in on the target
       const tg = foeById(f.lk);
@@ -3678,8 +3671,8 @@ function drawParts() {
       case 'cv': {      // Cleave: one long straight cut, red glow round a white core
         const c = Math.cos(p.a), sn = Math.sin(p.a), L = p.len * (0.6 + 0.4 * Math.min(1, p.t / 0.06));
         g.globalAlpha = al; g.lineCap = 'round';
-        g.strokeStyle = 'rgba(255,40,70,.45)'; g.lineWidth = 16 * al + 3; g.beginPath(); g.moveTo(p.x - c * L, p.y - sn * L); g.lineTo(p.x + c * L, p.y + sn * L); g.stroke();
-        g.strokeStyle = '#ffffff'; g.lineWidth = 4 * al + 1; g.stroke();
+        g.strokeStyle = p.col || 'rgba(255,40,70,.45)'; g.lineWidth = (16 * al + 3) * (p.w || 1); g.beginPath(); g.moveTo(p.x - c * L, p.y - sn * L); g.lineTo(p.x + c * L, p.y + sn * L); g.stroke();
+        g.strokeStyle = '#ffffff'; g.lineWidth = (4 * al + 1) * (p.w || 1); g.stroke();
         g.globalAlpha = 1; break;
       }
       case 'sl': g.globalAlpha = al; g.strokeStyle = p.col; g.lineWidth = 4 * al + 1; g.beginPath(); g.arc(p.x - Math.cos(p.a) * 10, p.y - Math.sin(p.a) * 10, p.r, p.a - Math.PI / 2 - 0.9, p.a - Math.PI / 2 + 0.9); g.stroke(); break;
@@ -3690,11 +3683,6 @@ function drawParts() {
         g.strokeStyle = '#c80f2c'; g.lineWidth = 8 * al + 2; g.stroke();
         g.strokeStyle = '#ffd0d8'; g.lineWidth = 2 * al + 0.5; g.stroke();
         g.lineCap = 'butt';
-        break;
-      }
-      case 'gh': {
-        g.globalAlpha = al * 0.7; g.fillStyle = '#bfeaff';
-        for (let i = 1; i <= 3; i++) circ(p.x - Math.cos(p.a) * i * 26 * (0.5 + q), p.y - Math.sin(p.a) * i * 26 * (0.5 + q), 18 - i * 3);
         break;
       }
       case 'spk': {       // Resonance: a spectral nail driven down into the target
@@ -3944,7 +3932,7 @@ function drawMini() {
 
 // ───────────────────────── Ultimate cut-ins ─────────────────────────
 // When an ultimate starts, a manga-style panel slides across the upper screen for the people it is
-// about (and the caster cannot be hurt until it has gone, CUT_T s): Soul Strike for Yuji and whoever he locked on to (Yuji dashing in, fist first), Mahoraga for
+// about (and the caster cannot be hurt until it has gone, CUT_T s): Soul Dismantle for Yuji and whoever he locked on to (Yuji dashing in, fist first), Mahoraga for
 // Megumi and anyone near him (Megumi making the summoning sign, one fist held at the wrist by the other
 // hand). The panel is a slanted neon band between two thin ones, with rain and speed lines; the figures
 // are drawn in panel units (100 = the band's height), clipped to the band. It has its own
@@ -4063,7 +4051,7 @@ function limb(pts, w, col) {
   g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.stroke();
 }
 // Yuji side on, leaning into the dash: pink hair over a dark undercut, the red hood at his neck, the
-// front fist thrown out and glowing, Soul Strike's pale trail behind him
+// front fist thrown out and glowing, Soul Dismantle's pale trail behind him
 function cutYuji(t) {
   const st = Math.sin(t * 26) * 4;
   g.fillStyle = 'rgba(191,234,255,.28)';
@@ -4193,7 +4181,7 @@ function cutGojo(t) {
   g.restore();
 }
 const CUTS = {
-  ss: { pal: ['#ff5cb4', '#d4157e', '#5e17c4'], acc: ['#2fb4ff', '#38e07a'], big: '魂', title: 'SOUL STRIKE', sub: '魂を捉える一撃', subCol: '#ffd1ea', fig: (t) => cutYuji(t) },
+  ss: { pal: ['#ff5cb4', '#d4157e', '#5e17c4'], acc: ['#2fb4ff', '#38e07a'], big: '魂', title: 'SOUL DISMANTLE', sub: '魂を断つ解', subCol: '#ffd1ea', fig: (t) => cutYuji(t) },
   maho: { pal: ['#3fe0ff', '#1f5fff', '#18196a'], acc: ['#38e07a', '#ff4fae'], big: '影', title: 'MAHORAGA', sub: '八握剣 異戒神将 魔虚羅', subCol: '#cfe4ff', fig: (t) => cutMegumi(t) },
   nr: { pal: ['#ffb347', '#ff5a1f', '#7a1035'], acc: ['#ff4fae', '#2fb4ff'], big: '釘', title: 'RAINING NAILS', sub: '芻霊呪法 · 釘の雨', subCol: '#ffe0c2', fig: (t) => cutNobara(t) },
   ms: { pal: ['#ff4d6d', '#9c0f2e', '#1f040c'], acc: ['#ffe3e8', '#ff8a2a'], big: '伏', title: 'MALEVOLENT SHRINE', sub: '領域展開 · 伏魔御廚子', subCol: '#ffd0d8', say: ['DOMAIN', 'EXPANSION'], fig: (t) => cutSukuna(t) },
@@ -4337,9 +4325,11 @@ const ICON = {
     x.strokeStyle = 'rgba(220,240,255,.55)'; x.lineWidth = 2.5;
     for (const y of [18, 32, 46]) { x.beginPath(); x.moveTo(2, y); x.lineTo(22, y); x.stroke(); }
   },
-  'yuji.u'(x) {      // Soul Strike: a fist in a blue flare
+  'yuji.u'(x) {      // Soul Dismantle: one long cut across a blue flare
     icOrb(x, 28, 'rgba(160,220,255,.9)', 'rgba(60,120,255,0)', '#7fd3ff');
-    icFist(x, '#ffffff');
+    x.save(); x.shadowColor = '#bfe0ff'; x.shadowBlur = 10; x.lineCap = 'round';
+    x.strokeStyle = 'rgba(120,200,255,.8)'; x.lineWidth = 12; x.beginPath(); x.moveTo(8, 54); x.lineTo(56, 10); x.stroke();
+    x.strokeStyle = '#ffffff'; x.lineWidth = 4; x.stroke(); x.restore();
   },
   'megumi.q'(x) {      // Nue: the bird from above, wings spread
     x.fillStyle = '#e2913a';
@@ -4862,11 +4852,11 @@ zone.addEventListener('touchcancel', stickUp);
 const PAD_LAYOUT = { m1: [0, 0, 98], blk: [0, 138, 66], q: [30, 138, 66], e: [60, 138, 66], c: [90, 138, 66], d: [4, 222, 60], r: [36, 222, 60], u: [70, 222, 70] };
 // per fighter: [length of the aim line, ring at its end, length set by how far you drag]
 const AIM_LEN = {
-  yuji: { q: [190, 0], e: [900, 0], c: [700, 0], u: [450, 0] },
+  yuji: { q: [190, 0], e: [900, 0], c: [700, 0], u: [SS.len, 0] },
   megumi: { q: [90, 0], e: [RAB.max, RAB.r, 1], c: [450, ELE_HIT, 1], u: [90, 0] },
   nobara: { q: [720, 0], e: [1, 0], c: [1, 0], u: [1, RAIN.r] },
   gojo: { q: [BLUE.range, BLUE.r, 1], e: [620, RED.r], c: [PURPLE.range, 0], u: [1, DOM.r] },
-  sukuna: { q: [SHOT[4].range, 0], e: [CLEAVE.range, 0], c: [1, 0], u: [1, MS.r] },      // c: aimed on the map instead
+  sukuna: { q: [1200, 0], e: [CLEAVE.range, 0], c: [1, 0], u: [1, MS.r] },      // c: aimed on the map instead
 };
 const dragLen = (spec, len) => (spec[2] ? 140 + clamp(len / 80, 0, 1) * (spec[0] - 140) : spec[0]);
 function buildPad(ch) {
@@ -5819,7 +5809,7 @@ function joinTick(dt) {
   for (const r of S.rab) r.t += dt;
   for (const r of S.rn) r.t += dt;
   for (const b of S.bl) b.t += dt;
-  for (const p of S.pu) { p.x += Math.cos(p.a) * PURPLE.spd * dt; p.y += Math.sin(p.a) * PURPLE.spd * dt; p.d += PURPLE.spd * dt; }
+  for (const p of S.pu) { p.x += Math.cos(p.a) * PURPLE.spd * dt; p.y += Math.sin(p.a) * PURPLE.spd * dt; p.d += PURPLE.spd * dt; p.rx = p.x; p.ry = p.y; }
   for (const d of S.dm) if (!d.cl) d.t -= dt; else if (d.fail > 0) d.fail = Math.max(0.01, d.fail - dt);
   for (const e of S.fl) e.t += dt;
   for (const m of S.ms) if (!m.cl) m.t += dt;

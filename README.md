@@ -235,16 +235,17 @@ cursed energy: every move has its own cooldown.
   whoever it is aimed at, and you cannot be hurt until it has gone.
 - **Yuji** is fast and hits hard up close. *Black Flash* lunges into a punch that breaks guard and hits
   very hard, *Piercing Blood* fires a line of blood after a short charge (watch for the red line),
-  *Dismantle* throws a wide slash that cuts through everyone in its path and always does the same damage, and the ultimate, *Soul Strike*, locks
-  on to the enemy nearest your aim (red brackets close in on them), then dashes in, steering after
-  them, for a huge blow.
+  *Dismantle* throws a wide slash that cuts through everyone in its path and always does the same damage, and the ultimate, *Soul Dismantle*, locks
+  on to the enemy nearest your aim (red brackets close in on them), crouches while a pale band shows its
+  path, then makes one huge cut along it, through walls, that takes exactly half the full health of
+  everyone in it, block or not.
 - **Megumi** fights through shikigami. *Nue* carries him for 10 seconds, faster and faster, shocking anyone she touches, *Rabbit
   Escape* sends a swarm of rabbits to where you aim, where it bursts and then nibbles and slows, *Max
   Elephant* drops on the spot you aim at after a shadow warning, and the ultimate summons *Mahoraga*,
   who kicks Megumi away and then attacks whoever he can see, Megumi included, until someone kills him
   or the match ends. Each new move that hurts Mahoraga turns his wheel: he adapts to it and takes far
   less from it after that, and every punch he lands makes the next one harder.
-- **Nobara** fights with nails and a hammer. *Nail* hammers three nails forward, and every nail that
+- **Nobara** fights with nails and a hammer. *Nail* (half a second's cooldown) hammers three nails forward, and every nail that
   hits stays stuck in its target. *Resonance* strikes everyone she has hit in the last 10 seconds,
   wherever they are (an orange ring shows who). *Hairpin* bursts every nail of hers stuck in anyone
   nearby: the more nails, the bigger the blast. The last one she hit (with anything, even a plain
@@ -260,14 +261,14 @@ cursed energy: every move has its own cooldown.
   ultimate, *Infinite Void*, takes about three times as long to charge. Blinding white light swells
   out of him for a moment (run!), then black ink splashes out of him with stars rushing through it
   and it closes on everyone still inside. They are frozen through the star rush (Gojo cannot move
-  during it either) and then 5 more seconds in the void: deep space, the black hole above them, and
+  during it either) and then 8 more seconds in the void: deep space, the black hole above them, and
   white splatters spreading out as far as they can see. Nobody inside can leave it
   until it ends, Gojo included, and nothing of the city is in there with them: no buildings or cars
   to bump into or to stop his Blue and Red, and nobody outside to shove them. From outside it is a black
   sphere hanging over the street, and nobody, cursed spirits included, can get in until it ends. No attack crosses its edge either
   way: nothing from outside hurts the people inside, and nothing inside hurts anyone outside.
-- **Sukuna**, the King of Curses. His *Dismantle* sends far bigger, harder slashes than Yuji's: one where
-  you aim and one at every enemy in reach, each flying through buildings and cutting through everyone in its path. *Cleave* (long cooldown) is one huge slash on the enemy closest to your pointer, from a long way off,
+- **Sukuna**, the King of Curses. His *Dismantle* sends one far bigger, harder slash than Yuji's where
+  you aim, and it never stops: it flies through every building and cuts everyone in its path until it leaves the city. *Cleave* (long cooldown) is one huge slash on the enemy closest to your pointer, from a long way off,
   that always takes 40% of their full health, block or not. *Divine Flame* (long cooldown): C (or the
   button) blows the minimap up to fill the screen with a ring the blast's size under your pointer; click
   (or tap) anywhere on the city and he stands in a ring of fire drawing a great flame bow while a ring
@@ -275,7 +276,7 @@ cursed energy: every move has its own cooldown.
   everyone in it for 6 seconds. Esc or a right click cancels. His ultimate, *Malevolent
   Shrine*, has no barrier: the shrine rises out of the ground under him and lifts him onto its roof,
   where nothing can hurt him, the whole domain turns red,
-  and for 10 seconds everyone near him (well past Gojo's domain's reach) is cut ten times a second, even
+  and for 8 seconds everyone near him (well past Gojo's domain's reach) is cut ten times a second, even
   through Gojo's Infinity, and anyone who steps inside cannot leave until it ends.
 - **Domain clash.** If Gojo and Sukuna expand their domains within a second of each other, with Gojo
   inside the shrine's reach, the domains clash. Both banners cut in from opposite sides of the screen
@@ -284,8 +285,8 @@ cursed energy: every move has its own cooldown.
   their powers grind against each other at the shrine's mouth. For 10 seconds both of them mash their
   ultimate (F, or tap its button): there is no counter, and nobody can touch either of them. The screen
   goes white, and whoever pressed more wins. If Gojo wins, the shrine crumbles and the rush runs on
-  into the void, which lasts 10 seconds instead of 5; if Sukuna wins, the rush shrinks away, Gojo's
-  domain fails, and the shrine cuts for 12 seconds.
+  into the void, which lasts 10 seconds instead of 8; if Sukuna wins, the rush shrinks away, Gojo's
+  domain fails, and the shrine cuts for 10 seconds instead of 8.
 - **Practice** — you against 1 to 10 cursed spirits (Easy, Normal or Hard), first to 10, 20 or 40 points.
 - **Private party** — HOST PARTY gives a four-digit code; friends type it and press JOIN. Up to 20, with
   as many cursed spirits as the host picks. If a player's connection drops, a bot plays for them while their browser

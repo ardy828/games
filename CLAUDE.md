@@ -617,8 +617,10 @@ mouse, touch), screens, multiplayer, main loop.
   `ULT.idle` per second, times `RULES.ur`. It survives death and empties at a new match. Starting an
   ultimate sends a `'C'` event (kind, caster, target, name): `doEvent()` runs `startCutin()` for the
   caster, the target and (for Mahoraga) anyone within 900, and the caster's `iframe` covers `CUT_T`.
-  Soul Strike's `lockOn()` picks a target into `f.lk` (synced); `ACTS.ss` crouches for `f.actD` (longer
-  when locked) and steers its dash at `SS.turn`, and `reticle()` marks the target.
+  Yuji's ultimate, Soul Dismantle (kind and action key still `ss`): `lockOn()` picks a target into `f.lk` (synced);
+  `ACTS.ss` crouches for `f.actD` (longer when locked) facing it, then cuts once along the aim, `SS.len`
+  long and `SS.w` either side, through walls, taking exactly `SS.share` of each victim's full health
+  (divided by `RULES.dmg`, like Cleave); `drawTelegraphs()` shows the band and `reticle()` the target.
 - **Cut-ins** (the section after the minimap) are drawn on their own canvas, `#cutin`, over the HUD:
   `drawCutin()` clears and hides it when none plays; `paintCutin(p, o)` draws one band (`o`: kind, role,
   name, and for a duo its height `cyK`, side `dir` and scale `hk`): the slanted neon bands, rain
@@ -691,7 +693,7 @@ mouse, touch), screens, multiplayer, main loop.
   anyone in it. His banner is a band like the others (`CUTS.dom`,
   `cutGojo()`: the sign, a fist with two fingers up).
 - **Sukuna**: his Dismantle is `SHOT` kind 4 (bigger, further, harder than Yuji's kind 0), one shot where
-  he aims and one at every enemy in reach, flying through buildings and on past Infinity, sharing one `hit` list so a volley cuts nobody twice. Cleave
+  he aims, flying through buildings and on past Infinity until it leaves the city (`SHOT[4].range` is `MAP * 1.5`). Cleave
   (`ACTS.cleave`, `CLEAVE`) picks `cleaveTarget()` (closest to the pointer: aim and `inp.ad`) into `f.lk` and deals exactly `CLEAVE.share` of its full
   health (divided by `RULES.dmg`, which `hurt()` multiplies back in), ignoring blocks. Divine Flame
   is aimed on the map: C (or the touch button) calls `openFugaMap()`, which blows `#mini` up to fill the
@@ -742,7 +744,7 @@ mouse, touch), screens, multiplayer, main loop.
   someone they can see: within `DIFF.sight` and with line of sight (nearest and most hurt first). A target that slips
   out of view, or an unseen attacker, is remembered as a spot to check for `BOT_MEMORY` s; otherwise
   they roam between street corners (`ai.roam`). They dodge telegraphs (elephant shadow, Piercing Blood
-  line, Soul Strike crouch, a Brute Curse's slam, a hunting Mahoraga), block swings, use each move when
+  line, Soul Dismantle's band, a Brute Curse's slam, a hunting Mahoraga), block swings, use each move when
   it would land, and heal under 40%. `wander()` is the shared memory-then-roam fallback.
 - **Chat**: T (or Enter) opens `#chat`; `sendChat()` goes to the host (`toHost({t:'chat'})`), whose
   `hostChat()` rate-limits each player and sends `event(['T', id, text])`, which `chatLine()` shows in the
