@@ -237,11 +237,12 @@ cursed energy: every move has its own cooldown.
 - **Everyone** has a dash with a moment of invulnerability, a block that soaks 75% of a hit from the
   front until its guard meter breaks, and RCT, which heals a third of your health on a long cooldown.
 - **Ultimates** have a meter instead of a cooldown (a gold bar under your health): it charges as you deal
-  damage, a little as you take it and slowly over time, and keeps its charge when you die. F works
+  damage, a little as you take it and slowly over time (damage done by an ultimate never adds to it),
+  and keeps its charge when you die. F works
   only when it is full. Using one slides a manga-style panel across the top of the screen for you and
   whoever it is aimed at, and you cannot be hurt until it has gone.
-- **Yuji** is fast and hits hard up close. *Black Flash* lunges into a punch that breaks guard and hits
-  very hard, *Piercing Blood* fires a line of blood after a short charge (watch for the red line),
+- **Yuji** is fast and hits hard up close. *Black Flash* charges his fists (they crackle red and black for 6
+  seconds) and his next punch that lands is the Black Flash, breaking guard and hitting very hard, *Piercing Blood* fires a line of blood after a short charge (watch for the red line),
   *Dismantle* throws a wide slash that cuts through everyone in its path and always does the same damage, and the ultimate, *Soul Dismantle*, locks
   on to the enemy nearest your aim (red brackets close in on them), crouches while a pale band shows its
   path, then makes one huge cut along it, through walls, that takes exactly half the full health of

@@ -613,10 +613,13 @@ mouse, touch), screens, multiplayer, main loop.
 - **No cursed energy.** `q e c` (techniques), `r` (RCT) and `d` (dash) have cooldowns in `f.cd`, read
   through `cdOf(ch, k)` (which applies `RULES.cd`); `CHARS` holds each fighter's stats and move names and
   `COMMON` the shared two. The ultimate `u` has a meter instead, `f.ult` 0–100, filled by `charge()`:
-  `ULT.deal` per point of damage dealt (not by your own Mahoraga), `ULT.take` per point taken and
+  `ULT.deal` per point of damage dealt (not by your own Mahoraga, nor by an ultimate: `ULT_KINDS` or a
+  hit flagged `ult`, like Raining Nails), `ULT.take` per point taken and
   `ULT.idle` per second, times `RULES.ur`. It survives death and empties at a new match. Starting an
   ultimate sends a `'C'` event (kind, caster, target, name): `doEvent()` runs `startCutin()` for the
   caster, the target and (for Mahoraga) anyone within 900, and the caster's `iframe` covers `CUT_T`.
+  Yuji's Black Flash is not an action: Q sets `f.bf` (synced) to `BF.win`, and `meleeHit()` turns his next
+  punch that lands into it (`BF.dmg`, guard break, kind `bf`), clearing `f.bf`.
   Yuji's ultimate, Soul Dismantle (kind and action key still `ss`): `lockOn()` picks a target into `f.lk` (synced);
   `ACTS.ss` crouches for `f.actD` (longer when locked) facing it, then cuts once along the aim, `SS.len`
   long and `SS.w` either side, through walls, taking exactly `SS.share` of each victim's full health
@@ -647,7 +650,7 @@ mouse, touch), screens, multiplayer, main loop.
 - **Input** is `f.inp`: move vector, `aim` (radians), `ad` (distance to the cursor, for moves that
   land where you point), `m1`/`blk` held, and a press *counter* per key, so a lost packet cannot eat a
   press. `control()` turns counter changes into presses, buffered for 0.3 s while busy.
-- **Actions**: `ACTS` is what a fighter is busy doing (`swing`, `dash`, `cast`, `bf`, `pb`, `ss`,
+- **Actions**: `ACTS` is what a fighter is busy doing (`swing`, `dash`, `cast`, `pb`, `ss`,
   `summon`, `nail`, `res`, `pin`, `rain`, `red`, `purple`, `domain`, and the curses' `pounce`, `slam`, `spit`), each a `step(f)` over `f.actT`. `lock` means the action drives the velocity,
   `slow` scales walking while it runs, `armor` means hits damage but do not interrupt. `MOVES[ch][k]`
   starts one and returns `false` to refuse (Mahoraga already out).

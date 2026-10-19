@@ -368,7 +368,8 @@ const STEP = 1 / 60;
 const FR = 20;                 // fighter radius
 const KB = 4;                  // knockback velocity decays at this rate, so a push of d units starts at d * KB
 const PROTECT = 1.5, CREDIT_T = 8;
-const ULT = { deal: 1 / 25, take: 1 / 50, idle: 0.3 };   // meter per point dealt, per point taken, per second
+const ULT = { deal: 1 / 30, take: 1 / 60, idle: 0.25 };   // meter per point dealt, per point taken, per second
+const ULT_KINDS = ['ss', 'shrine'];      // ultimates' hits (and any hit flagged ult, like Raining Nails) never fill the attacker's meter
 const MAX_FIGHTERS = 20;      // sorcerers (people) in a room or party; cursed spirits come on top
 const MAX_CURSES = 10, CURSE_PTS = 1;
 const CHARS = {
@@ -1074,7 +1075,7 @@ function mkFighter(id, name, ch, ctl) {
     x: MID, y: MID, vx: 0, vy: 0, aim: 0, hp: CHARS[ch].hp, alive: false, resp: 0.3, prot: 0,
     guard: 100, gdT: 0, blk: false, push: 0, iframe: 0, slow: 0, heal: 0, slamT: 0,
     act: '', actT: 0, actA: 0, actD: 0, lk: null, hitDone: false, hitL: [], combo: 3, comboT: 9, swCd: 0,
-    cd: { q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 }, ult: 0, pts: 0, nl: [], rm: [], rain: 0, frz: 0, nue: 0, nh: {}, kills: 0, deaths: 0, lastBy: null, lastT: -99,
+    cd: { q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 }, ult: 0, pts: 0, nl: [], rm: [], rain: 0, frz: 0, nue: 0, bf: 0, nh: {}, kills: 0, deaths: 0, lastBy: null, lastT: -99,
     inp: { mx: 0, my: 0, aim: 0, ad: 300, m1: false, blk: false, q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 },
     seen: { q: 0, e: 0, c: 0, r: 0, u: 0, d: 0 }, fresh: true, buf: null, bufT: 0, ai: null,
     // cosmetic, never simulated
@@ -1114,7 +1115,7 @@ function respawn(f) {
   f.ch = f.nch; f.r = CHARS[f.ch].r || FR;
   if (cursed(f)) f.name = CHARS[f.ch].n;
   Object.assign(f, { x: p.x + rnd(-12, 12), y: p.y + rnd(-12, 12), vx: 0, vy: 0, hp: maxHp(f), alive: true, prot: PROTECT,
-    guard: 100, gdT: 0, push: 0, act: '', heal: 0, slow: 0, blk: false, iframe: 0, lastBy: null, buf: null, combo: 3, comboT: 9, nl: [], rm: [], rain: 0, frz: 0, nue: 0, nh: {} });
+    guard: 100, gdT: 0, push: 0, act: '', heal: 0, slow: 0, blk: false, iframe: 0, lastBy: null, buf: null, combo: 3, comboT: 9, nl: [], rm: [], rain: 0, frz: 0, nue: 0, bf: 0, nh: {} });
   for (const k of KEYS) f.cd[k] = 0;
   f.px = f.rx = f.x; f.py = f.ry = f.y;
   fx(['sp', r1(f.x), r1(f.y)]);
@@ -1135,24 +1136,6 @@ const ACTS = {
     else { f.vx *= 0.3; f.vy *= 0.3; f.act = ''; }
   } },
   // Yuji
-  bf: { lock: true, step(f) {
-    const a = f.actA;
-    if (f.actT < 0.1) { f.vx = f.vy = 0; return; }
-    if (f.actT < 0.27 && !f.hitDone) {
-      f.vx = Math.cos(a) * 950; f.vy = Math.sin(a) * 950;
-      const hx = f.x + Math.cos(a) * 18, hy = f.y + Math.sin(a) * 18;
-      for (const t of targets(f.id)) {
-        if (Math.hypot(t.x - hx, t.y - hy) > t.r + FR + 10) continue;
-        if (!hurt(t, 280, { by: f.id, a, kb: 300, gb: true, kind: 'bf' })) continue;
-        f.hitDone = true; f.vx = f.vy = 0;
-        fx(['bf', r1(t.x), r1(t.y), r2(a), f.id]);
-        break;
-      }
-      return;
-    }
-    f.vx *= 0.5; f.vy *= 0.5;
-    if (f.actT >= 0.42) f.act = '';
-  } },
   pb: { slow: 0, step(f) {
     if (!f.hitDone && f.actT >= 0.42) {
       f.hitDone = true;
@@ -1318,7 +1301,7 @@ function rideNue(f, dt) {
 }
 const MOVES = {
   yuji: {
-    q(f) { startAct(f, 'bf'); fx(['snd', 'swing', r1(f.x), r1(f.y)]); },
+    q(f) { f.bf = BF.win; fx(['snd', 'charge', r1(f.x), r1(f.y)]); },      // Black Flash: the next punch that lands (meleeHit)
     e(f) { startAct(f, 'pb'); fx(['snd', 'charge', r1(f.x), r1(f.y)]); },
     c(f) {
       startAct(f, 'cast', 0.16);
@@ -1464,13 +1447,17 @@ function startSwing(f) {
   f.vx += Math.cos(f.aim) * 140; f.vy += Math.sin(f.aim) * 140;
   fx(['snd', 'swing', r1(f.x), r1(f.y)]);
 }
+// Yuji's Black Flash: Q primes his fists for BF.win s, and the next punch that lands is the Black Flash
+const BF = { win: 6, dmg: 280 };
 function meleeHit(f) {
   const C = CHARS[f.ch], fin = f.combo === 3, a = f.actA;
   for (const t of targets(f.id)) {
     const d = dist(f, t) - t.r - FR;
     if (d > C.reach - FR + 4) continue;
     if (Math.abs(angD(a, ang(f, t))) > 0.96 && d > 4) continue;
-    hurt(t, C.m1[f.combo], { by: f.id, a: ang(f, t), kb: fin ? (C.curse ? 120 : 230) : 25, kind: C.curse ? 'cu' : 'm1' });
+    const at = ang(f, t);
+    if (f.bf > 0 && hurt(t, BF.dmg, { by: f.id, a: at, kb: 300, gb: true, kind: 'bf' })) { f.bf = 0; fx(['bf', r1(t.x), r1(t.y), r2(at), f.id]); continue; }
+    hurt(t, C.m1[f.combo], { by: f.id, a: at, kb: fin ? (C.curse ? 120 : 230) : 25, kind: C.curse ? 'cu' : 'm1' });
   }
 }
 function control(f, dt) {
@@ -1517,7 +1504,7 @@ function hurt(t, dmg, o) {
   }
   dmg = Math.max(1, Math.round(dmg));
   t.hp -= dmg;
-  if (o.by != null && o.by !== t.id) { t.lastBy = o.by; t.lastT = S.time; if (o.kind !== 'maho') charge(by, dmg * ULT.deal); }
+  if (o.by != null && o.by !== t.id) { t.lastBy = o.by; t.lastT = S.time; if (o.kind !== 'maho' && !o.ult && !ULT_KINDS.includes(o.kind)) charge(by, dmg * ULT.deal); }
   charge(t, dmg * ULT.take);
   if (blocked) { if (o.a != null) { t.vx += Math.cos(o.a) * 90; t.vy += Math.sin(o.a) * 90; } }
   else if (!(t.act && ACTS[t.act].armor) && o.kb && o.a != null) {
@@ -1533,7 +1520,7 @@ function hurt(t, dmg, o) {
 // Points change hands here: a sorcerer who kills a curse gains CURSE_PTS; one who kills a sorcerer
 // takes everything the victim carried, plus 1. A sorcerer dies with nothing either way.
 function die(t) {
-  Object.assign(t, { alive: false, hp: 0, resp: RULES.resp, act: '', heal: 0, blk: false, push: 0, vx: 0, vy: 0, nl: [], rain: 0, frz: 0 });
+  Object.assign(t, { alive: false, hp: 0, resp: RULES.resp, act: '', heal: 0, blk: false, push: 0, vx: 0, vy: 0, nl: [], rain: 0, frz: 0, bf: 0 });
   for (const o of S.f) if (o.rm && o.rm.length) o.rm = o.rm.filter((v, i, a) => a[i - (i % 2)] !== t.id);      // no Resonance on the dead
   for (const d of S.dm) if (d.vic.includes(t.id)) d.vic = d.vic.filter((id) => id !== t.id);      // nor is anyone dead still held in a domain,
   for (const m of S.ms) if (Array.isArray(m.in) && m.in.includes(t.id)) m.in = m.in.filter((id) => id !== t.id);      // so they never respawn inside it
@@ -1626,7 +1613,7 @@ function hurtMaho(m, dmg, o) {
   if (adapted) dmg *= 0.4;
   dmg = Math.max(1, Math.round(dmg));
   m.hp -= dmg;
-  if (o.by != null && o.by !== m.own) charge(byId(o.by), dmg * ULT.deal);
+  if (o.by != null && o.by !== m.own && !o.ult && !ULT_KINDS.includes(o.kind)) charge(byId(o.by), dmg * ULT.deal);
   fx(['h', r1(m.x), r1(m.y), dmg, KIND_CODE[k] || 0, adapted ? 2 : 0, m.id]);
   if (!adapted && k !== 'wall') { m.adapt.push(k); spinWheel(m); }
   if ((k === 'bf' || k === 'ss') && o.a != null) { m.push = 0.35; m.vx = Math.cos(o.a) * 400; m.vy = Math.sin(o.a) * 400; }
@@ -1867,7 +1854,7 @@ function updRain(dt) {
     if (was < 0 && r.t >= 0) {
       for (const t of targets(r.own)) {
         if (Math.hypot(t.x - r.x, t.y - r.y) > RAIN.hit + t.r) continue;
-        if (hurt(t, RAIN.dmg, { by: r.own, a: Math.atan2(t.y - r.y, t.x - r.x), kb: 20, kind: 'nail' })) embed(t, r.own);
+        if (hurt(t, RAIN.dmg, { by: r.own, a: Math.atan2(t.y - r.y, t.x - r.x), kb: 20, kind: 'nail', ult: true })) embed(t, r.own);
       }
       fx(['rnl', r.x, r.y]);
     }
@@ -2156,6 +2143,7 @@ function updFighter(f, dt) {
   if (f.iframe > 0) f.iframe -= dt;
   if (f.prot > 0) f.prot -= dt;
   if (f.slow > 0) f.slow -= dt;
+  if (f.bf > 0) f.bf -= dt;
   if (f.swCd > 0) f.swCd -= dt;
   if (f.slamT > 0) f.slamT -= dt;
   f.comboT += dt;
@@ -2309,7 +2297,7 @@ function think(f, ai) {
     if (o === f || !o.alive) continue;
     if (o.act === 'slam' && o.actT < SLAM.wind && dist(o, f) < SLAM.r + FR + 20) { threat = ang(o, f); continue; }
     const pu = o.act === 'purple' && o.actT < PURPLE.wind;
-    const charging = pu || (o.act === 'pb' && o.actT < 0.42) || (o.act === 'ss' && o.actT < o.actD) || (o.act === 'bf' && o.actT < 0.1);
+    const charging = pu || (o.act === 'pb' && o.actT < 0.42) || (o.act === 'ss' && o.actT < o.actD);
     if (!charging) continue;
     const d = dist(o, f), a = ang(o, f), reach = pu ? PURPLE.range : o.act === 'pb' ? 900 : o.act === 'ss' ? SS.len : 200;
     if (d < reach && Math.abs(angD(o.aim, a)) < Math.atan2(pu ? PURPLE.r + FR : FR + 16, d) + 0.06 && (pu || los(o, f))) threat = o.aim + Math.PI / 2 * (angD(o.aim, a) > 0 ? 1 : -1);
@@ -2332,7 +2320,7 @@ function think(f, ai) {
   const own = S.maho.find((m) => m.own === f.id);
   if (see) {
     if (f.ch === 'yuji') {
-      if (d < 175 && ready('q')) { inp.aim = aimAt(lead(0.15)); inp.q++; }
+      if (d < 260 && !(f.bf > 0) && ready('q')) inp.q++;      // prime Black Flash, then punch
       else if (d > 150 && d < SS.range && ready('u') && (t.hp < maxHp(t) * 0.6 || Math.random() < 0.12)) { inp.aim = aimAt(lead(0.35)); inp.u++; }
       else if (d > 200 && d < 820 && ready('e')) { inp.aim = aimAt(lead(0.42)); inp.e++; }
       else if (d > 90 && d < 850 && ready('c')) { inp.aim = aimAt(lead(d / 1500)); inp.c++; }
@@ -3017,7 +3005,6 @@ function arms(f, sleeve) {
     if (fin) { L = [8 + ext * 22, -6 + ext * 2]; R = [8 + ext * 22, 6 - ext * 2]; }
     else if (side > 0) R = fist; else L = fist;
   } else if (f.blk) { L = [14, -7]; R = [15, 6]; }
-  else if (act === 'bf') { if (t < 0.1) R = [0, 15]; else R = [30, 3]; L = [6, -13]; }
   else if (act === 'pb') { L = [15, -5]; R = [15, 5]; }
   else if (act === 'ss') { if (t < f.actD) { L = [-3, -15]; R = [-3, 15]; } else { R = [30, 2]; L = [4, -14]; } }
   else if (act === 'dash') { L = [-4, -15]; R = [-4, 15]; }
@@ -3036,6 +3023,7 @@ function arms(f, sleeve) {
   else if (act === 'cast') { const p = clamp(t / 0.16, 0, 1); R = [20, 12 - p * 24]; }
   const band = f.ch === 'sukuna' ? '#111014' : null;
   hand(L[0], L[1], sleeve, band); hand(R[0], R[1], sleeve, band);
+  R.l = L;      // the left hand rides along, for glows in both
   return R;
 }
 function drawFighter(f) {
@@ -3103,11 +3091,10 @@ function drawFighter(f) {
     spiky(-1, 0, 5, 9.5, 9, f.id * 0.5 + 0.3, '#262634', 0.15, 0.7);
   }
   // move glows in the hand
-  if (f.act === 'bf') {
-    const k = f.actT < 0.1 ? f.actT / 0.1 : 1;
-    g.fillStyle = `rgba(255,30,60,${0.5 * k})`; circ(R[0], R[1], 9 + 3 * Math.sin(T * 50));
-    g.fillStyle = '#0a0008'; circ(R[0], R[1], 5);
-  } else if (f.act === 'pb' && f.actT < 0.45) {
+  if (f.bf > 0) {      // Black Flash primed: both fists crackle black and red
+    for (const [hx, hy] of [R, R.l]) { g.fillStyle = `rgba(255,30,60,${0.35 + 0.2 * Math.sin(T * 30)})`; circ(hx, hy, 8 + 2 * Math.sin(T * 50 + hx)); g.fillStyle = '#0a0008'; circ(hx, hy, 4.5); }
+  }
+  if (f.act === 'pb' && f.actT < 0.45) {
     const k = clamp(f.actT / 0.42, 0, 1);
     g.fillStyle = '#7a0a1c'; circ(21, 0, 3 + 5 * k); g.fillStyle = '#e0203e'; circ(21, 0, 1.5 + 3 * k);
   } else if (f.act === 'ss' && f.actT >= f.actD) { g.fillStyle = 'rgba(191,234,255,.6)'; circ(R[0], R[1], 11); }
@@ -5275,7 +5262,7 @@ zone.addEventListener('touchcancel', stickUp);
 const PAD_LAYOUT = { m1: [0, 0, 98], blk: [0, 138, 66], q: [30, 138, 66], e: [60, 138, 66], c: [90, 138, 66], d: [4, 222, 60], r: [36, 222, 60], u: [70, 222, 70] };
 // per fighter: [length of the aim line, ring at its end, length set by how far you drag]
 const AIM_LEN = {
-  yuji: { q: [190, 0], e: [900, 0], c: [700, 0], u: [SS.len, 0] },
+  yuji: { q: [1, 0], e: [900, 0], c: [700, 0], u: [SS.len, 0] },
   megumi: { q: [90, 0], e: [RAB.max, RAB.r, 1], c: [450, ELE_HIT, 1], u: [90, 0] },
   nobara: { q: [720, 0], e: [1, 0], c: [1, 0], u: [1, RAIN.r] },
   gojo: { q: [BLUE.range, BLUE.r, 1], e: [620, RED.r], c: [1400, 0], u: [1, DOM.r] },
@@ -5551,7 +5538,7 @@ let peer = null, nextId = 1, snapT = 0, inT = 0, lastSent = '', helloT = 0;
 // dec(), so the two sides cannot drift. Types: 1 / 2 = rounded to 1 or 2 decimals, s = string,
 // b = boolean, B = bot or not, c = the cooldown table, none = a plain value.
 const SPEC = {
-  f: 'id name:s ch:s nch:s bot:B x:1 y:1 vx:1 vy:1 aim:2 hp:1 alive:b resp:2 prot:2 guard:1 gdT:2 blk:b push:2 iframe:2 slow:2 heal:2 slamT:2 act:s actT:2 actA:2 actD:2 lk hitDone:b hitL combo comboT:2 swCd:2 cd:c ult:1 pts kills deaths lastBy lastT:2 nl rm rain:2 frz:2 nue:2',
+  f: 'id name:s ch:s nch:s bot:B x:1 y:1 vx:1 vy:1 aim:2 hp:1 alive:b resp:2 prot:2 guard:1 gdT:2 blk:b push:2 iframe:2 slow:2 heal:2 slamT:2 act:s actT:2 actA:2 actD:2 lk hitDone:b hitL combo comboT:2 swCd:2 cd:c ult:1 pts kills deaths lastBy lastT:2 nl rm rain:2 frz:2 nue:2 bf:2',
   m: 'id own x:1 y:1 vx:1 vy:1 aim:2 hp:1 spins adapt mode:s mt:2 cd:2 lcd:2 tg rt:2 push:2 frz:2 hitDone:b pc nl',
   e: 'id own x:1 y:1 t:2 a:2',
   r: 'id own x0:1 y0:1 x:1 y:1 a:2 t:2 T:2 burst:b nt:2',
@@ -6238,7 +6225,7 @@ function joinTick(dt) {
     f.ra = f.ra + angD(f.ra, f.aim) * k;
     if (f.act) f.actT += dt;
     for (const q of KEYS) if (f.cd[q] > 0) f.cd[q] = Math.max(0, f.cd[q] - dt);
-    for (const q of ['push', 'prot', 'resp', 'heal', 'iframe', 'slow', 'rain', 'frz']) if (f[q] > 0) f[q] = Math.max(0, f[q] - dt);
+    for (const q of ['push', 'prot', 'resp', 'heal', 'iframe', 'slow', 'rain', 'frz', 'bf']) if (f[q] > 0) f[q] = Math.max(0, f[q] - dt);
   }
   for (const m of S.maho) {
     m.x += m.vx * dt; m.y += m.vy * dt; m.mt += dt;
