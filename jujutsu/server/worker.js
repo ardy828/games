@@ -16,7 +16,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import ADMIN_HTML from './admin.html';
 
-const VERSION = 11;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
+const VERSION = 12;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
 const ROOMS = ['pub-1', 'pub-2', 'pub-3', 'pub-4'];
 const MAX_PLAYERS = 20;
 const MAX_MSG = 32768;      // bytes; a full room's snapshot is about 8 kB

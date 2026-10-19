@@ -220,6 +220,7 @@
   /* touch: a floating move stick on the left, buttons on the right */
   #pad{position:fixed;inset:0;display:none;pointer-events:none}
   body.tui.playing #pad{display:block}
+  body.tui.playing.fmap #pad,body.tui.playing.res #pad{display:none}      /* never over the flame map or the vote */
   body.tui #abil,body.tui #tabHint{display:none}
   body.tui #me{bottom:auto;top:12px;left:104px;translate:none;width:min(240px,40vw)}
   body.tui #goal{top:auto;bottom:8px;font-size:13px}
@@ -4308,7 +4309,7 @@ function drawMini() {
     if (!fugaMapFor()) { closeFugaMap(); return; }
     const fs = Math.round(n / 40);
     mg.font = `800 ${fs}px Barlow, sans-serif`; mg.textAlign = 'center'; mg.fillStyle = '#ffcf9a';
-    mg.fillText(TOUCH ? 'TAP WHERE DIVINE FLAME LANDS' : 'CLICK WHERE DIVINE FLAME LANDS  ·  ESC CANCELS', n / 2, fs * 1.6);
+    mg.fillText(!TOUCH ? 'CLICK WHERE DIVINE FLAME LANDS  ·  ESC CANCELS' : fmap.armed ? 'TAP THE RING TO LAUNCH  ·  TAP ELSEWHERE TO MOVE IT' : 'TAP WHERE DIVINE FLAME LANDS', n / 2, fs * 1.6);
     if (fmap.x >= 0) {
       const x = fmap.x, y = fmap.y, R = FUGA.r * k, pulse = 1 + 0.04 * Math.sin(T * 10);
       mg.strokeStyle = 'rgba(255,200,120,.5)'; mg.lineWidth = d; mg.setLineDash([5 * d, 4 * d]);
@@ -4936,7 +4937,7 @@ function hud() {
   const board = tabHeld && S.phase === 'play';
   if (board !== shownBoard || (board && T % 0.5 < 0.02)) { shownBoard = board; $('board').classList.toggle('on', board); if (board) fillTable($('boardBody'), standings()); }
   const res = S.phase === 'over';
-  if (res !== shownRes) { shownRes = res; $('results').classList.toggle('on', res); if (res) fillVote(); }
+  if (res !== shownRes) { shownRes = res; $('results').classList.toggle('on', res); document.body.classList.toggle('res', res); if (res) { releaseInput(); fillVote(); } }
   if (res) for (const b of $('voteRow').children) {
     const m = +b.dataset.m, n = String(S.vt.filter((v) => v[1] === m).length || '');
     if (b.lastChild.textContent !== n) b.lastChild.textContent = n;
@@ -5155,12 +5156,19 @@ function closeFugaMap() {
   document.body.classList.remove('fmap'); sizeMini();
 }
 function fmapAt(e) { const b = mini.getBoundingClientRect(); fmap.x = (e.clientX - b.left) / b.width * mini.width; fmap.y = (e.clientY - b.top) / b.height * mini.height; }
-mini.addEventListener('pointermove', (e) => { if (fmap) fmapAt(e); });
-mini.addEventListener('pointerdown', (e) => { if (!fmap) return; e.preventDefault(); if (e.button === 2) { closeFugaMap(); return; } fmapAt(e); });
+mini.addEventListener('pointermove', (e) => { if (fmap && (e.pointerType === 'mouse' || !fmap.armed)) fmapAt(e); });
+addEventListener('pointerdown', (e) => { if (fmap && e.target !== mini && e.pointerType !== 'mouse') closeFugaMap(); }, true);      // a tap off the map cancels
+mini.addEventListener('pointerdown', (e) => { if (!fmap) return; e.preventDefault(); if (e.button === 2) { closeFugaMap(); return; } if (e.pointerType === 'mouse' || !fmap.armed) fmapAt(e); });
 mini.addEventListener('pointerup', (e) => {
   if (!fmap || e.button === 2) return;
   fmapAt(e);
-  const me = fugaMapFor(), k = mini.width / MAP, wx = fmap.x / k, wy = fmap.y / k;
+  const k = mini.width / MAP;
+  if (e.pointerType !== 'mouse') {      // no hover on a touch screen: the first tap shows where it lands, a tap in that ring launches it
+    const a = fmap.armed;
+    if (!a || Math.hypot(fmap.x - a.x, fmap.y - a.y) > FUGA.r * k) { fmap.armed = { x: fmap.x, y: fmap.y }; return; }
+    fmap.x = a.x; fmap.y = a.y;
+  }
+  const me = fugaMapFor(), wx = fmap.x / k, wy = fmap.y / k;
   closeFugaMap();
   if (!me) return;
   forceAim = { a: Math.atan2(wy - me.y, wx - me.x), ad: Math.hypot(wy - me.y, wx - me.x), until: T + 0.25 };

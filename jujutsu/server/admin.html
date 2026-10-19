@@ -189,7 +189,7 @@
   </div>
 </main>
 <div id="toast"></div>
-<div id="fmap" hidden><div class="box"><h3><span id="fmapT">DIVINE FLAME</span><button id="fmapX" aria-label="Close">✕</button></h3><p>Click where it lands. Esc to cancel.</p><canvas id="fmapC" width="640" height="640"></canvas></div></div>
+<div id="fmap" hidden><div class="box"><h3><span id="fmapT">DIVINE FLAME</span><button id="fmapX" aria-label="Close">✕</button></h3><p>Click where it lands (on a touch screen: tap, then tap the ring). Esc to cancel.</p><canvas id="fmapC" width="640" height="640"></canvas></div></div>
 
 <script>
 (() => {
@@ -238,7 +238,8 @@ const PRESETS = [
 const MAPS = [['SHIBUYA', '#383a42'], ['JUJUTSU HIGH', '#3f5c34'], ['SHINJUKU', '#6b6258'], ['OKINAWA', '#e2cd98']], MAP = 3620;
 // Divine Flame: a room's map from above in a popup, with everyone on it (red sorcerers, purple cursed
 // spirits, from the host's last report); a click drops the flame there and closes it
-let flameRoom = null;
+let flameRoom = null, flameAt = null, flameArmed = null;
+const FLAME_R = 380;      // the blast's radius (FUGA.r in the game)
 function drawFlameMap() {
   const r = flameRoom && lastStatus && (lastStatus.rooms || []).find((o) => o.name === flameRoom), st = r && r.stat;
   if (!st) { closeFlame(); return; }
@@ -249,16 +250,30 @@ function drawFlameMap() {
   x.strokeStyle = 'rgba(255,255,255,.07)'; x.lineWidth = 1;
   for (let g = 580; g < MAP; g += 580) { x.beginPath(); x.moveTo(g * k, 0); x.lineTo(g * k, n); x.moveTo(0, g * k); x.lineTo(n, g * k); x.stroke(); }
   for (const [px, py, cu] of st.p || []) { x.fillStyle = cu ? '#a07cff' : '#ff4a66'; x.beginPath(); x.arc(px * k, py * k, cu ? 4 : 6, 0, Math.PI * 2); x.fill(); }
+  const at = flameArmed || flameAt;      // where it would land: the blast's size round the pointer
+  if (at) {
+    x.fillStyle = 'rgba(255,110,30,.28)'; x.beginPath(); x.arc(at.x * k, at.y * k, FLAME_R * k, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = '#ff9a3a'; x.lineWidth = 3; x.stroke();
+    x.fillStyle = '#fff1c0'; x.beginPath(); x.arc(at.x * k, at.y * k, 3, 0, Math.PI * 2); x.fill();
+  }
 }
-function openFlame(name) { flameRoom = name; $('fmap').hidden = false; drawFlameMap(); }
+function openFlame(name) { flameRoom = name; flameAt = flameArmed = null; $('fmap').hidden = false; drawFlameMap(); }
 function closeFlame() { flameRoom = null; $('fmap').hidden = true; }
+const flameSpot = (e) => { const b = $('fmapC').getBoundingClientRect(); return { x: (e.clientX - b.left) / b.width * MAP, y: (e.clientY - b.top) / b.height * MAP }; };
+$('fmapC').onpointermove = (e) => { if (e.pointerType === 'mouse') { flameAt = flameSpot(e); drawFlameMap(); } };
+$('fmapC').onpointerleave = () => { flameAt = null; if (flameRoom) drawFlameMap(); };
 $('fmapX').onclick = closeFlame;
 $('fmap').onclick = (e) => { if (e.target.id === 'fmap') closeFlame(); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && flameRoom) closeFlame(); });
-$('fmapC').onclick = (e) => {
-  const c = $('fmapC'), b = c.getBoundingClientRect(), mx = (e.clientX - b.left) / b.width * MAP, my = (e.clientY - b.top) / b.height * MAP, room = flameRoom;
+$('fmapC').onpointerup = (e) => {
+  let p = flameSpot(e);
+  if (e.pointerType !== 'mouse') {      // a touch screen has no hover: the first tap shows where it lands, a tap in that ring sends it
+    if (!flameArmed || Math.hypot(p.x - flameArmed.x, p.y - flameArmed.y) > FLAME_R) { flameArmed = p; drawFlameMap(); return; }
+    p = flameArmed;
+  }
+  const room = flameRoom;
   closeFlame();
-  act('Divine Flame in ' + room, 'event', { room, ev: 'fuga', x: Math.round(mx), y: Math.round(my) });
+  act('Divine Flame in ' + room, 'event', { room, ev: 'fuga', x: Math.round(p.x), y: Math.round(p.y) });
 };
 const EVENTS = [
   ['heal', '反転', 'Heal everyone', 'Full health for every fighter'],

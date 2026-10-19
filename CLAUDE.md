@@ -700,8 +700,9 @@ mouse, touch), screens, multiplayer, main loop.
   (`ACTS.cleave`, `CLEAVE`) picks `cleaveTarget()` (closest to the pointer: aim and `inp.ad`) into `f.lk` and deals exactly `CLEAVE.share` of its full
   health (divided by `RULES.dmg`, which `hurt()` multiplies back in), ignoring blocks. Divine Flame
   is aimed on the map: C (or the touch button) calls `openFugaMap()`, which blows `#mini` up to fill the
-  screen (`body.fmap`); `drawMini()` draws the blast's ring at the pointer and a click or lifted finger
-  sends the spot as `forceAim` (aim and distance, which the desktop input now honours too) with a C
+  screen (`body.fmap`, which hides `#pad` so the stick zone cannot cover it); `drawMini()` draws the blast's
+  ring at the pointer and a click sends the spot (on touch, the first tap arms `fmap.armed` and a tap
+  inside that ring sends it; a tap off the map closes it) as `forceAim` (aim and distance, which the desktop input now honours too) with a C
   press. `flameBow()` draws the bow (`ACTS.fuga`, `FUGA`, `S.fl`): an entity whose `t` counts up from `-(charge + flight)`; while he draws
   the bow a ring of fire around him singes anyone beside him, then `updFuga()` lands it (`fx 'fl'`) and
   burns and slows everyone inside for `FUGA.dur` s; it is cancelled if he dies or is stopped while
@@ -755,7 +756,7 @@ mouse, touch), screens, multiplayer, main loop.
   the minimap and the vote's cards (`MAPS[i].thumb`, made at boot). New matches start in Shibuya
   (`newState()`); a joiner loads the host's map from the snapshot's `mp`.
 - **Map vote**: while a match's results show (`S.phase === 'over'`), `fillVote()` puts a card for each of
-  `mapOpts()` (every map but this one) on `#results`; `castVote()` sends `{t:'vote'}` to the host,
+  `mapOpts()` (every map but this one) on `#results` (`body.res` hides `#pad`, which would cover a card); `castVote()` sends `{t:'vote'}` to the host,
   whose `hostVote()` keeps `[id, map]` pairs in `S.vt` (sent in the snapshot while the results show).
   Over the last `VOTE_FADE` s of the break the screen goes white (`render()`); then `nextMap()` loads
   the most voted map (a tie or no votes: a coin toss) before `newMatch()`, and its `'W'` event loads it

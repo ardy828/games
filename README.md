@@ -279,7 +279,7 @@ cursed energy: every move has its own cooldown.
   you aim, and it never stops: it flies through every building and cuts everyone in its path until it leaves the city. *Cleave* (long cooldown) is one huge slash on the enemy closest to your pointer, from a long way off,
   that always takes 40% of their full health, block or not. *Divine Flame* (long cooldown): C (or the
   button) blows the minimap up to fill the screen with a ring the blast's size under your pointer; click
-  (or tap) anywhere on the city and he stands in a ring of fire drawing a great flame bow while a ring
+  anywhere on the city (on a phone, tap to place the ring and tap the ring again to launch; a tap off the map cancels) and he stands in a ring of fire drawing a great flame bow while a ring
   marks the spot, then the arrow lands, a cylinder of fire as wide as the blast roars up and stands, and the ring of fire burns and slows
   everyone in it for 6 seconds. Esc or a right click cancels. His ultimate, *Malevolent
   Shrine*, has no barrier: the shrine rises out of the ground under him and lifts him onto its roof,
