@@ -673,7 +673,8 @@ mouse, touch), screens, multiplayer, main loop.
   pair in `f.rm`, her most recent hit by anything) as one nail if it had none. `nl`, `rm` and `rain` are synced.
 - **Gojo**: Blue (`BLUE`, `S.bl`, `updBlue()`) pulls by setting velocity and `push` on everyone in range
   each step and ticks damage; Red is `SHOT` kind 3 and bursts through `redBlast()`; Hollow Purple
-  (`PURPLE`, `S.pu`, `updPurple()`) ignores walls and keeps a host-only `hit` list. Infinite Void
+  (`PURPLE`, `S.pu`, `updPurple()`) ignores walls, flies on until it leaves the map (`edgeLen()` draws its
+  path to the edge) and keeps a host-only `hit` list. Infinite Void
   (`DOM`, `S.dm`) counts `d.t` down from `DOM.form + DOM.shut` (`DOM.shut` = `DOM.rush + DOM.dur`): for `DOM.form` s white light swells out
   of Gojo in the world (`drawBurst()`), then `updDomain()` closes it on everyone inside, recording them in `vic` and
   setting their `frz` to `DOM.shut`, and Gojo's to `DOM.rush`; for those first `DOM.rush` s `drawRush()` splashes
@@ -802,12 +803,15 @@ mouse, touch), screens, multiplayer, main loop.
   room. A hosting tab in the background keeps the sim running from the heartbeat timer.
 - **Server** (`jujutsu/server/worker.js`): one Durable Object per room `pub-1`…`pub-4`, WebSocket
   Hibernation API, 20 players (`MAX_PLAYERS`), only the host may send to `*`, to an id or to `!` (its scoreboard, every
-  2 s, for the admin page), a host silent for `STALL_MS` is replaced. Each room stores the admin's
+  2 s, for the admin page: the scoreboard, the map `mp` and everyone's position `p`), a host silent for `STALL_MS` is replaced. Each room stores the admin's
   rules and sends them in `welcome` and as `{sys:'rules'}`; admin events go to the host as
-  `{sys:'admin', ev}` (`adminEvent()` runs them), broadcasts to everyone as `{sys:'msg', text, sec}` (`announce()` shows the text big for `sec` s, 2–60), and a kick
+  `{sys:'admin', ev}` (`adminEvent()` runs them: `map` with a map number calls `switchMap()`, which keeps the
+  points and respawns everyone there; `fuga` with a spot drops an owner-less Divine Flame there),
+  `clearchat` empties the room's log and sends `{sys:'clearchat'}` (`clearChat()`), broadcasts to everyone as `{sys:'msg', text, sec}` (`announce()` shows the text big for `sec` s, 2–60), and a kick
   is `{sys:'kick'}` then a close.
 - **Admin page** (`jujutsu/server/admin.html`, served by the Worker at `/admin`, imported as a text
-  module): talks to `/admin/api/{status,rules,event,msg,kick}` with `Authorization: Bearer
+  module): talks to `/admin/api/{status,rules,event,msg,kick,clearchat}` (its Divine Flame event opens a
+  popup map of the room, `openFlame()`, drawn from the host's last `stat`) with `Authorization: Bearer
   ADMIN_KEY` (a Cloudflare secret; without it the API answers 503). It is not a game page and is not
   on GitHub Pages, so it has no lockdown block. Its README has the deploy steps (Cloudflare Workers Builds from this repo,
   root `jujutsu/server`). Test it with `npx wrangler dev` and a copy of the game with `SERVER` set to

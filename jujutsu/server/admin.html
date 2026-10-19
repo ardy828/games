@@ -68,6 +68,17 @@
   .room h3{font-family:var(--disp);font-weight:400;font-size:18px;letter-spacing:.06em;display:flex;justify-content:space-between}
   .room h3 span{color:var(--muted)}
   .room .info{font-size:12.5px;color:var(--muted);margin:2px 0 8px;overflow-wrap:anywhere}
+  .maps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+  .maps button{font-size:12px;letter-spacing:.06em;padding:8px 4px;border:1px solid var(--line);color:var(--text, #fff);background:var(--panel2);cursor:pointer}
+  .maps button.on{border-color:var(--gold);color:var(--gold)}
+  #fmap{position:fixed;inset:0;background:rgba(5,4,10,.78);display:grid;place-items:center;z-index:50}
+  #fmap[hidden]{display:none}
+  #fmap .box{background:var(--panel2);border:1px solid var(--line);border-top:3px solid #ff7a1e;padding:12px;text-align:center}
+  #fmap h3{font-family:var(--disp);font-weight:400;letter-spacing:.06em;font-size:20px;margin-bottom:2px;display:flex;justify-content:space-between;gap:12px}
+  #fmap h3 button{background:transparent;border:1px solid var(--line);color:var(--muted);cursor:pointer;padding:0 8px}
+  #fmap p{font-size:12px;color:var(--muted);margin-bottom:8px}
+  #fmapC{display:block;width:min(80vh,86vw);aspect-ratio:1;cursor:crosshair;border:1px solid var(--line)}
+  .chatlog h4 button{float:right;font-size:10.5px;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line);background:transparent;padding:0 6px;cursor:pointer}
   table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13.5px}
   th{font-size:10.5px;letter-spacing:.12em;color:var(--muted);text-align:left;padding:2px 4px}
   td{padding:4px;border-top:1px solid var(--line)}
@@ -167,6 +178,7 @@
         <h2>EVENTS <small>happen at once</small></h2>
         <div class="row" style="margin:0 0 10px"><span class="note">In</span><select id="evRoom"></select></div>
         <div class="events" id="events"></div>
+        <div class="maps" id="evMaps" title="Move the room to another map: the points stay and everyone respawns there"></div>
       </section>
 
       <section class="card">
@@ -177,6 +189,7 @@
   </div>
 </main>
 <div id="toast"></div>
+<div id="fmap" hidden><div class="box"><h3><span id="fmapT">DIVINE FLAME</span><button id="fmapX" aria-label="Close">✕</button></h3><p>Click where it lands. Esc to cancel.</p><canvas id="fmapC" width="640" height="640"></canvas></div></div>
 
 <script>
 (() => {
@@ -221,6 +234,32 @@ const PRESETS = [
   ['Gojo only', { yuji: false, megumi: false, nobara: false, gojo: true, sukuna: false }],
   ['Sukuna only', { yuji: false, megumi: false, nobara: false, gojo: false, sukuna: true }],
 ];
+// the game's maps (MAPS in jujutsu/index.html, in the same order) and the size of every map (its MAP)
+const MAPS = [['SHIBUYA', '#383a42'], ['JUJUTSU HIGH', '#3f5c34'], ['SHINJUKU', '#6b6258'], ['OKINAWA', '#e2cd98']], MAP = 3620;
+// Divine Flame: a room's map from above in a popup, with everyone on it (red sorcerers, purple cursed
+// spirits, from the host's last report); a click drops the flame there and closes it
+let flameRoom = null;
+function drawFlameMap() {
+  const r = flameRoom && lastStatus && (lastStatus.rooms || []).find((o) => o.name === flameRoom), st = r && r.stat;
+  if (!st) { closeFlame(); return; }
+  const c = $('fmapC'), n = c.width, x = c.getContext('2d'), k = n / MAP;
+  $('fmapT').textContent = 'DIVINE FLAME · ' + r.name.toUpperCase() + ' · ' + (MAPS[st.mp] || MAPS[0])[0];
+  x.fillStyle = (MAPS[st.mp] || MAPS[0])[1]; x.fillRect(0, 0, n, n);
+  if (st.mp === 3) { x.fillStyle = '#2489b4'; x.fillRect(0, 3000 * k, n, n); }
+  x.strokeStyle = 'rgba(255,255,255,.07)'; x.lineWidth = 1;
+  for (let g = 580; g < MAP; g += 580) { x.beginPath(); x.moveTo(g * k, 0); x.lineTo(g * k, n); x.moveTo(0, g * k); x.lineTo(n, g * k); x.stroke(); }
+  for (const [px, py, cu] of st.p || []) { x.fillStyle = cu ? '#a07cff' : '#ff4a66'; x.beginPath(); x.arc(px * k, py * k, cu ? 4 : 6, 0, Math.PI * 2); x.fill(); }
+}
+function openFlame(name) { flameRoom = name; $('fmap').hidden = false; drawFlameMap(); }
+function closeFlame() { flameRoom = null; $('fmap').hidden = true; }
+$('fmapX').onclick = closeFlame;
+$('fmap').onclick = (e) => { if (e.target.id === 'fmap') closeFlame(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && flameRoom) closeFlame(); });
+$('fmapC').onclick = (e) => {
+  const c = $('fmapC'), b = c.getBoundingClientRect(), mx = (e.clientX - b.left) / b.width * MAP, my = (e.clientY - b.top) / b.height * MAP, room = flameRoom;
+  closeFlame();
+  act('Divine Flame in ' + room, 'event', { room, ev: 'fuga', x: Math.round(mx), y: Math.round(my) });
+};
 const EVENTS = [
   ['heal', '反転', 'Heal everyone', 'Full health for every fighter'],
   ['ults', '魂', 'Ultimates ready', 'Fill every ultimate meter'],
@@ -228,6 +267,7 @@ const EVENTS = [
   ['maho', '魔虚羅', 'Wild Mahoraga', 'Drops one with no master until someone kills it'],
   ['end', '終', 'End round', 'Most points wins right now'],
   ['restart', '始', 'Restart round', 'Scores back to zero'],
+  ['fuga', '火', 'Divine Flame', 'Pick a spot on the map'],
 ];
 
 let key = '';
@@ -310,6 +350,7 @@ const mmss = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padSta
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 function render(s) {
   lastStatus = s;
+  if (flameRoom) drawFlameMap();
   setLive(true);
   const rooms = s.rooms || [];
   const people = rooms.reduce((n, r) => n + r.players.length, 0), active = rooms.filter((r) => r.players.length).length;
@@ -361,7 +402,9 @@ function render(s) {
     }
     if (r.chat && r.chat.length) {      // the room's chat, newest at the bottom
       const log = el('div', 'chatlog');
-      log.append(el('h4', '', 'CHAT'));
+      const hd = el('h4', '', 'CHAT'), clr = el('button', '', 'CLEAR');
+      clr.onclick = () => { if (confirm('Clear the chat in ' + r.name + '? It goes for the players too.')) act('Cleared the chat in ' + r.name, 'clearchat', { room: r.name }); };
+      hd.append(clr); log.append(hd);
       for (const c of r.chat) {
         const line = el('div'), d = new Date(c.at);
         line.append(el('time', '', String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')), el('b', '', c.name), document.createTextNode(c.text));
@@ -468,10 +511,18 @@ for (const [ev, kj, n, h] of EVENTS) {
   b.append(top, el('span', '', h));
   b.onclick = () => {
     const room = $('evRoom').value;
-    act(n + ' in ' + (room === 'all' ? 'all rooms' : room), 'event', { room, ev });
+    if (ev !== 'fuga') { act(n + ' in ' + (room === 'all' ? 'all rooms' : room), 'event', { room, ev }); return; }
+    // a Divine Flame lands in one room: the one picked, or else the first with a game on
+    const rs = (lastStatus && lastStatus.rooms) || [], r = room === 'all' ? rs.find((o) => o.stat) : rs.find((o) => o.name === room && o.stat);
+    if (r) openFlame(r.name); else toast(room === 'all' ? 'No room has a game on.' : 'Nobody is playing in ' + room + '.', true);
   };
   $('events').append(b);
 }
+MAPS.forEach(([name], i) => {      // move the room (or every room) to another map
+  const b = el('button', '', 'MAP: ' + name);
+  b.onclick = () => { const room = $('evRoom').value; act('Moved ' + (room === 'all' ? 'every room' : room) + ' to ' + name, 'event', { room, ev: 'map', map: i }); };
+  $('evMaps').append(b);
+});
 
 buildFields();
 fillRules(DEFAULTS);

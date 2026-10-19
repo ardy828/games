@@ -5,7 +5,7 @@
 // object only passes messages along. Clients send "to|json", where to is '*' (everyone, host only),
 // 'h' (the host), a player id (host only) or '!' (the room itself: the host's scoreboard for the
 // admin page); the room delivers it as "from|json". The room's own messages come from '!': welcome,
-// join, leave, full, host, and the admin's rules, msg, admin (an event for the host to run) and kick.
+// join, leave, full, host, and the admin's rules, msg, admin (an event for the host to run), clearchat and kick.
 // When the host leaves, or goes quiet for STALL_MS (a hidden tab, a dead laptop), the oldest remaining
 // player becomes host and every player is told, so the room lives as long as anyone is in it.
 //
@@ -16,13 +16,15 @@
 import { DurableObject } from 'cloudflare:workers';
 import ADMIN_HTML from './admin.html';
 
-const VERSION = 10;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
+const VERSION = 11;          // shown on the root page and in /check, so you can tell which code is live; bump it with each change
 const ROOMS = ['pub-1', 'pub-2', 'pub-3', 'pub-4'];
 const MAX_PLAYERS = 20;
 const MAX_MSG = 32768;      // bytes; a full room's snapshot is about 8 kB
 const STALL_MS = 3000;      // a host silent this long hands the room on
 const CHAT_LOG = 100;      // chat lines each room keeps for the admin page
-const EVENTS = ['heal', 'ults', 'cds', 'maho', 'end', 'restart'];
+const EVENTS = ['heal', 'ults', 'cds', 'maho', 'end', 'restart', 'map', 'fuga'];
+const MAP_COUNT = 4;          // the game's maps (MAPS in jujutsu/index.html): 'map' takes one of them
+const MAP_SIZE = 3620;       // and its MAP, the size of every map: 'fuga' takes a spot on it
 
 // The rules the admin sets for the public rooms. Keep RULES0 and cleanRules() in step with the copies
 // in ../index.html, which applies them.
@@ -77,8 +79,21 @@ async function adminApi(req, env, what) {
   }
   if (what === 'event') {
     if (!EVENTS.includes(body.ev)) return json({ error: 'Unknown event.' }, 400);
-    const res = await Promise.all(where.map((name) => ask(env, name, 'event', { ev: body.ev })));
+    const ev = { ev: body.ev };
+    if (body.ev === 'map') {
+      ev.map = Math.round(Number(body.map));
+      if (!(ev.map >= 0 && ev.map < MAP_COUNT)) return json({ error: 'No such map.' }, 400);
+    } else if (body.ev === 'fuga') {      // a spot on one room's map
+      if (!ROOMS.includes(body.room)) return json({ error: 'Which room?' }, 400);
+      ev.x = Math.round(Math.min(MAP_SIZE, Math.max(0, Number(body.x) || 0)));
+      ev.y = Math.round(Math.min(MAP_SIZE, Math.max(0, Number(body.y) || 0)));
+    }
+    const res = await Promise.all(where.map((name) => ask(env, name, 'event', ev)));
     return json({ ok: true, rooms: res.filter((r) => r.ok).length });
+  }
+  if (what === 'clearchat') {
+    await Promise.all(where.map((name) => ask(env, name, 'clearchat')));
+    return json({ ok: true });
   }
   if (what === 'msg') {
     const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 140);
@@ -202,8 +217,14 @@ export class Room extends DurableObject {
     }
     if (what === 'event') {
       const h = players.find((p) => p.me.id === host);
-      if (h) send(h.ws, sys({ sys: 'admin', ev: body.ev }));
+      if (h) send(h.ws, sys({ sys: 'admin', ev: body.ev, map: body.map, x: body.x, y: body.y }));
       return { ok: !!h };
+    }
+    if (what === 'clearchat') {      // the log here and every player's chat box
+      this.chat = [];
+      await this.ctx.storage.put('chat', this.chat);
+      for (const p of players) send(p.ws, sys({ sys: 'clearchat' }));
+      return { ok: true };
     }
     if (what === 'msg') {
       for (const p of players) send(p.ws, sys({ sys: 'msg', text: String(body.text || '').slice(0, 140), sec: body.sec }));
@@ -264,7 +285,7 @@ export class Room extends DurableObject {
     } else if (me.id !== host) {
       // only the host speaks to everyone, to one player or to the room
     } else if (to === '!') {
-      if (!isChat && msg.length < 4096) { try { this.stat = { ...JSON.parse(msg.slice(bar + 1)), at: now }; } catch (e) { /* ignored */ } }
+      if (!isChat && msg.length < 8192) { try { this.stat = { ...JSON.parse(msg.slice(bar + 1)), at: now }; } catch (e) { /* ignored */ } }
     } else if (to === '*') {
       for (const p of this.players(ws)) send(p.ws, out);
     } else {

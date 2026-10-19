@@ -117,10 +117,10 @@
   #muteBtn{left:56px}
   #fsBtn{left:102px}
   #fsBtn svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round}
-  #mini{position:absolute;right:10px;top:10px;width:150px;height:150px;border:1px solid var(--line);background:#101018}
+  #mini{position:absolute;right:10px;top:10px;width:220px;height:220px;border:1px solid var(--line);background:#101018}
   #goal{position:absolute;left:0;right:0;top:12px;text-align:center;font-weight:800;font-size:15px;letter-spacing:.04em;text-shadow:0 2px 6px #000}
   #goal em{font-style:normal;color:var(--gold)}
-  #feed{position:absolute;right:10px;top:170px;display:grid;gap:4px;justify-items:end}
+  #feed{position:absolute;right:10px;top:240px;display:grid;gap:4px;justify-items:end}
   .fd{background:rgba(10,10,18,.8);border-left:3px solid var(--red);font-weight:700;font-size:13px;padding:4px 10px;animation:fdin 220ms ease both;transition:opacity 400ms}
   .fd.me{border-left-color:var(--gold);background:rgba(60,46,10,.85)}
   .fd.gone{opacity:0}
@@ -223,9 +223,9 @@
   body.tui #abil,body.tui #tabHint{display:none}
   body.tui #me{bottom:auto;top:12px;left:104px;translate:none;width:min(240px,40vw)}
   body.tui #goal{top:auto;bottom:8px;font-size:13px}
-  body.tui #mini{width:96px;height:96px}
+  body.tui #mini{width:132px;height:132px}
   body.fmap #mini{position:fixed;left:50%;top:50%;right:auto;width:min(94vw,86vh);height:min(94vw,86vh);transform:translate(-50%,-50%);z-index:40;pointer-events:auto;cursor:crosshair;touch-action:none;box-shadow:0 0 0 100vmax rgba(5,4,10,.6)}
-  body.tui #feed{top:114px}
+  body.tui #feed{top:150px}
   body.tui #deadBox{top:auto;bottom:40%}
   #stickZone{position:absolute;left:0;top:110px;bottom:0;width:45%;pointer-events:auto;touch-action:none}
   .stk{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);opacity:.55;pointer-events:none}
@@ -1564,6 +1564,16 @@ function newMatch() {
   event(['N', 'New match. ' + goalText() + (RULES.rounds && RULES.time > 0 ? ' in ' + RULES.time + ' min' : '') + '.']);
 }
 
+// the admin moves a room to another map mid-match: the points stay, the world is cleared and everyone
+// respawns there, under the same white as a vote
+function switchMap(m) {
+  if (!S || !Number.isInteger(m) || m < 0 || m >= MAPS.length || m === mapId) return;
+  S.maho = []; S.ele = []; S.rab = []; S.sh = []; S.rn = []; S.bl = []; S.pu = []; S.dm = []; S.fl = []; S.ms = []; S.cl = [];
+  loadMap(m);
+  let i = 0;
+  for (const f of S.f) if (f.alive) Object.assign(f, { alive: false, resp: 0.4 + 0.05 * i++, act: '', frz: 0, nue: 0, rain: 0, push: 0, vx: 0, vy: 0 });
+  event(['W', m]);
+}
 // The map vote. While a match's results show, everyone votes for one of the other maps (S.vt: [id, map]
 // pairs, kept by the host); the screen fades to white over the last VOTE_FADE s, the most voted map
 // (a tie or no votes: a coin toss) loads under the white with the new match, and it fades back in.
@@ -1875,7 +1885,7 @@ function updRain(dt) {
 // street, and nobody can get in through its edge until it ends.
 const BLUE = { r: 230, T: 1.6, dt: 0.1, dmg: 9, pull: 330, pop: 70, popDmg: 60, range: 420 };
 const RED = { r: 125, dmg: 240, kb: 380, wind: 0.35 };
-const PURPLE = { wind: 0.75, spd: 950, r: 58, range: 1400, dmg: 420 };
+const PURPLE = { wind: 0.75, spd: 950, r: 58, range: MAP * 1.5, dmg: 420 };      // range: it flies on until it leaves the map
 const DOM = { r: 430, dur: 8, lift: 70, form: 0.55, rush: 2.4 };
 DOM.shut = DOM.rush + DOM.dur;      // how long it stays closed: the star rush, then DOM.dur s of void
 function updBlue(dt) {
@@ -1907,6 +1917,14 @@ function redBlast(b) {
   }
   fx(['red', r1(b.x), r1(b.y)]);
 }
+// how far from (x, y) along a to the edge of the map
+function edgeLen(x, y, a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  let t = 1e9;
+  if (c > 1e-6) t = Math.min(t, (MAP - x) / c); else if (c < -1e-6) t = Math.min(t, -x / c);
+  if (s > 1e-6) t = Math.min(t, (MAP - y) / s); else if (s < -1e-6) t = Math.min(t, -y / s);
+  return Math.max(0, t);
+}
 function updPurple(dt) {
   for (const p of S.pu) {
     const step = PURPLE.spd * dt, c = Math.cos(p.a), s = Math.sin(p.a);
@@ -1920,7 +1938,7 @@ function updPurple(dt) {
     const before = Math.floor(p.d / 80);
     p.x += c * step; p.y += s * step; p.d += step;
     if (Math.floor(p.d / 80) > before) fx(['ptrail', r1(p.x), r1(p.y)]);
-    if (p.d > PURPLE.range) { p.dead = true; fx(['pend', r1(p.x), r1(p.y)]); }
+    if (p.d > PURPLE.range || p.x < -PURPLE.r || p.y < -PURPLE.r || p.x > MAP + PURPLE.r || p.y > MAP + PURPLE.r) { p.dead = true; fx(['pend', r1(clamp(p.x, 0, MAP)), r1(clamp(p.y, 0, MAP))]); }
   }
   S.pu = S.pu.filter((p) => !p.dead);
 }
@@ -3672,7 +3690,8 @@ function drawTelegraphs() {
   for (const f of S.f) if (f.alive && f.act === 'purple' && f.actT < PURPLE.wind) {     // Hollow Purple's path
     const p = f.actT / PURPLE.wind;
     g.strokeStyle = `rgba(190,110,255,${0.15 + 0.25 * p})`; g.lineWidth = PURPLE.r * 2; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(f.rx, f.ry); g.lineTo(f.rx + Math.cos(f.ra) * PURPLE.range, f.ry + Math.sin(f.ra) * PURPLE.range); g.stroke(); g.lineCap = 'butt';
+    const L = edgeLen(f.rx, f.ry, f.ra);
+    g.beginPath(); g.moveTo(f.rx, f.ry); g.lineTo(f.rx + Math.cos(f.ra) * L, f.ry + Math.sin(f.ra) * L); g.stroke(); g.lineCap = 'butt';
   }
   for (const m of S.maho) if (m.mode === 'swing' && m.mt < 0.34) {
     g.fillStyle = `rgba(240,194,79,${0.12 + 0.2 * m.mt / 0.34})`;
@@ -4263,10 +4282,8 @@ function drawMini() {
   for (const e of S.ele) if (e.t < 0 && !mv) { mg.fillStyle = 'rgba(95,176,255,.6)'; mg.beginPath(); mg.arc(e.x * k, e.y * k, 3 * d, 0, TAU); mg.fill(); }
   for (const m of S.maho) { if (outside(m.rx, m.ry)) continue; mg.fillStyle = '#f0c24f'; mg.beginPath(); mg.arc(m.rx * k, m.ry * k, 4 * d, 0, TAU); mg.fill(); }
   const me = byId(meId), pr = me && me.alive && me.ch === 'gojo' && !mv;
-  if (pr) {      // Gojo: Hollow Purple's reach and path, brighter when it is ready, to snipe with
-    const ok = !(me.cd.c > 0), a = me.ra, x = me.rx * k, y = me.ry * k, L = PURPLE.range * k;
-    mg.strokeStyle = ok ? 'rgba(190,110,255,.75)' : 'rgba(190,110,255,.3)'; mg.lineWidth = d; mg.setLineDash([4 * d, 3 * d]);
-    mg.beginPath(); mg.arc(x, y, L, 0, TAU); mg.stroke(); mg.setLineDash([]);
+  if (pr) {      // Gojo: Hollow Purple's path to the edge of the map, brighter when it is ready, to snipe with
+    const ok = !(me.cd.c > 0), a = me.ra, x = me.rx * k, y = me.ry * k, L = edgeLen(me.rx, me.ry, a) * k;
     mg.strokeStyle = ok ? 'rgba(200,130,255,.35)' : 'rgba(200,130,255,.14)'; mg.lineWidth = Math.max(d, PURPLE.r * 2 * k); mg.lineCap = 'round';
     mg.beginPath(); mg.moveTo(x, y); mg.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); mg.stroke(); mg.lineCap = 'butt';
   }
@@ -5062,6 +5079,7 @@ function hostChat(id, text, own) {
   event(['T', id, text]);
   if (own && net && net.kind === 'ws') wsSend('!', { t: 'chat', text });
 }
+function clearChat() { $('chatLog').textContent = ''; bubbles.clear(); }      // the admin cleared the room's chat
 function chatLine(id, text) {
   if (!text) return;
   const f = byId(id), box = $('chatLog'), d = document.createElement('div'), b = document.createElement('b');
@@ -5252,7 +5270,7 @@ const AIM_LEN = {
   yuji: { q: [190, 0], e: [900, 0], c: [700, 0], u: [SS.len, 0] },
   megumi: { q: [90, 0], e: [RAB.max, RAB.r, 1], c: [450, ELE_HIT, 1], u: [90, 0] },
   nobara: { q: [720, 0], e: [1, 0], c: [1, 0], u: [1, RAIN.r] },
-  gojo: { q: [BLUE.range, BLUE.r, 1], e: [620, RED.r], c: [PURPLE.range, 0], u: [1, DOM.r] },
+  gojo: { q: [BLUE.range, BLUE.r, 1], e: [620, RED.r], c: [1400, 0], u: [1, DOM.r] },
   sukuna: { q: [1200, 0], e: [CLEAVE.range, 0], c: [1, 0], u: [1, MS.r] },      // c: aimed on the map instead
 };
 const dragLen = (spec, len) => (spec[2] ? 140 + clamp(len / 80, 0, 1) * (spec[0] - 140) : spec[0]);
@@ -5746,7 +5764,8 @@ function netHostTick(dt) {
   if (snapT <= 0) { snapT = 1 / (n > 7 ? Math.max(12, Math.round(140 / n)) : 20); sendSnap(); }
   if (net.kind === 'ws' && (statT -= dt) <= 0) {      // the scoreboard, for the admin page
     statT = 2;
-    wsSend('!', { t: 'stat', ph: S.phase, rl: Math.round(S.roundT), tw: S.toWin, f: ranked().map((f) => [f.id, f.name, f.ch, f.pts, f.kills, f.deaths, f.ctl === 'bot' ? 1 : 0, f.alive ? 1 : 0]) });
+    wsSend('!', { t: 'stat', ph: S.phase, rl: Math.round(S.roundT), tw: S.toWin, mp: mapId, f: ranked().map((f) => [f.id, f.name, f.ch, f.pts, f.kills, f.deaths, f.ctl === 'bot' ? 1 : 0, f.alive ? 1 : 0]),
+      p: S.f.filter((f) => f.alive).slice(0, 40).map((f) => [Math.round(f.x), Math.round(f.y), cursed(f) ? 1 : 0]) });
   }
 }
 function broadcastLobby() {
@@ -5963,7 +5982,8 @@ function onSys(m) {
     if (text && S && S.mode !== 'demo') { announce(text, clamp(num(m.sec, 5), 2, 60)); feed([['📢 ' + text]]); SFX.win(); }
     return;
   }
-  if (m.sys === 'admin') { if (n.host) adminEvent(m.ev); return; }
+  if (m.sys === 'admin') { if (n.host) adminEvent(m.ev, m); return; }
+  if (m.sys === 'clearchat') { clearChat(); return; }
   if (m.sys === 'kick') { n.kicked = true; return; }
   if (m.sys === 'join') {
     if (!n.host) return;
@@ -6020,9 +6040,17 @@ function applyRules() {
   if (S.phase === 'play' && RULES.rounds && S.toWin > 0 && w && w.pts >= S.toWin) matchOver(w, 'points');
 }
 // one-off events from the admin page, run by the room's host
-function adminEvent(ev) {
+function adminEvent(ev, m = {}) {
   if (!S || S.mode !== 'host') return;
   const live = S.f.filter((f) => f.alive);
+  if (ev === 'map') { switchMap(m.map); return; }
+  if (ev === 'fuga') {      // a Divine Flame with nobody's name on it, dropped where the admin clicked on their map
+    const x = clamp(+m.x || 0, 0, MAP), y = clamp(+m.y || 0, 0, MAP);
+    S.fl.push({ id: S.nid++, own: null, x: r1(x), y: r1(y), sx: r1(x - 300), sy: r1(y - 1200), t: -FUGA.flight });
+    fx(['snd', 'whistle', r1(x), r1(y)]);
+    event(['B', 'DIVINE FLAME', 'Sent down by the admin']);
+    return;
+  }
   if (ev === 'heal') { for (const f of live) { f.hp = maxHp(f); fx(['heal', f.id]); } event(['B', 'EVERYONE HEALED', 'Courtesy of the admin']); }
   else if (ev === 'ults') { for (const f of S.f) f.ult = 100; event(['B', 'ULTIMATES READY', 'Every ultimate is charged. Press F!']); }
   else if (ev === 'cds') { for (const f of S.f) for (const k of KEYS) f.cd[k] = 0; event(['B', 'COOLDOWNS RESET', 'Every move is ready']); }

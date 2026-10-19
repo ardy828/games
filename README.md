@@ -262,8 +262,8 @@ cursed energy: every move has its own cooldown.
 - **Gojo** has the Limitless. *Blue* sits where you aim for a moment and drags everyone near it into its
   middle, hurting them all the while (dash to break free). *Red* bursts on whatever it hits, hurling
   everyone near it away. *Hollow Purple* winds up (a purple line shows its path), then a huge orb goes
-  through everyone and every wall in its way, hitting each once, hard, with no knockback; while he is
-  up, the minimap shows its reach and path and rings anyone in it, for sniping. His block is
+  through everyone and every wall in its way all the way to the edge of the map, hitting each once, hard,
+  with no knockback; while he is up, the minimap shows its path and rings anyone in it, for sniping. His block is
   *Infinity*: held, nothing reaches him from any side and nothing breaks it (shots stop, Blue cannot
   pull him), but he cannot attack while it is up. His
   ultimate, *Infinite Void*, takes about three times as long to charge. Blinding white light swells
@@ -309,6 +309,7 @@ cursed energy: every move has its own cooldown.
   rooms: who is on (with a kick button), the rules (round length or endless, points to win, respawn
   time, cursed spirits, damage / health / speed / cooldown / ultimate-charge multipliers, which fighters are allowed),
   broadcast messages and events (heal everyone, fill every ultimate, a wild Mahoraga, end or restart
-  the round). [The server's README](jujutsu/server/README.md) explains how to set its password.
+  the round, a Divine Flame dropped wherever you click on the room's map, and a switch to another map
+  that keeps the points), and each room's chat (with a button to clear it, for the players too). [The server's README](jujutsu/server/README.md) explains how to set its password.
 - All drawing is canvas (each map is built from a fixed seed, so everyone gets the same map) and all
   audio is synthesised. Your name, fighter, lobby choices, kills and wins are kept in `localStorage`.

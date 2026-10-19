@@ -43,7 +43,7 @@ the public rooms:
 - **Who's on**: every room's players, who is hosting, the scoreboard and the round clock, updated every
   few seconds, with a button to kick someone.
 - **Chat**: each room's last chat lines (time, name, text), kept on the server under the name of the
-  player who sent them.
+  player who sent them. CLEAR empties it, on the server and in every player's chat box.
 - **Rules** for every public room: rounds on or off (off is one endless free-for-all), points to win,
   round time limit, break between rounds, respawn time, how many cursed spirits roam each room and
   how good they are, damage, health, speed, cooldown and ultimate-charge multipliers, which fighters
@@ -51,7 +51,10 @@ the public rooms:
   in. Private parties and practice keep their usual rules.
 - **Broadcast**: a message shown as a banner in every room, or in one.
 - **Events**: heal everyone, fill every ultimate, reset every cooldown, drop a wild Mahoraga that
-  attacks anyone until it is killed, end the round now, restart the round.
+  attacks anyone until it is killed, end the round now, restart the round, a Divine Flame (the room's
+  map pops up with everyone on it, red sorcerers and purple cursed spirits; click where it lands), and
+  the MAP buttons, which move the room (or every room) to another map: the points stay and everyone
+  respawns there.
 
 It needs a password, which you set once in Cloudflare:
 
