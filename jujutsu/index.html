@@ -200,6 +200,13 @@
   #results{border-top-color:var(--gold);text-align:center}
   #results h3{font-family:var(--disp);font-weight:400;font-size:clamp(30px,7vw,46px);letter-spacing:.04em;line-height:1;margin-bottom:4px}
   #results p{color:var(--muted);font-size:13px;margin-bottom:8px}
+  #vote{margin-top:12px}#vote>b{display:block;font-size:11px;letter-spacing:.16em;color:var(--muted);margin-bottom:6px}
+  #voteRow{display:flex;gap:8px;justify-content:center}
+  .vc{flex:1;max-width:150px;background:#171724;border:2px solid var(--line);color:#fff;padding:6px;cursor:pointer;font:inherit;position:relative}
+  .vc canvas{display:block;width:100%;aspect-ratio:1;margin-bottom:4px}.vc b{display:block;font-family:var(--disp);font-weight:400;font-size:17px;letter-spacing:.04em}
+  .vc small{display:block;color:var(--muted);font-size:10px;line-height:1.2;min-height:2.4em}
+  .vc i{position:absolute;top:2px;right:6px;font-style:normal;font-weight:800;color:var(--gold);font-size:18px;text-shadow:0 1px 3px #000}
+  .vc.me{border-color:var(--gold)}.vc:hover{border-color:#8a8aa8}.vc.me:hover{border-color:var(--gold)}
   table{width:100%;border-collapse:collapse;font-size:14px}
   th{font-size:11px;letter-spacing:.14em;color:var(--muted);text-align:left;padding:2px 6px}
   td{padding:4px 6px;border-top:1px solid var(--line);text-align:left}
@@ -268,7 +275,7 @@ img,svg,canvas,a{-webkit-user-drag:none}
     <div class="swap"><button data-ch="yuji">YUJI</button><button data-ch="megumi">MEGUMI</button><button data-ch="nobara">NOBARA</button><button data-ch="gojo">GOJO</button><button data-ch="sukuna">SUKUNA</button></div>
   </div>
   <div id="board"><table><thead><tr><th>SORCERER</th><th>FIGHTER</th><th class="n">PTS</th><th class="n">K</th><th class="n">D</th></tr></thead><tbody id="boardBody"></tbody></table></div>
-  <div id="results"><h3 id="resT"></h3><p id="resS"></p><table><tbody id="resBody"></tbody></table></div>
+  <div id="results"><h3 id="resT"></h3><p id="resS"></p><table><tbody id="resBody"></tbody></table><div id="vote"><b>VOTE FOR THE NEXT MAP</b><div id="voteRow"></div></div></div>
   <button id="pauseBtn" class="ico" aria-label="Pause">II</button>
   <button id="muteBtn" class="ico" aria-label="Mute">♪</button>
   <button id="chatBtn" class="ico" aria-label="Chat">💬</button>
@@ -614,7 +621,7 @@ function setMute(m) {
 const SW = 140, BS = 440, PITCH = SW + BS, NB = 6, MAP = NB * PITCH + SW;   // 3620 square
 const WALK = 24;            // sidewalk inside each block's edge
 const MID = MAP / 2;
-const city = { blocks: [], bld: [], solids: [], trees: [], deco: [], spawns: [] };
+const city = { blocks: [], bld: [], solids: [], trees: [], deco: [], spawns: [], zones: [] };
 function mulberry(a) {
   return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 }
@@ -625,6 +632,11 @@ const PALS = [
   { roof: '#6a5b4a', edge: '#4c4135', det: '#8a7a66' }, { roof: '#535a52', edge: '#3c423b', det: '#737b70' },
 ];
 const SHRINE_PAL = { roof: '#3b3434', edge: '#b8352c', det: '#5a4f4b', shrine: true };
+const TEMPLE_PAL = { roof: '#4a4f58', edge: '#2b2f36', det: '#d9b14a', temple: true };      // Jujutsu High's halls
+const RUIN_PAL = { roof: '#7d7670', edge: '#4e4843', det: '#5e5852', ruin: true };          // what is left of Shinjuku
+const HUT_PALS = [{ roof: '#d9534f', edge: '#a8322f', det: '#f2e6c9', hut: true }, { roof: '#2f8fb0', edge: '#1f6680', det: '#f2e6c9', hut: true },
+  { roof: '#e8b84a', edge: '#b88a2a', det: '#3a2a1a', hut: true }, { roof: '#6fae5a', edge: '#4a7d3a', det: '#f2e6c9', hut: true }];
+const TOWER_PAL = { roof: '#f2f0ea', edge: '#c9c4b8', det: '#d93a3a', hut: true, tower: true };
 const HC = 160, HN = Math.ceil(MAP / HC);
 const hash = [];
 for (let i = 0; i < HN * HN; i++) hash.push([]);
@@ -709,7 +721,7 @@ function rayLen(x, y, a, max) {
 }
 function los(a, b) { const d = dist(a, b); return rayLen(a.x, a.y, ang(a, b), d) >= d - 2; }
 
-function buildCity() {
+function buildShibuya() {
   const R = mulberry(20180), rr = (a, b) => a + R() * (b - a), ri = (a, b) => Math.floor(rr(a, b + 1)), rp = (a) => a[Math.floor(R() * a.length)];
   const TYPES = { '2,2': 'plaza', '3,2': 'plaza', '2,3': 'plaza', '3,3': 'plaza', '0,4': 'park', '4,0': 'park', '5,1': 'shrine', '1,5': 'lot' };
   const tree = (x, y, r) => { addSolid({ c: 1, x, y, r: r * 0.55 }); city.trees.push({ x, y, r, hue: R() }); };
@@ -832,6 +844,158 @@ function buildCity() {
   city.spawns = city.spawns.filter((p) => !blockedPt(p.x, p.y, FR + 8));
 }
 
+// The other maps are open ground drawn from city.zones (patches of ground, drawn in order over the map's
+// base colour) with buildings, trees and rubble on it. Each is built from its own seed, so every device
+// builds the same map.
+const addBld = (x, y, w, h, pal, hgt) => { const b = addSolid({ x, y, w, h, tall: true, pal, hgt, det: [] }); city.bld.push(b); return b; };
+const addZone = (o) => { city.zones.push(o); return o; };
+function addTree(x, y, r, kind, solid = true) {
+  if (solid) addSolid({ c: 1, x, y, r: r * (kind === 'palm' ? 0.36 : kind === 'dead' ? 0.4 : 0.55) });
+  city.trees.push({ x, y, r, kind, hue: hash1(x * 0.137 + y * 0.711) });
+}
+function torii(cx, y) {
+  for (const sx of [-34, 34]) addSolid({ c: 1, x: cx + sx, y, r: 7, tall: true, torii: true });
+  city.deco.push({ t: 'torii', x: cx, y });
+}
+function rectFree(x, y, w, h) {      // nothing solid in this rectangle, and it is on the map
+  if (x < 0 || y < 0 || x + w > MAP || y + h > MAP) return false;
+  for (const o of solidsAround(x + w / 2, y + h / 2, Math.hypot(w, h) / 2 + 20)) {
+    if (o.c ? (clamp(o.x, x, x + w) - o.x) ** 2 + (clamp(o.y, y, y + h) - o.y) ** 2 < o.r * o.r : x < o.x + o.w && x + w > o.x && y < o.y + o.h && y + h > o.y) return false;
+  }
+  return true;
+}
+function inZone(x, y, m, kinds) {      // within m of a zone of one of these kinds
+  for (const z of city.zones) {
+    if (kinds && !kinds.includes(z.k)) continue;
+    if (z.c ? Math.hypot(x - z.x, y - z.y) < z.r + m : x > z.x - m && x < z.x + z.w + m && y > z.y - m && y < z.y + z.h + m) return true;
+  }
+  return false;
+}
+function gridSpawns(step) { for (let y = step / 2; y < MAP; y += step) for (let x = step / 2; x < MAP; x += step) city.spawns.push({ x, y }); }
+// Jujutsu High: the school in the hills. Temple halls round a raked gravel courtyard with the old tree
+// in the middle, stone paths through torii, the sports ground of the Goodwill Event, forest all round.
+function buildHigh() {
+  const R = mulberry(2018), rr = (a, b) => a + R() * (b - a), C = MID;
+  addZone({ k: 'gravel', x: 1060, y: 840, w: 1500, h: 1040 });
+  addZone({ k: 'stone', x: C - 80, y: 590, w: 160, h: 250 });
+  addZone({ k: 'stone', x: C - 80, y: 1880, w: 160, h: 480 });
+  addZone({ k: 'stone', x: 940, y: 1290, w: 120, h: 140 }); addZone({ k: 'stone', x: 2560, y: 1290, w: 120, h: 140 });
+  addZone({ k: 'dirt', x: 900, y: 2360, w: 1820, h: 960 });
+  addZone({ k: 'diamond', c: 1, x: C, y: 3030, r: 380 });
+  const hall = (x, y, w, h, hg) => addBld(x, y, w, h, TEMPLE_PAL, hg);
+  hall(1460, 250, 700, 340, 95);                                  // the main hall
+  hall(420, 960, 520, 240, 70); hall(420, 1520, 520, 240, 70);    // the dormitories
+  hall(2680, 960, 520, 240, 70); hall(2680, 1520, 520, 240, 70);  // the classrooms
+  hall(480, 300, 280, 200, 60); hall(2860, 300, 280, 200, 60);
+  torii(C, 2200); torii(C, 730);
+  addTree(C, 1360, 66, 'big');
+  for (const [dx, dy] of [[-160, -160], [160, -160], [-160, 160], [160, 160]]) addSolid({ c: 1, x: C + dx, y: 1360 + dy, r: 9, lantern: true });
+  for (let y = 1960; y < 2340; y += 95) for (const sx of [-112, 112]) addSolid({ c: 1, x: C + sx, y, r: 9, lantern: true });
+  addSolid({ c: 1, x: 560, y: 2620, r: 100, pond: true });
+  for (let x = 1100; x <= 2540; x += 180) if (Math.abs(x - C) > 130) { addTree(x, 790, 26, 'sakura'); addTree(x, 1935, 26, 'sakura'); }
+  for (const y of [1000, 1180, 1540, 1720]) { addTree(1010, y, 24, 'sakura'); addTree(2610, y, 24, 'sakura'); }
+  for (let n = 0; n < 1600 && city.trees.length < 360; n++) {      // the forest on the hills round the school
+    const x = rr(40, MAP - 40), y = rr(40, MAP - 40), r = rr(24, 36), edge = Math.min(x, y, MAP - x, MAP - y);
+    if (edge > 320 && R() > 0.05) continue;
+    if (inZone(x, y, r + 30) || blockedPt(x, y, r + 30)) continue;
+    addTree(x, y, r, 'pine');
+  }
+  gridSpawns(150);
+}
+// Shinjuku, after Gojo and Sukuna: the city flattened round one huge crater, a few stumps of buildings and
+// broken walls, rubble, burnt-out cars and what is left of the roads. Open ground.
+function buildShinjuku() {
+  const R = mulberry(2023), rr = (a, b) => a + R() * (b - a), C = MID;
+  for (const p of [1180, 2440]) for (const hz of [true, false]) for (let a = rr(0, 200); a < MAP;) {
+    const len = Math.min(rr(300, 900), MAP - a);
+    addZone(hz ? { k: 'road', x: a, y: p - 70, w: len, h: 140 } : { k: 'road', x: p - 70, y: a, w: 140, h: len });
+    a += len + rr(140, 420);
+  }
+  addZone({ k: 'crater', c: 1, x: C, y: C, r: 560 });
+  for (let n = 0, k = 0; n < 200 && k < 9; n++) {
+    const x = rr(250, MAP - 250), y = rr(250, MAP - 250), r = rr(110, 230);
+    if (Math.hypot(x - C, y - C) < 560 + r + 120 || inZone(x, y, r + 60, ['crater'])) continue;
+    addZone({ k: 'crater', c: 1, x, y, r }); k++;
+  }
+  for (let n = 0, k = 0; n < 400 && k < 15; n++) {      // stumps of buildings
+    const w = rr(130, 280), h = rr(130, 280), x = rr(150, MAP - 150 - w), y = rr(150, MAP - 150 - h);
+    if (Math.hypot(x + w / 2 - C, y + h / 2 - C) < 800 || !rectFree(x - 140, y - 140, w + 280, h + 280)) continue;
+    const b = addBld(x, y, w, h, RUIN_PAL, rr(30, 90)); b.jag = Array.from({ length: 16 }, () => R()); k++;
+  }
+  for (let n = 0, k = 0; n < 400 && k < 10; n++) {      // broken walls
+    const hz = R() < 0.5, w = hz ? rr(200, 340) : 28, h = hz ? 28 : rr(200, 340), x = rr(150, MAP - 150 - w), y = rr(150, MAP - 150 - h);
+    if (Math.hypot(x + w / 2 - C, y + h / 2 - C) < 700 || !rectFree(x - 110, y - 110, w + 220, h + 220)) continue;
+    const b = addBld(x, y, w, h, RUIN_PAL, rr(40, 70)); b.wall = true; b.jag = Array.from({ length: 16 }, () => R()); k++;
+  }
+  for (let n = 0, k = 0; n < 600 && k < 12; n++) {      // burnt-out cars
+    const hz = R() < 0.5, w = hz ? 76 : 34, h = hz ? 34 : 76, x = rr(120, MAP - 200), y = rr(120, MAP - 200);
+    if (Math.hypot(x - C, y - C) < 600 || !rectFree(x - 50, y - 50, w + 100, h + 100)) continue;
+    addSolid({ x, y, w, h, car: true, burnt: true, col: ['#4a3f38', '#3a3a40', '#5a3a30', '#47443d'][Math.floor(R() * 4)] }); k++;
+  }
+  for (let n = 0, k = 0; n < 900 && k < 80; n++) {      // rubble
+    const x = rr(60, MAP - 60), y = rr(60, MAP - 60), r = rr(12, 34);
+    if (Math.hypot(x - C, y - C) < 420 || blockedPt(x, y, r + 46)) continue;
+    addSolid({ c: 1, x, y, r, rock: true, hue: R() }); k++;
+  }
+  for (let n = 0, k = 0; n < 400 && k < 16; n++) {
+    const x = rr(100, MAP - 100), y = rr(100, MAP - 100);
+    if (Math.hypot(x - C, y - C) < 650 || blockedPt(x, y, 60)) continue;
+    addTree(x, y, rr(16, 24), 'dead'); k++;
+  }
+  gridSpawns(150);
+}
+// Okinawa: the beach from the Star Plasma Vessel mission. The road and the beach huts at the top, sand,
+// palms and umbrellas, and the sea along the bottom (nobody walks into it), with a wooden pier out into it.
+const SEA = 3000;
+function buildBeach() {
+  const R = mulberry(2006), rr = (a, b) => a + R() * (b - a);
+  addZone({ k: 'road', x: 0, y: 0, w: MAP, h: 250 }); addZone({ k: 'walk', x: 0, y: 250, w: MAP, h: 50 });
+  addZone({ k: 'wet', x: 0, y: SEA - 140, w: MAP, h: 140 }); addZone({ k: 'sea', x: 0, y: SEA, w: MAP, h: MAP - SEA });
+  addZone({ k: 'pier', x: 1720, y: SEA - 70, w: 180, h: 570 });
+  addSolid({ x: 0, y: SEA, w: 1720, h: MAP - SEA, sea: true }); addSolid({ x: 1900, y: SEA, w: MAP - 1900, h: MAP - SEA, sea: true });
+  addSolid({ x: 1720, y: SEA + 500, w: 180, h: MAP - SEA - 500, sea: true });
+  for (let x = rr(120, 260), i = 0; x < MAP - 320; i++) {      // beach huts and shops along the road
+    const w = rr(220, 320);
+    addBld(x, 340, w, rr(190, 240), HUT_PALS[i % HUT_PALS.length], rr(35, 55));
+    x += w + rr(170, 330);
+  }
+  addBld(1240, 2580, 74, 74, TOWER_PAL, 80);      // the lifeguard tower
+  for (const [cx, n] of [[260, 9], [3360, 9], [2700, 5]]) for (let k = 0; k < n; k++) {      // rocks by the water
+    const x = cx + rr(-200, 200), y = SEA - rr(20, 260), r = rr(16, 38);
+    if (!blockedPt(x, y, r + 8)) addSolid({ c: 1, x, y, r, rock: true, hue: R() });
+  }
+  for (let n = 0; n < 800 && city.trees.filter((t) => t.kind === 'palm').length < 46; n++) {
+    const x = rr(80, MAP - 80), y = rr(680, SEA - 220), r = rr(28, 36);
+    if (blockedPt(x, y, r + 70) || city.trees.some((t) => Math.hypot(t.x - x, t.y - y) < t.r + r + 60)) continue;
+    addTree(x, y, r, 'palm');
+  }
+  const towels = ['#e8505b', '#3a86c8', '#f2c14e', '#7bc67b', '#c77dff'];
+  for (let n = 0, k = 0; n < 600 && k < 18; n++) {      // umbrellas, a towel beside each
+    const x = rr(200, MAP - 200), y = rr(820, SEA - 200);
+    if (blockedPt(x, y, 110) || city.trees.some((t) => Math.hypot(t.x - x, t.y - y) < t.r + 120)) continue;
+    addTree(x, y, 46, 'umb', false);
+    addZone({ k: 'towel', x: x + 26, y: y + 6, w: 34, h: 74, col: towels[k % towels.length] }); k++;
+  }
+  gridSpawns(150);
+}
+const MAPS = [
+  { n: 'SHIBUYA', d: 'The scramble crossing', base: '#383a42', mini: '#3d3f48', build: () => buildShibuya() },
+  { n: 'JUJUTSU HIGH', d: 'The school in the hills', base: '#3f5c34', mini: '#3a5530', build: () => buildHigh() },
+  { n: 'SHINJUKU', d: 'What Gojo and Sukuna left', base: '#6b6258', mini: '#5f574e', build: () => buildShinjuku(), open: true },
+  { n: 'OKINAWA', d: 'The beach', base: '#e2cd98', mini: '#c9b582', build: () => buildBeach(), open: true },
+];
+let mapId = -1, mapFade = 0;
+function loadMap(id) {
+  id = clamp(id | 0, 0, MAPS.length - 1);
+  for (const k of Object.keys(city)) city[k] = [];
+  for (const h of hash) h.length = 0;
+  mapId = id;
+  MAPS[id].build();
+  city.spawns = city.spawns.filter((p) => !blockedPt(p.x, p.y, FR + 8));
+  buildNav(); flows.clear(); miniBase = null;
+  decals.length = 0; parts.length = 0;
+}
+
 // Navigation: a 32-unit grid of walkable cells, and a breadth-first flow field toward a target that
 // bots and Mahoraga follow when a building is in the way.
 const NC = 32, NN = Math.ceil(MAP / NC);
@@ -898,9 +1062,10 @@ function flowTo(key, x, y) {
 let S = null;
 let meId = 0;          // the fighter played on this device
 function newState(mode, o = {}) {
+  if (mode !== 'join' && mapId !== 0) loadMap(0);
   parts.length = 0; decals.length = 0;
   return { mode, time: 0, phase: 'play', overT: 0, toWin: o.toWin ?? 10, diff: o.diff ?? 1, win: '', nid: 1, roundT: RULES.time * 60,
-    f: [], maho: [], ele: [], rab: [], sh: [], rn: [], bl: [], pu: [], dm: [], fl: [], ms: [], cl: [] };
+    f: [], maho: [], ele: [], rab: [], sh: [], rn: [], bl: [], pu: [], dm: [], fl: [], ms: [], cl: [], vt: [] };
 }
 function mkFighter(id, name, ch, ctl) {
   return {
@@ -1389,11 +1554,34 @@ const ranked = () => S.f.filter((f) => !cursed(f)).sort((a, b) => b.pts - a.pts 
 const standings = () => ranked().map((f) => [f.id, f.name, f.ch, f.pts, f.kills, f.deaths]);
 const goalText = () => (!RULES.rounds ? 'Endless free-for-all' : S.toWin > 0 ? 'First to ' + S.toWin + ' points' : 'Most points');
 function newMatch() {
-  S.phase = 'play'; S.win = ''; S.roundT = RULES.time * 60;
+  S.phase = 'play'; S.win = ''; S.roundT = RULES.time * 60; S.vt = [];
   S.maho = []; S.ele = []; S.rab = []; S.sh = []; S.rn = []; S.bl = []; S.pu = []; S.dm = []; S.fl = []; S.ms = []; S.cl = [];
   let i = 0;
   for (const f of S.f) { f.pts = 0; f.kills = 0; f.deaths = 0; f.ult = 0; f.alive = false; f.resp = 0.2 + 0.08 * i++; }
   event(['N', 'New match. ' + goalText() + (RULES.rounds && RULES.time > 0 ? ' in ' + RULES.time + ' min' : '') + '.']);
+}
+
+// The map vote. While a match's results show, everyone votes for one of the other maps (S.vt: [id, map]
+// pairs, kept by the host); the screen fades to white over the last VOTE_FADE s, the most voted map
+// (a tie or no votes: a coin toss) loads under the white with the new match, and it fades back in.
+const VOTE_FADE = 0.7;
+const mapOpts = () => MAPS.map((_, i) => i).filter((i) => i !== mapId);
+function hostVote(id, m) {
+  if (!S || S.phase !== 'over' || !mapOpts().includes(m)) return;
+  const v = S.vt.find((o) => o[0] === id);
+  if (v) v[1] = m; else S.vt.push([id, m]);
+}
+let myVote = -1;
+function castVote(m) {
+  if (!S || S.phase !== 'over' || S.mode === 'demo' || !mapOpts().includes(m)) return;
+  myVote = m;
+  if (S.mode === 'join') toHost({ t: 'vote', m }); else hostVote(meId, m);
+}
+function nextMap() {
+  const opts = mapOpts(), n = opts.map((m) => S.vt.filter((v) => v[1] === m).length), top = Math.max(...n);
+  const pool = opts.filter((_, i) => n[i] === top), m = pool[Math.floor(Math.random() * pool.length)];
+  loadMap(m);
+  event(['W', m]);
 }
 
 // Mahoraga: rises from Megumi's shadow, kicks Megumi away, then hunts whoever is nearest and in
@@ -1569,7 +1757,13 @@ function updEle(dt) {
 // Rabbit Escape: the swarm pours out of Megumi's shadow, rushes to where he aimed (up to RAB.max
 // away) and bursts there, then mills about for a moment, nibbling and slowing whoever is caught in it.
 // One entity stands for the whole swarm; each rabbit's path is worked out from it when drawing.
-const RAB = { n: 60, min: 120, max: 560, spd: 820, r: 190, dmg: 180, linger: 4 };
+const RAB = { n: 60, min: 120, max: 560, spd: 820, r: 190, dmg: 180, linger: 4, pull: 150, reach: 270 };      // pull: how fast the swarm drags anyone within reach to its middle
+function rabPull(f, r, dt) {      // the swarm drags anyone in it toward its middle (walking out is slow, a dash gets you out)
+  const dx = r.x - f.x, dy = r.y - f.y, d = Math.hypot(dx, dy);
+  if (d > RAB.reach + f.r || d < 24 || f.frz > 0 || infinity(f) || spaceOf(f.id) !== spaceOf(r.own)) return;
+  const k = Math.min(d - 20, RAB.pull * dt) / d;
+  f.x += dx * k; f.y += dy * k;
+}
 function updRabbits(dt) {
   for (const r of S.rab) {
     r.t += dt;
@@ -1581,6 +1775,7 @@ function updRabbits(dt) {
       fx(['rabb', r.x, r.y, r.a]);
     }
     if (!r.burst) continue;
+    for (const f of S.f) if (f.alive && f.id !== r.own) rabPull(f, r, dt);
     if ((r.nt -= dt) <= 0) {
       r.nt = 0.3;
       for (const f of S.f) {
@@ -1996,7 +2191,7 @@ function separate() {
 function step(dt) {
   const s = S;
   s.time += dt;
-  if (s.phase === 'over' && (s.overT -= dt) <= 0) newMatch();
+  if (s.phase === 'over' && (s.overT -= dt) <= 0) { if (s.mode !== 'demo') nextMap(); newMatch(); }
   if (s.phase === 'play' && RULES.rounds && RULES.time > 0 && (s.roundT -= dt) <= 0) {
     const w = ranked()[0];
     if (w) matchOver(w, 'time'); else s.roundT = RULES.time * 60;
@@ -2412,7 +2607,12 @@ function drawGround() {
   const { L, T, R, B } = view;
   g.fillStyle = '#121219'; g.fillRect(L, T, R - L, B - T);
   const x0 = clamp(L, 0, MAP), y0 = clamp(T, 0, MAP), x1 = clamp(R, 0, MAP), y1 = clamp(B, 0, MAP);
-  g.fillStyle = '#383a42'; g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  g.fillStyle = MAPS[mapId].base; g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  if (mapId === 0) groundShibuya(L, T, R, B); else groundOpen(x0, y0, x1, y1);
+  // the map's edge
+  g.strokeStyle = '#f0c24f'; g.lineWidth = 6; g.setLineDash([24, 16]); g.strokeRect(-3, -3, MAP + 6, MAP + 6); g.setLineDash([]);
+}
+function groundShibuya(L, T, R, B) {
   // lane dashes
   g.fillStyle = 'rgba(232,226,210,.5)';
   for (let s = 0; s <= NB; s++) {
@@ -2440,8 +2640,81 @@ function drawGround() {
   for (const b of city.blocks) if (b.x < R && b.x + b.w > L && b.y < B && b.y + b.h > T) drawBlock(b);
   g.fillStyle = '#2b2c33'; g.strokeStyle = '#4a4b52'; g.lineWidth = 2;
   for (const d of city.deco) if (d.t === 'manhole' && vis(d.x, d.y, 14)) { circ(d.x, d.y, 11); g.stroke(); }
-  // the map's edge
-  g.strokeStyle = '#f0c24f'; g.lineWidth = 6; g.setLineDash([24, 16]); g.strokeRect(-3, -3, MAP + 6, MAP + 6); g.setLineDash([]);
+}
+// the open maps: blotches over the base colour, then city.zones in order
+function groundOpen(x0, y0, x1, y1) {
+  const G = 220, blot = { 1: 'rgba(30,60,20,.22)', 2: 'rgba(40,32,26,.16)', 3: 'rgba(255,250,230,.16)' }[mapId];
+  g.fillStyle = blot;
+  for (let gy = Math.floor(y0 / G); gy * G < y1; gy++) for (let gx = Math.floor(x0 / G); gx * G < x1; gx++) {
+    const h = hash1(gx * 31.7 + gy * 57.3 + mapId);
+    ell(gx * G + h * G, gy * G + hash1(h * 91) * G, 40 + 60 * h, 22 + 30 * hash1(h * 13), h * 3);
+  }
+  for (const z of city.zones) {
+    if (z.c ? !vis(z.x, z.y, z.r * 1.7) : z.x > x1 || z.x + z.w < x0 || z.y > y1 || z.y + z.h < y0) continue;
+    const { x, y, w, h } = z;
+    if (z.k === 'gravel') {      // raked gravel, a stone kerb round it
+      g.fillStyle = '#b9b1a0'; g.fillRect(x, y, w, h);
+      g.strokeStyle = 'rgba(0,0,0,.08)'; g.lineWidth = 2; g.beginPath();
+      for (let ly = Math.max(y + 14, Math.floor(y0 / 14) * 14); ly < Math.min(y + h, y1); ly += 14) { g.moveTo(Math.max(x, x0), ly); g.lineTo(Math.min(x + w, x1), ly); }
+      g.stroke(); g.strokeStyle = '#8e897f'; g.lineWidth = 10; g.strokeRect(x, y, w, h);
+    } else if (z.k === 'stone') {
+      g.fillStyle = '#8e897f'; g.fillRect(x, y, w, h);
+      g.strokeStyle = 'rgba(0,0,0,.14)'; g.lineWidth = 1.5; g.beginPath();
+      if (h > w) for (let ly = y + 30; ly < y + h; ly += 30) { g.moveTo(x, ly); g.lineTo(x + w, ly); } else for (let lx = x + 30; lx < x + w; lx += 30) { g.moveTo(lx, y); g.lineTo(lx, y + h); }
+      g.stroke();
+    } else if (z.k === 'dirt') {
+      g.fillStyle = '#a67d55'; g.fillRect(x, y, w, h);
+      g.strokeStyle = '#e8e2d4'; g.lineWidth = 4; g.strokeRect(x + 20, y + 20, w - 40, h - 40);
+    } else if (z.k === 'diamond') {      // the baseball diamond of the Goodwill Event
+      const r = z.r, hx = x, hy = y + r * 0.62, b = r * 0.55;
+      g.fillStyle = '#b98c5f'; g.beginPath(); g.moveTo(hx, hy); g.arc(hx, hy, r * 1.15, -Math.PI * 0.75, -Math.PI * 0.25); g.closePath(); g.fill();
+      g.fillStyle = '#4f7a3a'; g.beginPath(); g.moveTo(hx, hy - b * 0.25); g.lineTo(hx + b * 0.6, hy - b * 0.85); g.lineTo(hx, hy - b * 1.45); g.lineTo(hx - b * 0.6, hy - b * 0.85); g.closePath(); g.fill();
+      g.strokeStyle = '#f4f0e6'; g.lineWidth = 4; g.beginPath();
+      g.moveTo(hx - r * 1.1, hy - r * 1.1); g.lineTo(hx, hy); g.lineTo(hx + r * 1.1, hy - r * 1.1); g.stroke();
+      g.fillStyle = '#f4f0e6';
+      for (const [bx, by] of [[0, 0], [0.71, -0.71], [0, -1.42], [-0.71, -0.71]]) g.fillRect(hx + bx * b - 7, hy + by * b - 7, 14, 14);
+      g.fillStyle = '#c99c6c'; circ(hx, hy - b * 0.71, 22);
+    } else if (z.k === 'road') {
+      g.fillStyle = '#46474e'; g.fillRect(x, y, w, h);
+      g.fillStyle = 'rgba(232,226,210,.45)';
+      if (w > h) for (let lx = x + 30; lx < x + w - 40; lx += 70) g.fillRect(lx, y + h / 2 - 2, 34, 4);
+      else for (let ly = y + 30; ly < y + h - 40; ly += 70) g.fillRect(x + w / 2 - 2, ly, 4, 34);
+      g.fillStyle = 'rgba(20,18,16,.25)';      // cracks and broken ends
+      for (let i = 0; i < 4; i++) { const u = hash1(x * 0.3 + y + i); ell(w > h ? x + u * w : x + w / 2, w > h ? y + h / 2 : y + u * h, 30, 12, u * 3); }
+    } else if (z.k === 'crater') {
+      const gr = g.createRadialGradient(x, y, z.r * 0.1, x, y, z.r * 1.15);
+      gr.addColorStop(0, '#231d19'); gr.addColorStop(0.55, '#3d342d'); gr.addColorStop(0.85, '#5a5048'); gr.addColorStop(1, 'rgba(107,98,88,0)');
+      g.fillStyle = gr; circ(x, y, z.r * 1.15);
+      g.strokeStyle = 'rgba(150,138,124,.55)'; g.lineWidth = z.r * 0.06; g.beginPath(); g.arc(x, y, z.r * 0.92, 0, TAU); g.stroke();
+      g.strokeStyle = 'rgba(25,20,16,.5)'; g.lineWidth = 3; g.beginPath();
+      for (let i = 0; i < 9; i++) { const a = hash1(z.r + i * 7.1) * TAU, l = z.r * (1.1 + 0.5 * hash1(i + z.r)); g.moveTo(x + Math.cos(a) * z.r * 0.9, y + Math.sin(a) * z.r * 0.9); g.lineTo(x + Math.cos(a + 0.12) * l, y + Math.sin(a + 0.12) * l); }
+      g.stroke();
+    } else if (z.k === 'walk') { g.fillStyle = '#c9c2b3'; g.fillRect(x, y, w, h); }
+    else if (z.k === 'wet') {
+      const gr = g.createLinearGradient(0, y, 0, y + h);
+      gr.addColorStop(0, 'rgba(180,150,100,0)'); gr.addColorStop(1, '#b89d68');
+      g.fillStyle = gr; g.fillRect(x, y, w, h);
+    } else if (z.k === 'sea') {
+      const gr = g.createLinearGradient(0, y, 0, y + h);
+      gr.addColorStop(0, '#3fb2cf'); gr.addColorStop(0.25, '#2489b4'); gr.addColorStop(1, '#114f7c');
+      g.fillStyle = gr; g.fillRect(Math.max(x, x0), y, Math.min(x + w, x1) - Math.max(x, x0), h);
+      g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 6; g.beginPath();      // the surf
+      for (let lx = Math.floor(x0 / 20) * 20; lx <= x1; lx += 20) { const ly = y + 6 + Math.sin(lx * 0.012 + T * 1.6) * 7; if (lx === Math.floor(x0 / 20) * 20) g.moveTo(lx, ly); else g.lineTo(lx, ly); }
+      g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 3;
+      for (let k = 1; k < 7; k++) { g.beginPath(); for (let lx = Math.floor(x0 / 40) * 40; lx <= x1; lx += 40) { const ly = y + k * 90 + Math.sin(lx * 0.008 + T * (0.8 + k * 0.1) + k) * 10; if (lx === Math.floor(x0 / 40) * 40) g.moveTo(lx, ly); else g.lineTo(lx, ly); } g.stroke(); }
+    } else if (z.k === 'pier') {
+      g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x + 10, y + 14, w, h);
+      g.fillStyle = '#8a6a48'; g.fillRect(x, y, w, h);
+      g.strokeStyle = 'rgba(40,25,10,.4)'; g.lineWidth = 2; g.beginPath();
+      for (let ly = y + 18; ly < y + h; ly += 18) { g.moveTo(x, ly); g.lineTo(x + w, ly); }
+      g.stroke(); g.fillStyle = '#4a3622';
+      for (let ly = y + 60; ly < y + h; ly += 120) { circ(x + 6, ly, 9); circ(x + w - 6, ly, 9); }
+    } else if (z.k === 'towel') {
+      g.fillStyle = z.col; g.fillRect(x, y, w, h);
+      g.fillStyle = 'rgba(255,255,255,.55)'; for (let ly = y + 10; ly < y + h; ly += 18) g.fillRect(x, ly, w, 6);
+    }
+  }
 }
 function drawBlock(b) {
   g.fillStyle = '#8b8780'; g.fillRect(b.x, b.y, b.w, b.h);
@@ -2485,6 +2758,11 @@ function drawObjects() {
     else if (o.pond) { g.fillStyle = '#7d7564'; circ(o.x, o.y, o.r + 6); g.fillStyle = '#2f6f96'; circ(o.x, o.y, o.r); g.fillStyle = 'rgba(160,220,255,.25)'; ell(o.x - 14, o.y - 16, 22, 9, -0.4); }
     else if (o.booth) { g.fillStyle = '#d9d2c2'; g.fillRect(o.x, o.y, o.w, o.h); g.fillStyle = '#6a8fae'; g.fillRect(o.x + 6, o.y + 6, o.w - 12, o.h - 12); }
     else if (o.lantern) { g.fillStyle = '#8d877b'; circ(o.x, o.y, o.r); g.fillStyle = '#6b665c'; circ(o.x, o.y, o.r * 0.55); g.fillStyle = 'rgba(255,200,120,.5)'; circ(o.x, o.y, 3); }
+    else if (o.rock) {
+      g.fillStyle = 'rgba(0,0,0,.28)'; circ(o.x + o.r * 0.25, o.y + o.r * 0.35, o.r);
+      g.fillStyle = mapId === 3 ? '#6f6a63' : o.hue < 0.5 ? '#7a736b' : '#8a8178'; ell(o.x, o.y, o.r, o.r * 0.85, o.hue * 3);
+      g.fillStyle = 'rgba(255,255,255,.14)'; ell(o.x - o.r * 0.3, o.y - o.r * 0.3, o.r * 0.45, o.r * 0.3, o.hue * 3);
+    }
     else if (o.statue) { g.fillStyle = '#5a5245'; circ(o.x, o.y, o.r + 6); g.fillStyle = '#7c6a48'; ell(o.x, o.y, o.r, o.r * 0.6); circ(o.x + o.r * 0.8, o.y - 2, 6); }
   }
   for (const d of city.deco) {
@@ -2506,6 +2784,7 @@ function drawCar(o) {
   g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(-L * 0.08, -Wd / 2 + 5, L * 0.24, 3);
   g.fillStyle = '#ffe9b0'; g.fillRect(L / 2 - 3, -Wd / 2 + 4, 3, 6); g.fillRect(L / 2 - 3, Wd / 2 - 10, 3, 6);
   g.fillStyle = '#c0283a'; g.fillRect(-L / 2, -Wd / 2 + 4, 3, 6); g.fillRect(-L / 2, Wd / 2 - 10, 3, 6);
+  if (o.burnt) { g.fillStyle = 'rgba(20,14,10,.6)'; ell(-L * 0.1, 0, L * 0.32, Wd * 0.4, 0.3); ell(L * 0.25, -Wd * 0.1, L * 0.15, Wd * 0.3); }
   g.restore();
 }
 function bldVisible(b, m) { return b.x - m < view.R && b.x + b.w + m > view.L && b.y - m < view.B && b.y + b.h + m > view.T; }
@@ -2525,6 +2804,9 @@ function drawBuildings() {
     if (!bldVisible(b, 4)) continue;
     const p = b.pal, { x, y, w, h } = b;
     if (p.shrine) { drawShrine(b); continue; }
+    if (p.temple) { drawTemple(b); continue; }
+    if (p.ruin) { drawRuin(b); continue; }
+    if (p.hut) { drawHut(b); continue; }
     g.fillStyle = p.roof; g.fillRect(x, y, w, h);
     if (p.glass) {
       g.strokeStyle = 'rgba(160,200,255,.18)'; g.lineWidth = 2; g.beginPath();
@@ -2563,10 +2845,86 @@ function drawShrine(b) {
   g.fillStyle = '#4c4343'; g.fillRect(x, y + h / 2 - 5, w, 10);
   g.fillStyle = '#d9b14a'; circ(x + w / 2, y + h / 2, 6);
 }
+// a Jujutsu High hall: a hipped roof of dark tiles, the ridge along its length with gold finials
+function drawTemple(b) {
+  const { x, y, w, h } = b, hz = w >= h, s = Math.min(w, h) / 2;
+  g.fillStyle = '#e9e2d0'; g.fillRect(x - 3, y - 3, w + 6, h + 6);
+  g.fillStyle = '#4a4f58'; g.fillRect(x, y, w, h);
+  g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 2; g.beginPath();
+  if (hz) for (let t = x + 12; t < x + w; t += 12) { g.moveTo(t, y); g.lineTo(t, y + h); } else for (let t = y + 12; t < y + h; t += 12) { g.moveTo(x, t); g.lineTo(x + w, t); }
+  g.stroke();
+  const [ax, ay, bx2, by2] = hz ? [x + s, y + h / 2, x + w - s, y + h / 2] : [x + w / 2, y + s, x + w / 2, y + h - s];
+  g.fillStyle = 'rgba(255,255,255,.07)'; g.beginPath(); g.moveTo(x, y); g.lineTo(ax, ay); g.lineTo(bx2, by2); g.lineTo(hz ? x + w : x, hz ? y : y + h); g.closePath(); g.fill();
+  g.strokeStyle = '#2b2f36'; g.lineWidth = 5; g.beginPath();
+  g.moveTo(x, y); g.lineTo(ax, ay); g.moveTo(hz ? x : x + w, hz ? y + h : y); g.lineTo(ax, ay);
+  g.moveTo(x + w, y + h); g.lineTo(bx2, by2); g.moveTo(hz ? x + w : x, hz ? y : y + h); g.lineTo(bx2, by2); g.stroke();
+  g.lineWidth = 12; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx2, by2); g.stroke();
+  g.fillStyle = '#d9b14a'; circ(ax, ay, 8); circ(bx2, by2, 8);
+  g.strokeStyle = '#2b2f36'; g.lineWidth = 6; g.strokeRect(x + 3, y + 3, w - 6, h - 6);
+  g.strokeStyle = '#8a2f2a'; g.lineWidth = 2; g.strokeRect(x - 2, y - 2, w + 4, h + 4);
+}
+// a stump of a Shinjuku building: a broken floor slab with ragged edges, cracks and bent rebar
+function drawRuin(b) {
+  const { x, y, w, h } = b, J = b.jag || [], n = 16, pts = [];
+  for (let i = 0; i < n; i++) {
+    const u = i / n, k = (J[i] ?? 0.5) * (b.wall ? 0.3 : 0.14);
+    let px, py;
+    if (u < 0.25) { px = x + w * u * 4; py = y + h * k; } else if (u < 0.5) { px = x + w - w * k; py = y + h * (u - 0.25) * 4; }
+    else if (u < 0.75) { px = x + w - w * (u - 0.5) * 4; py = y + h - h * k; } else { px = x + w * k; py = y + h - h * (u - 0.75) * 4; }
+    pts.push([px, py]);
+  }
+  const path = () => { g.beginPath(); pts.forEach(([px, py], i) => (i ? g.lineTo(px, py) : g.moveTo(px, py))); g.closePath(); };
+  g.fillStyle = '#7d7670'; path(); g.fill();
+  g.strokeStyle = '#4e4843'; g.lineWidth = 4; g.stroke();
+  if (!b.wall) {
+    g.fillStyle = '#6a635d'; g.fillRect(x + w * 0.2, y + h * 0.2, w * 0.6, h * 0.6);
+    g.strokeStyle = 'rgba(30,26,22,.55)'; g.lineWidth = 2; g.beginPath();
+    for (let i = 0; i < 4; i++) { const a = J[i + 3] * TAU, cx = x + w * (0.3 + 0.4 * J[i + 7]), cy = y + h * (0.3 + 0.4 * J[i + 9]); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * w * 0.25, cy + Math.sin(a) * h * 0.25); }
+    g.stroke();
+  }
+  g.strokeStyle = '#3a2a22'; g.lineWidth = 2.5; g.beginPath();
+  for (let i = 0; i < n; i += 3) { const [px, py] = pts[i], a = Math.atan2(py - (y + h / 2), px - (x + w / 2)) + (J[i] - 0.5); g.moveTo(px, py); g.lineTo(px + Math.cos(a) * 16, py + Math.sin(a) * 16); }
+  g.stroke();
+}
+// a beach hut: a striped tin roof, or the lifeguard tower's white one with its red cross
+function drawHut(b) {
+  const p = b.pal, { x, y, w, h } = b;
+  g.fillStyle = p.roof; g.fillRect(x, y, w, h);
+  g.fillStyle = 'rgba(255,255,255,.18)';
+  if (!p.tower) for (let t = x + 8; t < x + w - 4; t += 20) g.fillRect(t, y, 8, h);
+  g.strokeStyle = p.edge; g.lineWidth = 6; g.strokeRect(x + 3, y + 3, w - 6, h - 6);
+  if (p.tower) { g.fillStyle = p.det; g.fillRect(x + w / 2 - 6, y + 14, 12, h - 28); g.fillRect(x + 14, y + h / 2 - 6, w - 28, 12); }
+  else { g.fillStyle = p.det; g.fillRect(x + w * 0.25, y + h - 22, w * 0.5, 14); }
+}
 function drawTrees() {
   for (const t of city.trees) {
     if (!vis(t.x, t.y, t.r + 8)) continue;
-    const c1 = t.hue < 0.5 ? '#2f5a2c' : '#38602a', c2 = t.hue < 0.5 ? '#3f7a3a' : '#4a7d36';
+    if (t.kind === 'palm') {      // fronds round a trunk, from above
+      g.strokeStyle = '#2e5e22'; g.lineWidth = 2;
+      for (let i = 0; i < 7; i++) {
+        const a = i * TAU / 7 + t.hue * 6, ex = t.x + Math.cos(a) * t.r * 1.15, ey = t.y + Math.sin(a) * t.r * 1.15;
+        g.fillStyle = i % 2 ? '#3f8a2e' : '#4b9a36'; ell((t.x + ex) / 2, (t.y + ey) / 2, t.r * 0.62, t.r * 0.2, a);
+        g.beginPath(); g.moveTo(t.x, t.y); g.lineTo(ex, ey); g.stroke();
+      }
+      g.fillStyle = '#7a5a36'; circ(t.x, t.y, t.r * 0.2);
+      continue;
+    }
+    if (t.kind === 'umb') {      // a beach umbrella: striped wedges round the pole
+      for (let i = 0; i < 8; i++) {
+        g.fillStyle = i % 2 ? '#fff6e8' : ['#e8505b', '#3a86c8', '#f2a03d', '#2fa58f'][Math.floor(t.hue * 4)];
+        g.beginPath(); g.moveTo(t.x, t.y); g.arc(t.x, t.y, t.r, i * TAU / 8, (i + 1) * TAU / 8); g.closePath(); g.fill();
+      }
+      g.fillStyle = '#555'; circ(t.x, t.y, 3.5);
+      continue;
+    }
+    if (t.kind === 'dead') {      // burnt bare branches
+      g.strokeStyle = '#3a2a20'; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath();
+      for (let i = 0; i < 5; i++) { const a = i * 1.3 + t.hue * 6; g.moveTo(t.x, t.y); g.lineTo(t.x + Math.cos(a) * t.r, t.y + Math.sin(a) * t.r); }
+      g.stroke(); g.lineCap = 'butt'; g.fillStyle = '#2a1e18'; circ(t.x, t.y, t.r * 0.3);
+      continue;
+    }
+    const pal = { sakura: ['#d98aa4', '#f2b8c9'], pine: ['#1e3c25', '#2b5233'], big: ['#2c5427', '#3c7034'] }[t.kind];
+    const c1 = pal ? pal[0] : t.hue < 0.5 ? '#2f5a2c' : '#38602a', c2 = pal ? pal[1] : t.hue < 0.5 ? '#3f7a3a' : '#4a7d36';
     g.fillStyle = c1; circ(t.x, t.y, t.r);
     g.fillStyle = c2;
     for (let i = 0; i < 5; i++) { const a = i * 1.26 + t.hue * 6; circ(t.x + Math.cos(a) * t.r * 0.45 - 2, t.y + Math.sin(a) * t.r * 0.45 - 2, t.r * 0.5); }
@@ -3797,6 +4155,8 @@ function render() {
     const me2 = S.mode === 'demo' ? null : byId(meId), w = clashWhite(c);
     if (w > 0 && me2 && (c.go === meId || c.su === meId || Math.hypot(me2.x - c.x, me2.y - c.y) < MS.r + 900)) { g.globalAlpha = w; g.fillStyle = '#fbf8f3'; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
   }
+  const vw = S.mode === 'demo' ? 0 : Math.max(S.phase === 'over' ? clamp(1 - S.overT / VOTE_FADE, 0, 1) : 0, Math.min(1, mapFade));
+  if (vw > 0) { g.globalAlpha = vw; g.fillStyle = '#fbf8f3'; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }      // the map switch hides under white
   if (cam.flash > 0) { g.globalAlpha = cam.flash; g.fillStyle = cam.flashC; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
   if (me && !me.alive) { g.fillStyle = 'rgba(12,6,24,.38)'; g.fillRect(0, 0, W, H); }
   if (me && me.alive && screen === null && !TOUCH) {     // crosshair
@@ -3832,6 +4192,7 @@ function animate(dt, alpha) {
 }
 let demoT = 0, demoId = null;
 function updCam(dt) {
+  mapFade = Math.max(0, mapFade - dt / 0.9);
   cam.z = clamp(Math.sqrt(W * H) / VIEW, 0.42, 2.2);
   const vd = myVoid();      // the camera pulls back as the ink bursts round you, then eases in again
   if (vd) { const a = domAge(vd); cam.z *= 1 - 0.15 * (a < DOM.rush ? 1 - (1 - a / DOM.rush) ** 2 : clamp(1 - (a - DOM.rush) / 0.6, 0, 1)); }
@@ -3870,14 +4231,23 @@ function sizeMini() {
   mini.width = mini.height = Math.round(s * DPR);
   miniBase = null;
 }
-function buildMini() {
-  const n = mini.width, c = document.createElement('canvas'), x = c.getContext('2d'), k = n / MAP;
+function paintMap(n) {      // the loaded map from above, n pixels square: the minimap and the vote's cards
+  const c = document.createElement('canvas'), x = c.getContext('2d'), k = n / MAP;
   c.width = c.height = n;
-  x.fillStyle = '#3d3f48'; x.fillRect(0, 0, n, n);
+  x.fillStyle = MAPS[mapId].mini; x.fillRect(0, 0, n, n);
   for (const b of city.blocks) { x.fillStyle = { park: '#2f5229', plaza: '#6e695f', shrine: '#6e6656', lot: '#2e2f35' }[b.type] || '#26262e'; x.fillRect(b.x * k, b.y * k, b.w * k, b.h * k); }
-  for (const b of city.bld) { x.fillStyle = b.pal.shrine ? '#a33027' : '#4c4e5b'; x.fillRect(b.x * k, b.y * k, b.w * k, b.h * k); }
-  miniBase = c;
+  const ZC = { gravel: '#a39b8a', stone: '#7a766e', dirt: '#8f6c49', road: '#3f4046', crater: '#3a322b', walk: '#a8a191', wet: '#b39a68', sea: '#1f78a3', pier: '#7a5c3c', diamond: '#a07a52' };
+  for (const z of city.zones) {
+    if (!ZC[z.k]) continue;
+    x.fillStyle = ZC[z.k];
+    if (z.c) { x.beginPath(); x.arc(z.x * k, z.y * k, z.r * k, 0, TAU); x.fill(); } else x.fillRect(z.x * k, z.y * k, z.w * k, z.h * k);
+  }
+  for (const t of city.trees) if (t.kind && t.kind !== 'umb') { x.fillStyle = t.kind === 'sakura' ? '#c98aa0' : t.kind === 'dead' ? '#3a2a20' : '#244a26'; x.beginPath(); x.arc(t.x * k, t.y * k, Math.max(1, t.r * k), 0, TAU); x.fill(); }
+  for (const o of city.solids) if (o.rock) { x.fillStyle = '#5a554e'; x.beginPath(); x.arc(o.x * k, o.y * k, Math.max(1, o.r * k), 0, TAU); x.fill(); }
+  for (const b of city.bld) { x.fillStyle = b.pal.shrine ? '#a33027' : b.pal.temple ? '#2b2f36' : b.pal.ruin ? '#8d857c' : b.pal.hut ? b.pal.roof : '#4c4e5b'; x.fillRect(b.x * k, b.y * k, b.w * k, b.h * k); }
+  return c;
 }
+function buildMini() { miniBase = paintMap(mini.width); }
 function drawMini() {
   if (!$('hud').classList.contains('on')) return;
   if (!miniBase || miniBase.width !== mini.width) buildMini();
@@ -4546,7 +4916,25 @@ function hud() {
   const board = tabHeld && S.phase === 'play';
   if (board !== shownBoard || (board && T % 0.5 < 0.02)) { shownBoard = board; $('board').classList.toggle('on', board); if (board) fillTable($('boardBody'), standings()); }
   const res = S.phase === 'over';
-  if (res !== shownRes) { shownRes = res; $('results').classList.toggle('on', res); }
+  if (res !== shownRes) { shownRes = res; $('results').classList.toggle('on', res); if (res) fillVote(); }
+  if (res) for (const b of $('voteRow').children) {
+    const m = +b.dataset.m, n = String(S.vt.filter((v) => v[1] === m).length || '');
+    if (b.lastChild.textContent !== n) b.lastChild.textContent = n;
+    b.classList.toggle('me', m === myVote);
+  }
+}
+function fillVote() {
+  const row = $('voteRow'); row.textContent = '';
+  mapOpts().forEach((m, k) => {
+    const b = document.createElement('button'), c = document.createElement('canvas'), M = MAPS[m];
+    b.className = 'vc'; b.dataset.m = m; c.width = c.height = 160;
+    if (M.thumb) c.getContext('2d').drawImage(M.thumb, 0, 0);
+    const nm = document.createElement('b'), d = document.createElement('small'), n = document.createElement('i');
+    nm.textContent = (TOUCH ? '' : (k + 1) + ' ') + M.n; d.textContent = M.d + (M.open ? ' · open' : '');
+    b.append(c, nm, d, n);
+    b.addEventListener('click', () => castVote(m));
+    row.append(b);
+  });
 }
 function escHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function fillTable(tb, rows) {
@@ -4605,6 +4993,11 @@ function doEvent(a) {
     $('resS').textContent += ' Next match starts in a few seconds.';
     fillTable($('resBody'), rows);
     if (!demoMode && wid === meId) { save.wins++; persist(); SFX.win(); }
+  } else if (a[0] === 'W') {      // the next match is on map a[1]
+    const m = clamp(a[1] | 0, 0, MAPS.length - 1);
+    if (m !== mapId) loadMap(m);
+    myVote = -1;
+    if (!demoMode) { mapFade = 1.35; setTimeout(() => banner(MAPS[m].n, MAPS[m].d, '#f0c24f', 2.4), 500); }
   } else if (a[0] === 'N') { if (!demoMode) feed([[a[1], 1]]); }
   else if (a[0] === 'T') { if (!demoMode) chatLine(a[1], clean(a[2], CHAT_MAX)); }
   else if (a[0] === 'B') {     // a banner waits for a cut-in to finish
@@ -4708,6 +5101,7 @@ addEventListener('keydown', (e) => {
     else if (k && screen === null) press[k]++;
     if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
     if (e.code === 'KeyM') setMute(!save.mute);
+    if (S && S.phase === 'over' && /^Digit[1-3]$/.test(e.code)) castVote(mapOpts()[+e.code[5] - 1]);
   }
   if (e.code === 'Tab') tabHeld = true;
   keys.add(e.code);
@@ -5295,6 +5689,8 @@ function onHostData(link, m) {
     if (screen === 'lobby') renderLobby();
   } else if (m.t === 'chat') {
     if (S && S.mode === 'host') hostChat(h.id, m.text);
+  } else if (m.t === 'vote') {
+    if (S && S.mode === 'host') hostVote(h.id, m.m | 0);
   } else if (m.t === 'bye') {
     dropHuman(h, true);
     if (link.conn) { try { link.conn.close(); } catch (e) { /* gone */ } }
@@ -5329,7 +5725,7 @@ function dropHuman(h, quit) {
 function sendSnap() {
   const s = S;
   stream({
-    t: 's', tm: r2(s.time), ph: s.phase, ot: r2(s.overT), rt: r1(s.roundT), tw: s.toWin, nid: s.nid,
+    t: 's', tm: r2(s.time), ph: s.phase, ot: r2(s.overT), rt: r1(s.roundT), tw: s.toWin, nid: s.nid, mp: mapId, vt: s.phase === 'over' ? s.vt : 0,
     f: s.f.map((o) => enc(o, SPEC.f)), m: s.maho.map((o) => enc(o, SPEC.m)), e: s.ele.map((o) => enc(o, SPEC.e)),
     r: s.rab.map((o) => enc(o, SPEC.r)), h: s.sh.map((o) => enc(o, SPEC.h)), n: s.rn.map((o) => enc(o, SPEC.n)),
     bl: s.bl.map((o) => enc(o, SPEC.b)), pu: s.pu.map((o) => enc(o, SPEC.u)), dm: s.dm.map((o) => enc(o, SPEC.d)), fl: s.fl.map((o) => enc(o, SPEC.l)), ms: s.ms.map((o) => enc(o, SPEC.s)), cl: s.cl.map((o) => enc(o, SPEC.c)),
@@ -5692,6 +6088,8 @@ function applySnap(m) {
   const s = S;
   s.time = num(m.tm); s.phase = m.ph === 'over' ? 'over' : 'play'; s.overT = num(m.ot);
   s.toWin = clamp(m.tw | 0, 0, 999); s.nid = Math.max(s.nid, m.nid | 0); s.roundT = num(m.rt);
+  if (Number.isInteger(m.mp) && m.mp !== mapId && m.mp >= 0 && m.mp < MAPS.length) loadMap(m.mp);
+  s.vt = Array.isArray(m.vt) ? m.vt.filter((v) => Array.isArray(v) && Number.isFinite(v[0]) && Number.isInteger(v[1])).slice(0, 40) : [];
   const me0 = byId(meId), wasAlive = me0 && me0.alive;
   s.f = mergeRows(s.f, m.f, SPEC.f, (id) => mkFighter(id, 'Sorcerer', 'yuji', 'net'));
   for (const f of s.f) { f.ctl = f.id === meId ? 'local' : f.bot ? 'bot' : 'net'; if (!f.alive) { f.rx = f.x; f.ry = f.y; } }
@@ -5746,6 +6144,7 @@ function predStep(me, dt) {
     pred.vx += (mx * sp - pred.vx) * k; pred.vy += (my * sp - pred.vy) * k;
   }
   pred.x += pred.vx * dt; pred.y += pred.vy * dt;
+  for (const r of S.rab) if (r.burst && r.own !== me.id) { const o = { x: pred.x, y: pred.y, r: FR, frz: 0, id: me.id, ch: me.ch, blk: me.blk }; rabPull(o, r, dt); pred.x = o.x; pred.y = o.y; }
   const c = S.dm.length && voidOf(me.id) ? NO_HIT : collide(pred, FR);
   if (c.hit) { const into = -(pred.vx * c.nx + pred.vy * c.ny); if (into > 0) { pred.vx += c.nx * into; pred.vy += c.ny * into; } }
   if (S.dm.length) domWall(pred, me.id, FR);
@@ -5876,8 +6275,7 @@ function frame(now) {
   render();
   if (S && S.mode !== 'demo') { hud(); drawMini(); }
 }
-buildCity();
-buildNav();
+for (let i = MAPS.length - 1; i >= 0; i--) { loadMap(i); MAPS[i].thumb = paintMap(160); }      // ends on Shibuya
 addEventListener('resize', () => { fit(); if (TOUCH) layoutPad(); });
 fit();
 setTouch(TOUCH);

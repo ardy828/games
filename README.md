@@ -15,7 +15,7 @@ and Jujutsu Arena's public server, a small Cloudflare Worker in [`jujutsu/server
 | **Flatcraft** | 3D survival sandbox with biomes, mobs and crafting | [Play](https://ardy828.github.io/games/flatcraft/) | [`flatcraft/`](flatcraft/) |
 | **Obito's Multiverse** | Story-driven ninja action adventure | [Play](https://ardy828.github.io/games/obito/) | [`obito/`](obito/) |
 | **Bonk Arena** | Sumo party brawler, solo or online with up to 8 | [Play](https://ardy828.github.io/games/bonk/) | [`bonk/`](bonk/) |
-| **Jujutsu Arena** | Top-down sorcerer brawler on a city map, online up to 20 | [Play](https://ardy828.github.io/games/jujutsu/) | [`jujutsu/`](jujutsu/) |
+| **Jujutsu Arena** | Top-down sorcerer brawler on four maps from the show, online up to 20 | [Play](https://ardy828.github.io/games/jujutsu/) | [`jujutsu/`](jujutsu/) |
 
 Each game's menu has a button back to the landing page.
 
@@ -205,11 +205,18 @@ The platform shrinks after ten seconds, so every round ends.
 
 ## Jujutsu Arena
 
-A top-down brawler on a big city map: streets, rooftops, parks, a shrine and a scramble crossing in the
-middle. Pick Yuji, Megumi, Nobara, Gojo or Sukuna and score points; the first to the points target wins and a new match
+A top-down brawler on four maps from the show. Pick Yuji, Megumi, Nobara, Gojo or Sukuna and score points; the first to the points target wins and a new match
 starts. You respawn a few seconds after going down and can switch fighter while you wait. There is no
 cursed energy: every move has its own cooldown.
 
+- **Maps** — *Shibuya* (streets, rooftops, parks, a shrine and the scramble crossing in the middle),
+  *Jujutsu High* (temple halls round a gravel courtyard, the Goodwill Event's baseball field, forest
+  all round), and two open ones: *Shinjuku* (what Gojo and Sukuna left: one huge crater, stumps of
+  buildings, rubble and burnt-out cars) and *Okinawa* (the beach, with palms, umbrellas, beach huts
+  and a pier, and a sea nobody can walk into). Every match starts in Shibuya. When a match ends,
+  everyone votes for the next map on the results screen (click a card, or press 1, 2 or 3; the
+  map you just played is not on it); the screen fades to white and the most voted map comes up
+  under it, a tie decided by a coin toss.
 - **Points** — exorcising a cursed spirit is worth 1 point. Killing another sorcerer takes every point
   they carry, plus 1, and leaves them with none. Any other death (to a curse, a wall, your own
   Mahoraga) loses all your points. The ★ by a sorcerer's name is how many they carry. Kills and
@@ -240,7 +247,8 @@ cursed energy: every move has its own cooldown.
   path, then makes one huge cut along it, through walls, that takes exactly half the full health of
   everyone in it, block or not.
 - **Megumi** fights through shikigami. *Nue* carries him for 10 seconds, faster and faster, shocking anyone she touches, *Rabbit
-  Escape* sends a swarm of rabbits to where you aim, where it bursts and then nibbles and slows, *Max
+  Escape* sends a swarm of rabbits to where you aim, where it bursts and then nibbles, slows and drags
+  anyone in it toward its middle (walking out takes nearly all of it; a dash gets you out), *Max
   Elephant* drops on the spot you aim at after a shadow warning, and the ultimate summons *Mahoraga*,
   who kicks Megumi away and then attacks whoever he can see, Megumi included, until someone kills him
   or the match ends. Each new move that hurts Mahoraga turns his wheel: he adapts to it and takes far
@@ -302,5 +310,5 @@ cursed energy: every move has its own cooldown.
   time, cursed spirits, damage / health / speed / cooldown / ultimate-charge multipliers, which fighters are allowed),
   broadcast messages and events (heal everyone, fill every ultimate, a wild Mahoraga, end or restart
   the round). [The server's README](jujutsu/server/README.md) explains how to set its password.
-- All drawing is canvas (the city is built from a fixed seed, so everyone gets the same map) and all
+- All drawing is canvas (each map is built from a fixed seed, so everyone gets the same map) and all
   audio is synthesised. Your name, fighter, lobby choices, kills and wins are kept in `localStorage`.

@@ -587,7 +587,7 @@ One IIFE, sections in this order: save, skins, tuning, canvas, audio, drawing ba
 
 ## Jujutsu Arena architecture
 
-Free-for-all on a city map: Yuji, Megumi, Nobara, Gojo or Sukuna against each other and the cursed spirits, first to
+Free-for-all on four maps (Shibuya, Jujutsu High, Shinjuku, Okinawa): Yuji, Megumi, Nobara, Gojo or Sukuna against each other and the cursed spirits, first to
 `toWin` points, respawns after `RULES.resp` s. One IIFE, sections in this order: save, tuning, canvas,
 audio, city, the match (sim), bots and curses, effects, rendering, minimap, HUD, input (keyboard,
 mouse, touch), screens, multiplayer, main loop.
@@ -730,14 +730,33 @@ mouse, touch), screens, multiplayer, main loop.
   (the joiner's `predStep()` too) from `NUE.sp0` to `NUE.sp1`, `rideNue()` shocks anyone touched (once per
   `NUE.every` s each, `f.nh` host only), and the Q cooldown waits for the ride to end.
 - **Rabbit Escape** is one entity per cast, not one per rabbit: the swarm runs from `x0,y0` to `x,y`
-  over `T` s, bursts (`RAB.dmg` in `RAB.r`), then nibbles and slows for `RAB.linger` s. Each rabbit's
-  path is worked out from the entity in `drawSwarm()`.
-- **City** (`buildCity()`, seed fixed) is a 6×6 grid of blocks with 140-wide streets; block types are
-  `city`, `plaza` (the four round the scramble crossing), `park`, `shrine` and `lot`. Everything solid
-  goes through `addSolid()` into a spatial hash; `tall` solids (buildings, torii posts, the statue)
-  also stop projectiles, beams and line of sight (`tallAt`, `rayLen`, `los`). Cars, trees, planters
-  and the pond only block walking. **Anything random in `buildCity()` must use its seeded `R`**, or
-  devices disagree about the map.
+  over `T` s, bursts (`RAB.dmg` in `RAB.r`), then nibbles and slows for `RAB.linger` s, and `rabPull()`
+  drags anyone within `RAB.reach` toward its middle at `RAB.pull` (the joiner's `predStep()` too). Each
+  rabbit's path is worked out from the entity in `drawSwarm()`.
+- **Maps**: `MAPS` lists them (name, line, base and minimap colours, `build`, `open`), and `loadMap(id)`
+  empties `city` and the spatial hash, runs the map's builder, then filters `city.spawns` and redoes
+  the nav grid, flow fields and minimap; every map is `MAP` square. `mapId` is the loaded one. Shibuya
+  (`buildShibuya()`, seed fixed) is a 6×6 grid of blocks with 140-wide streets; block types are
+  `city`, `plaza` (the four round the scramble crossing), `park`, `shrine` and `lot`, and
+  `groundShibuya()` draws its streets. The others (`buildHigh()`, `buildShinjuku()`, `buildBeach()`)
+  are open ground: `city.zones` (`addZone()`: gravel, stone, dirt, diamond, road, crater, walk, wet,
+  sea, pier, towel; rectangles, or circles with `c`) are drawn in order by `groundOpen()` over the
+  map's base colour, buildings by palette (`TEMPLE_PAL` → `drawTemple()`, `RUIN_PAL` → `drawRuin()`
+  with its ragged `jag` edge, `HUT_PALS`/`TOWER_PAL` → `drawHut()`), trees by `kind` (`sakura`, `pine`,
+  `big`, `palm`, `dead`, and `umb`, a beach umbrella that is not solid), and rubble as `rock` solids.
+  Okinawa's sea is `sea` solids, so nobody walks into it but shots fly over. Everything solid goes
+  through `addSolid()` into a spatial hash; `tall` solids (buildings, torii posts, the statue)
+  also stop projectiles, beams and line of sight (`tallAt`, `rayLen`, `los`). Cars, trees, planters,
+  rocks, the sea and the ponds only block walking. **Anything random in a map's builder must use its
+  seeded `R`**, or devices disagree about the map. `paintMap(n)` draws the loaded map from above, for
+  the minimap and the vote's cards (`MAPS[i].thumb`, made at boot). New matches start in Shibuya
+  (`newState()`); a joiner loads the host's map from the snapshot's `mp`.
+- **Map vote**: while a match's results show (`S.phase === 'over'`), `fillVote()` puts a card for each of
+  `mapOpts()` (every map but this one) on `#results`; `castVote()` sends `{t:'vote'}` to the host,
+  whose `hostVote()` keeps `[id, map]` pairs in `S.vt` (sent in the snapshot while the results show).
+  Over the last `VOTE_FADE` s of the break the screen goes white (`render()`); then `nextMap()` loads
+  the most voted map (a tie or no votes: a coin toss) before `newMatch()`, and its `'W'` event loads it
+  on joiners and starts `mapFade`, which fades the white back out.
 - **Navigation**: a 32-unit grid (`navFree`) and a BFS flow field per target (`flowTo`, cached and
   shared), followed with `navDir()` by bots and Mahoraga when a building is in the way.
 - **Bots and curses** (`think()` every `DIFF.react` s, `botThink()` steering every step) only target
